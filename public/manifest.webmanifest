@@ -1,0 +1,13 @@
+{
+  "name": "Ag Desk Terminal",
+  "short_name": "Ag Desk",
+  "description": "World exchange sessions, commodities, and the frameworks you are examined on.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060e0b",
+  "theme_color": "#060e0b",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,107 @@
+name: Market reads
+
+# Sixteen scheduled reads a day: five zones at open, midday and close, plus a
+# daily agricultural read. Cron here is UTC — GitHub Actions does not support
+# time zones — so the times below are UTC equivalents of the local sessions.
+# They do not shift with daylight saving; adjust twice a year or accept the
+# hour of drift, which does not matter much for a market read.
+#
+# Minutes are deliberately off the hour. Every scheduled job on the platform
+# fires at :00, and queue delay there can run to many minutes.
+
+on:
+  schedule:
+    # --- Australia / New Zealand (AEDT = UTC+11) ---
+    - cron: "12 23 * * 0-4"   # 10:12 Sydney, open
+    - cron: "13 1 * * 1-5"   # 12:13 Sydney, midday
+    - cron: "34 5 * * 1-5"   # 16:34 Sydney, close
+
+    # --- East Asia (HKT = UTC+8) ---
+    - cron: "41 1 * * 1-5"   # 09:41 Hong Kong, open
+    - cron: "19 4 * * 1-5"   # 12:19 Hong Kong, midday
+    - cron: "6 9 * * 1-5"   # 17:06 Hong Kong, close
+
+    # --- India (IST = UTC+5:30) ---
+    - cron: "56 3 * * 1-5"   # 09:26 Mumbai, open
+    - cron: "38 6 * * 1-5"   # 12:08 Mumbai, midday
+    - cron: "14 10 * * 1-5"   # 15:44 Mumbai, close
+
+    # --- Europe / Middle East / Africa (BST = UTC+1) ---
+    - cron: "14 8 * * 1-5"   # 09:14 London, open
+    - cron: "21 11 * * 1-5"   # 12:21 London, midday
+    - cron: "42 16 * * 1-5"   # 17:42 London, close
+
+    # --- Americas (EDT = UTC-4) ---
+    - cron: "41 13 * * 1-5"   # 09:41 New York, open
+    - cron: "16 16 * * 1-5"   # 12:16 New York, midday
+    - cron: "21 20 * * 1-5"   # 16:21 New York, close
+
+    # --- Agricultural commodities ---
+    - cron: "42 5 * * 1-5"   # 06:42 London
+
+  # Lets you run any zone by hand from the Actions tab, which is how you
+  # should test this before trusting the schedule.
+  workflow_dispatch:
+    inputs:
+      zone:
+        description: "Zone to read"
+        required: true
+        default: "ams"
+        type: choice
+        options: [anz, eas, ind, eur, ams, ag]
+      phase:
+        description: "Phase"
+        required: true
+        default: "close"
+        type: choice
+        options: [open, midday, close]
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      # Maps the cron expression that fired onto a zone and phase. GitHub
+      # exposes the schedule that triggered the run, which is the only way to
+      # branch a single workflow across many crons.
+      - name: Resolve zone and phase
+        id: resolve
+        run: |
+          case "${{ github.event.schedule }}" in
+            "12 23 * * 0-4") Z=anz; P=open ;;
+            "13 1 * * 1-5")  Z=anz; P=midday ;;
+            "34 5 * * 1-5")  Z=anz; P=close ;;
+            "41 1 * * 1-5")  Z=eas; P=open ;;
+            "19 4 * * 1-5")  Z=eas; P=midday ;;
+            "6 9 * * 1-5")   Z=eas; P=close ;;
+            "56 3 * * 1-5")  Z=ind; P=open ;;
+            "38 6 * * 1-5")  Z=ind; P=midday ;;
+            "14 10 * * 1-5") Z=ind; P=close ;;
+            "14 8 * * 1-5")  Z=eur; P=open ;;
+            "21 11 * * 1-5") Z=eur; P=midday ;;
+            "42 16 * * 1-5") Z=eur; P=close ;;
+            "41 13 * * 1-5") Z=ams; P=open ;;
+            "16 16 * * 1-5") Z=ams; P=midday ;;
+            "21 20 * * 1-5") Z=ams; P=close ;;
+            "42 5 * * 1-5")  Z=ag;  P=close ;;
+            *)               Z="${{ inputs.zone }}"; P="${{ inputs.phase }}" ;;
+          esac
+          echo "zone=$Z"  >> "$GITHUB_OUTPUT"
+          echo "phase=$P" >> "$GITHUB_OUTPUT"
+
+      - name: Run the read
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FEED_MODEL: ${{ vars.FEED_MODEL || 'claude-sonnet-5-5' }}
+        run: node scripts/feed-read.mjs --zone "${{ steps.resolve.outputs.zone }}" --phase "${{ steps.resolve.outputs.phase }}"

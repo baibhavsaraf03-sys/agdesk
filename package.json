@@ -1,0 +1,24 @@
+{
+  "name": "agdesk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An open-access markets terminal: world exchange sessions, agricultural commodities, lessons from zero, and an analyst you can question.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "feed": "node scripts/feed-read.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.68.0",
+    "@supabase/ssr": "0.7.0",
+    "@supabase/supabase-js": "2.58.0",
+    "next": "16.3.8",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "server-only": "^0.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
