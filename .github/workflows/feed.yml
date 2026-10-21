@@ -1,8 +1,8 @@
 name: Market reads
 
 # Sixteen scheduled reads a day: five zones at open, midday and close, plus a
-# daily agricultural read. Cron here is UTC â€” GitHub Actions does not support
-# time zones â€” so the times below are UTC equivalents of the local sessions.
+# daily agricultural read. Cron here is UTC Ã¢â‚¬â€ GitHub Actions does not support
+# time zones Ã¢â‚¬â€ so the times below are UTC equivalents of the local sessions.
 # They do not shift with daylight saving; adjust twice a year or accept the
 # hour of drift, which does not matter much for a market read.
 #
@@ -61,9 +61,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
