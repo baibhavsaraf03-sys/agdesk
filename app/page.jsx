@@ -8,6 +8,7 @@ import {
 import { DISCIPLINES, ALL_FRAMEWORKS, SEMINAR_MODES } from "@/lib/disciplines";
 import { FLOWS, FLOWS_PREFACE, FLOW_TAGS } from "@/lib/flows";
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
+import { Markdown } from "@/lib/markdown";
 
 /* ========================================================================== */
 /* screens                                                                    */
@@ -1159,7 +1160,9 @@ export default function Terminal() {
                     {msgs.map((m, i) => (
                       <div className={"msg " + (m.role === "user" ? "me" : m.role === "error" ? "ai err" : "ai")} key={i}>
                         <span className="who">{m.role === "user" ? "You" : "AGN"}</span>
-                        <div className="bub">{m.content}</div>
+                        <div className="bub">
+                          {m.role === "user" ? m.content : <Markdown text={m.content} />}
+                        </div>
                       </div>
                     ))}
                     {thinking && (

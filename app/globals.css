@@ -236,3 +236,39 @@ footer{border-top:1px solid var(--line);padding-block:14px 8px;font-size:10.5px;
 .tvcredit{font:400 10px/1.5 var(--mono);color:var(--fg-dim);padding:6px 9px;border-top:1px solid var(--line)}
 .tvcredit a{color:var(--fg);text-decoration:none;border-bottom:1px dotted var(--line)}
 .tvcredit a:hover{border-bottom-style:solid}
+
+/* ---- Markdown in analyst replies ----------------------------------------
+   Deliberately tight: a chat bubble is not a document, so headings step down
+   gently and vertical rhythm stays compact. */
+.md > *:first-child{margin-top:0}
+.md > *:last-child{margin-bottom:0}
+.md p{margin:0 0 .6em}
+.md h2,.md h3,.md h4,.md h5,.md h6{
+  margin:1.1em 0 .4em;font-weight:600;letter-spacing:.02em;color:var(--fg);line-height:1.3}
+.md h2,.md h3{font-size:14px;color:var(--accent)}
+.md h4{font-size:13px}
+.md h5,.md h6{font-size:12px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:.1em}
+.md ul,.md ol{margin:.2em 0 .7em;padding-left:1.35em}
+.md li{margin:.22em 0}
+.md li::marker{color:var(--fg-dim)}
+.md strong{color:var(--accent);font-weight:600}
+.md em{color:var(--fg);font-style:italic}
+.md a{color:var(--accent-2);text-decoration:none;border-bottom:1px dotted currentColor}
+.md a:hover{border-bottom-style:solid}
+.md code{background:var(--surface-2);border:1px solid var(--line);border-radius:2px;
+  padding:.05em .3em;font-size:.92em}
+.md pre{background:var(--surface-2);border:1px solid var(--line);padding:9px 11px;
+  margin:.5em 0 .8em;overflow-x:auto}
+.md pre code{background:none;border:0;padding:0;font-size:12px;line-height:1.5}
+.md blockquote{margin:.5em 0 .8em;padding:.1em 0 .1em .8em;
+  border-left:2px solid var(--accent);color:var(--fg-dim)}
+.md hr{border:0;border-top:1px solid var(--line);margin:.9em 0}
+.mdtablewrap{overflow-x:auto;margin:.5em 0 .8em;border:1px solid var(--line)}
+.md table{border-collapse:collapse;width:100%;font-size:12px}
+.md th,.md td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);
+  white-space:nowrap}
+.md th{color:var(--fg-dim);font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;font-size:10px;background:var(--surface-2)}
+.md tbody tr:last-child td{border-bottom:0}
+/* The user's own messages keep their line breaks; they are not Markdown. */
+.msg.me .bub{white-space:pre-wrap}
