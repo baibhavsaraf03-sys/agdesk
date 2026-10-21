@@ -192,7 +192,9 @@ Requirements:
 - Do not restate the verified figures as a list. Use them: explain what they imply, where they agree or disagree with the equity move, and what would change the reading.
 - Every other figure must come from something you actually retrieved in this session. Never carry a number forward unverified. Omit anything you cannot verify rather than guessing.
 - Say explicitly when a figure is a forecast or projection rather than a traded level.
-- No buy or sell calls and no investment advice. Explain reasoning instead.`;
+- No buy or sell calls and no investment advice. Explain reasoning instead.
+- Write plain prose. No citation markup, reference tags, bracketed source indices or inline source numbering anywhere in any field — sources go in the sources array and nowhere else.
+- Where two sources disagree materially, say so and say which you trust, rather than averaging them or picking silently.`;
 }
 
 /** The verified block, or an honest note that nothing could be verified. */
@@ -205,8 +207,10 @@ function verifiedBlock(rows, failed) {
   const lines = rows.map(
     (r) => `- ${r.nm}: ${r.px}${r.ch ? ` (${r.ch})` : ""} — ${r.src}, as of ${r.asof}`
   );
-  return `VERIFIED FIGURES — retrieved this run from official sources. Treat these as authoritative and do not contradict them with anything you find by search:
-${lines.join("\n")}`;
+  return `VERIFIED FIGURES — retrieved this run from official sources, each with the date it is as of:
+${lines.join("\n")}
+
+How to use these. For the date shown, they are authoritative: do not contradict them. But official statistics lag, and a figure dated several days ago is a reference point, not a current level. Where you retrieve a fresher traded level for the same instrument, lead with the fresher one, give both with their dates, and explain the gap — a wide Brent-WTI spread, for instance, is information about where the disruption is, not an error to reconcile away. Never present a dated figure as the current price.`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -241,6 +245,38 @@ const TOOLS = [
 function findRead(content) {
   const block = (content || []).find((b) => b.type === "tool_use" && b.name === "publish_read");
   return block ? block.input : null;
+}
+
+/**
+ * Strips citation markup out of the read.
+ *
+ * The web search tool has its own citation convention, and the model carries
+ * it into the text it writes — so published prose arrived full of
+ * `(cite index="5-3">…</cite>`. Sources belong in the sources array, not
+ * inline, and the prompt says so, but a model mid-paragraph will do it anyway.
+ */
+const CITE_OPEN = /\(?\s*cite\s+index\s*=\s*"[^"]*"\s*>/gi;
+const CITE_TAG = /<\/?cite\b[^>]*>/gi;
+
+function stripCites(s) {
+  return s
+    .replace(CITE_OPEN, "")
+    .replace(CITE_TAG, "")
+    .replace(/\(\s*\)/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+/** Same treatment for every string in the payload, however deeply nested. */
+function deepStrip(value, key) {
+  if (typeof value === "string") return key === "u" ? value.trim() : stripCites(value);
+  if (Array.isArray(value)) return value.map((v) => deepStrip(v));
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = deepStrip(v, k);
+    return out;
+  }
+  return value;
 }
 
 function plainText(content) {
@@ -307,6 +343,7 @@ async function main() {
   if (!payload.headline) {
     throw new Error("The published read had no headline.");
   }
+  payload = deepStrip(payload);
   payload.sections = Array.isArray(payload.sections) ? payload.sections : [];
   payload.watch = Array.isArray(payload.watch) ? payload.watch : [];
   payload.sources = Array.isArray(payload.sources) ? payload.sources : [];
