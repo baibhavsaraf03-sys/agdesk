@@ -16,6 +16,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { fetchQuotes } from "../lib/quotes.mjs";
+import { fetchNews, newsBlock } from "../lib/news.mjs";
+import {
+  geminiJson, FEED_PROVIDER, GEMINI_FEED_MODEL
+} from "../lib/providers.mjs";
 
 /* -------------------------------------------------------------------------- */
 /* zones                                                                      */
@@ -172,7 +176,7 @@ const READ_TOOL = {
  * are licensed for that. What is left for the model is the part it is actually
  * good at: what the numbers mean and how you would have reached that reading.
  */
-function buildPrompt(verified) {
+function buildPrompt(verified, headlines) {
   return `Produce a market read for the ${spec.label} zone, ${phase.toUpperCase()} phase.
 
 EXCHANGES AND INSTRUMENTS: ${spec.exchanges}
@@ -183,9 +187,11 @@ ${spec.extra}
 
 ${verified}
 
-Research the rest using web search — aim for eight to fourteen searches. Find current index levels and percentage moves, the one or two things actually driving them, relevant central bank and policy news, and anything that changes how the verified figures above should be read.
+${headlines}
 
-When the research is done, call the publish_read tool with the finished read. Do not write the read out as prose or JSON in your reply; the tool call is the deliverable.
+Work from the material above. The figures are exact; the headlines tell you what happened and who reported it. Where the headlines do not establish something — a specific index level, say — do not supply it from memory. Say what you could not confirm: a read that states three things firmly and names its gap is worth more than one that sounds complete and is partly invented.
+
+Return the finished read in the required structure, and nothing else — no preamble and no commentary about your sources.
 
 Requirements:
 - ${phase === "close" ? "3-4" : "2-3"} sections, ${phase === "close" ? "4-6" : "3-5"} watch items, 3-6 sources.
@@ -215,7 +221,21 @@ How to use these. For the date shown, they are authoritative: do not contradict 
 
 /* -------------------------------------------------------------------------- */
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+/**
+ * Built on demand, not at import. A Gemini-only setup has no Anthropic key at
+ * all, and the SDK throws at construction when it cannot find one — which
+ * would make the free path depend on the paid one being configured.
+ */
+let _anthropic = null;
+function anthropicClient() {
+  if (!_anthropic) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not set, and FEED_PROVIDER is not gemini");
+    }
+    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return _anthropic;
+}
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -236,10 +256,14 @@ const MODEL = process.env.FEED_MODEL || "claude-sonnet-5-5";
 // Search results land in the response alongside the read, so the budget has
 // to cover both. Too low and the tool call is truncated mid-write.
 const MAX_TOKENS = Number(process.env.FEED_MAX_TOKENS || 20000);
-const TOOLS = [
-  { type: "web_search_20250305", name: "web_search", max_uses: 14 },
-  READ_TOOL
-];
+// Anthropic's search tool was the entire running cost of this project: a
+// dozen billed searches per read, sixteen reads a day. lib/news.mjs now does
+// the gathering for free, so search is off by default and only comes back if
+// you ask for it with FEED_SEARCH=1 on the Anthropic path.
+const USE_SEARCH = process.env.FEED_SEARCH === "1";
+const TOOLS = USE_SEARCH
+  ? [{ type: "web_search_20250305", name: "web_search", max_uses: Number(process.env.FEED_SEARCH_USES || 10) }, READ_TOOL]
+  : [READ_TOOL];
 
 /** The validated tool input, if the model published one. */
 function findRead(content) {
@@ -287,6 +311,65 @@ function plainText(content) {
     .trim();
 }
 
+
+/**
+ * Gemini's JSON mode, given the same schema the Anthropic tool uses. One call,
+ * no tools, no search — and on the free tier, no cost.
+ */
+async function readViaGemini(prompt) {
+  const model = GEMINI_FEED_MODEL;
+  const out = await geminiJson({
+    model,
+    system:
+      "You are the resident analyst on a markets terminal used by finance, economics and politics students. " +
+      "You are given verified figures and headlines. Your job is interpretation, not recall.",
+    prompt,
+    schema: READ_TOOL.input_schema,
+    maxTokens: Math.min(MAX_TOKENS, 8192)
+  });
+  if (!out || typeof out !== "object") throw new Error("Gemini returned no object");
+  return out;
+}
+
+/**
+ * Anthropic, via tool calling. Kept because it is better at this, and because
+ * FEED_SEARCH=1 restores live search when a read matters enough to pay for.
+ */
+async function readViaAnthropic(prompt) {
+  const first = await anthropicClient().messages.create({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    tools: TOOLS,
+    messages: [{ role: "user", content: prompt }]
+  });
+
+  let payload = findRead(first.content);
+  if (payload) return payload;
+
+  const kinds = [...new Set((first.content || []).map((b) => b.type))].join(", ");
+  console.warn(`  first pass stopped on "${first.stop_reason}"; blocks: ${kinds || "none"}`);
+
+  // It narrated instead of publishing. Ask again with the tool forced, reusing
+  // whatever work the first pass already did.
+  const second = await anthropicClient().messages.create({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    tools: TOOLS,
+    tool_choice: { type: "tool", name: "publish_read" },
+    messages: [
+      { role: "user", content: prompt },
+      { role: "assistant", content: first.content },
+      { role: "user", content: "Now call publish_read with the finished read." }
+    ]
+  });
+  payload = findRead(second.content);
+  if (payload) return payload;
+
+  const text = plainText(second.content) || plainText(first.content);
+  if (!text) throw new Error("The model returned neither a tool call nor any text.");
+  return extractJson(text);
+}
+
 async function main() {
   // Numbers first. They are cheap, fast and authoritative, and the model
   // reasons better when it is not also trying to remember them.
@@ -295,47 +378,21 @@ async function main() {
   if (ok.length) console.log(`  verified ${quoteRows.length} rows from: ${ok.join(", ")}`);
   failed.forEach((f) => console.warn(`  source unavailable — ${f}`));
 
-  const PROMPT = buildPrompt(verifiedBlock(quoteRows, failed));
+  // Headlines next, also free. Between the two the model has its material and
+  // never needs a billed search tool.
+  console.log(`[${zone}/${phase}] gathering headlines…`);
+  const { items: news, ok: newsOk, failed: newsFailed } = await fetchNews(zone);
+  console.log(`  ${news.length} headlines from ${newsOk.length} source(s)`);
+  newsFailed.forEach((f) => console.warn(`  news source unavailable — ${f}`));
 
-  console.log(`[${zone}/${phase}] researching…`);
+  const PROMPT = buildPrompt(verifiedBlock(quoteRows, failed), newsBlock(news, newsFailed));
 
-  const first = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    tools: TOOLS,
-    messages: [{ role: "user", content: PROMPT }]
-  });
+  console.log(`[${zone}/${phase}] writing the read via ${FEED_PROVIDER}…`);
 
-  let payload = findRead(first.content);
-  if (!payload) {
-    const kinds = [...new Set((first.content || []).map((b) => b.type))].join(", ");
-    console.warn(`  first pass stopped on "${first.stop_reason}"; blocks: ${kinds || "none"}`);
-  }
-
-  // The model researched but narrated instead of publishing. Ask once more,
-  // this time with the tool forced, reusing the research already paid for.
-  if (!payload) {
-    console.log(`[${zone}/${phase}] no tool call on the first pass; requesting the read`);
-    const second = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      tools: TOOLS,
-      tool_choice: { type: "tool", name: "publish_read" },
-      messages: [
-        { role: "user", content: PROMPT },
-        { role: "assistant", content: first.content },
-        { role: "user", content: "Now call publish_read with the finished read." }
-      ]
-    });
-    payload = findRead(second.content);
-
-    // Last resort: a JSON object written into the reply.
-    if (!payload) {
-      const text = plainText(second.content) || plainText(first.content);
-      if (!text) throw new Error("The model returned neither a tool call nor any text.");
-      payload = extractJson(text);
-    }
-  }
+  let payload =
+    FEED_PROVIDER === "gemini"
+      ? await readViaGemini(PROMPT)
+      : await readViaAnthropic(PROMPT);
 
   // A read with no headline is not a read. Everything else is allowed to be
   // thin: a partial read beats replacing a good one with nothing, and the

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { geminiText, AGENT_PROVIDER, GEMINI_AGENT_MODEL } from "@/lib/providers.mjs";
 import { serverClient, adminClient } from "@/lib/supabase-server";
 import { METHOD_SUMMARY, AGENT_RULES, EXCHANGES, ZONES } from "@/lib/content";
 
@@ -7,6 +8,11 @@ export const maxDuration = 60;
 
 const FREE_DAILY = Number(process.env.FREE_DAILY_MESSAGES || 20);
 const MODEL = process.env.AGENT_MODEL || "claude-haiku-5-5";
+
+// Anthropic by default, deliberately. Visitors paste their own written
+// analysis into this screen for marking, and free tiers generally reserve the
+// right to train on what they are sent. Set AGENT_PROVIDER=gemini to run it
+// free instead - and say so on the TERMS screen if you do.
 
 // Site-wide ceiling on shared-key messages per UTC day. This is the number
 // that decides the worst possible bill, so set it from what you are willing
@@ -104,7 +110,9 @@ export async function POST(req) {
   }
 
   const userKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
-  const usingOwnKey = userKey.startsWith("sk-ant-");
+  const ownAnthropic = userKey.startsWith("sk-ant-");
+  const ownGemini = /^AIza[\w-]{10,}$/.test(userKey);
+  const usingOwnKey = ownAnthropic || ownGemini;
 
   const supabase = await serverClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -174,21 +182,38 @@ export async function POST(req) {
     .select("zone, phase, stamp, payload")
     .order("zone");
 
-  const client = new Anthropic({ apiKey: usingOwnKey ? userKey : process.env.ANTHROPIC_API_KEY });
+  // A visitor's own key decides the provider; otherwise the site's setting does.
+  const provider = ownGemini ? "gemini" : ownAnthropic ? "anthropic" : AGENT_PROVIDER;
+  const system = buildContext(reads);
 
   try {
-    const result = await client.messages.create({
-      model: usingOwnKey ? (body.model || MODEL) : MODEL,
-      max_tokens: 1200,
-      system: buildContext(reads),
-      messages: trimmed
-    });
-    const text = result.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
-    return json({ text, remaining, usingOwnKey });
+    let text;
+
+    if (provider === "gemini") {
+      text = await geminiText({
+        model: GEMINI_AGENT_MODEL,
+        system,
+        messages: trimmed,
+        maxTokens: 1400,
+        key: ownGemini ? userKey : process.env.GEMINI_API_KEY
+      });
+    } else {
+      const client = new Anthropic({ apiKey: ownAnthropic ? userKey : process.env.ANTHROPIC_API_KEY });
+      const result = await client.messages.create({
+        model: ownAnthropic ? (body.model || MODEL) : MODEL,
+        max_tokens: 1400,
+        system,
+        messages: trimmed
+      });
+      text = result.content
+        .filter((b) => b.type === "text")
+        .map((b) => b.text)
+        .join("")
+        .trim();
+    }
+
+    if (!text) return json({ error: "upstream", message: "The analyst returned nothing. Try again." }, 502);
+    return json({ text, remaining, usingOwnKey, provider });
   } catch (err) {
     const status = err?.status;
     if (status === 401) {

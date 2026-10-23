@@ -106,6 +106,12 @@ jobs:
           # Optional. Without it the reads lose oil, the dollar index and
           # fertiliser PPI — the run still succeeds, just thinner.
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          # The free path. With FEED_PROVIDER=gemini the read costs nothing:
+          # headlines come from GDELT and central bank feeds, figures from
+          # official statistics, and the writing from a free-tier model.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FEED_PROVIDER: ${{ vars.FEED_PROVIDER || 'gemini' }}
+          GEMINI_FEED_MODEL: ${{ vars.GEMINI_FEED_MODEL || 'gemini-flash-latest' }}
           FEED_MODEL: ${{ vars.FEED_MODEL || 'claude-sonnet-5-5' }}
           FEED_MAX_TOKENS: ${{ vars.FEED_MAX_TOKENS || '20000' }}
         run: node scripts/feed-read.mjs --zone "${{ steps.resolve.outputs.zone }}" --phase "${{ steps.resolve.outputs.phase }}"
