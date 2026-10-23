@@ -328,7 +328,9 @@ async function readViaGemini(prompt) {
       "You are given verified figures and headlines. Your job is interpretation, not recall.",
     prompt,
     schema: READ_TOOL.input_schema,
-    maxTokens: Math.min(MAX_TOKENS, 8192)
+    // Gemini 3.x spends thinking tokens from this same budget, so a ceiling
+    // sized only for the prose can be exhausted before any is written.
+    maxTokens: Math.min(MAX_TOKENS, 32768)
   });
   if (!out || typeof out !== "object") throw new Error("Gemini returned no object");
   return out;
@@ -392,10 +394,27 @@ async function main() {
 
   console.log(`[${zone}/${phase}] writing the read via ${FEED_PROVIDER}…`);
 
-  let payload =
-    FEED_PROVIDER === "gemini"
-      ? await readViaGemini(PROMPT)
-      : await readViaAnthropic(PROMPT);
+  /**
+   * Free first, paid only as a backstop.
+   *
+   * A free tier answers 503 when it is busy, and retries do not always outlast
+   * that. Rather than leave the screen showing yesterday's read, fall through
+   * to Anthropic — the material is already gathered, so this costs tokens
+   * only, with no search, and only on the days Gemini is unavailable.
+   */
+  let payload;
+  if (FEED_PROVIDER === "gemini") {
+    try {
+      payload = await readViaGemini(PROMPT);
+    } catch (err) {
+      if (!process.env.ANTHROPIC_API_KEY) throw err;
+      console.warn(`  gemini unavailable (${err.message.slice(0, 120)})`);
+      console.warn("  falling back to anthropic on the same material");
+      payload = await readViaAnthropic(PROMPT);
+    }
+  } else {
+    payload = await readViaAnthropic(PROMPT);
+  }
 
   // A read with no headline is not a read. Everything else is allowed to be
   // thin: a partial read beats replacing a good one with nothing, and the
