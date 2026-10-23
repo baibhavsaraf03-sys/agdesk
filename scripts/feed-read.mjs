@@ -200,7 +200,10 @@ Requirements:
 - Say explicitly when a figure is a forecast or projection rather than a traded level.
 - No buy or sell calls and no investment advice. Explain reasoning instead.
 - Write plain prose. No citation markup, reference tags, bracketed source indices or inline source numbering anywhere in any field — sources go in the sources array and nowhere else.
-- Where two sources disagree materially, say so and say which you trust, rather than averaging them or picking silently.`;
+- Where two sources disagree materially, say so and say which you trust, rather than averaging them or picking silently.
+- Match your language to the size of the move. A 3 basis point change in a yield is small; a 0.2% index move is noise. Never write "plunging", "surging", "soaring" or "collapsing" about a move under roughly 1%, or about a yield change under 15 basis points. State the number and say plainly that it is small. Inflating a quiet session into a dramatic one is the single worst thing you can do here, because a reader cannot tell it from a real move.
+- The sources array may contain only outlets that actually appear in the headlines above, or the institutions named in the verified figures. Do not add plausible-sounding sources you did not use, and do not pad the list to look thorough. Three real sources beat six invented ones.
+- If the headlines do not explain the session, your sections should say that explicitly and confine themselves to what the verified figures support. A short honest read is correct; a long one built on inference is not.`;
 }
 
 /** The verified block, or an honest note that nothing could be verified. */

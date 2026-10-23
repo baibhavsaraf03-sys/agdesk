@@ -16,12 +16,10 @@ const picked = process.argv.slice(2).filter((z) => ZONES.includes(z));
 const list = picked.length ? picked : ZONES;
 const verbose = process.argv.includes("--all");
 
-const gap = Number(process.env.GDELT_GAP_MS || 9000) / 1000;
+const gdelt = process.env.NEWS_GDELT === "1";
 console.log(
-  `Checking ${list.length} zone(s). GDELT calls are spaced ${gap}s apart and a zone ` +
-    `stops early once it has enough, so expect ${Math.ceil(list.length * gap)}-${Math.ceil(
-      list.length * 2 * gap
-    )}s. A real scheduled read makes one or two calls, not ${list.length * 2}.`
+  `Checking ${list.length} zone(s) from publisher RSS — no rate limits, so this is quick.` +
+    (gdelt ? " GDELT is enabled and will add ~9s per zone." : "")
 );
 
 let total = 0;
