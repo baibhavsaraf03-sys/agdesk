@@ -272,3 +272,114 @@ footer{border-top:1px solid var(--line);padding-block:14px 8px;font-size:10.5px;
 .md tbody tr:last-child td{border-bottom:0}
 /* The user's own messages keep their line breaks; they are not Markdown. */
 .msg.me .bub{white-space:pre-wrap}
+
+/* ==========================================================================
+   Shell: topbar, collapsible sidebar, stage.
+
+   Replaces a flat strip of twenty-six codes that sat across the top of every
+   screen. Everything was top-level, permanently visible and competing for
+   attention, which is tiring and tells a newcomer nothing about where to
+   begin. The sections are grouped now, and the whole lot folds away.
+   ========================================================================== */
+
+/* Slightly larger and more open than before: this is read, not monitored. */
+body{font-size:13.5px;line-height:1.55}
+
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;align-items:center;
+  gap:12px;height:48px;padding:0 max(12px,env(safe-area-inset-left,0px)) 0 max(12px,env(safe-area-inset-left,0px));
+  background:#040a08;border-bottom:1px solid var(--line)}
+.topbar .sysname{font-weight:600;font-size:11.5px;letter-spacing:.2em;color:var(--fg)}
+.tstat,.tclock{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--fg-dim);
+  letter-spacing:.04em;white-space:nowrap}
+.tclock{font-variant-numeric:tabular-nums}
+.tspacer{flex:1}
+.tbtn{background:none;border:1px solid var(--line);color:var(--fg-dim);font:inherit;font-size:11px;
+  padding:4px 9px;cursor:pointer;white-space:nowrap}
+.tbtn:hover{color:var(--fg);border-color:var(--fg-dim)}
+.tbtn[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.kbd{display:inline-block;border:1px solid var(--line);border-radius:2px;padding:0 3px;margin-right:4px;
+  font-size:10px;color:var(--fg-dim)}
+@media(max-width:620px){ .tclock,.tstat{display:none} .tbtn{padding:4px 7px} }
+
+.navtoggle{display:flex;flex-direction:column;justify-content:center;gap:4px;width:30px;height:30px;
+  padding:0 5px;background:none;border:1px solid var(--line);cursor:pointer;flex:none}
+.navtoggle span{display:block;height:1px;background:var(--fg-dim)}
+.navtoggle[aria-expanded="true"] span{background:var(--accent)}
+
+.cmdwrap{position:sticky;top:calc(48px + env(safe-area-inset-top,0px));z-index:39;
+  background:var(--surface);border-bottom:1px solid var(--line);padding:9px max(12px,env(safe-area-inset-left,0px))}
+
+.shell{flex:1 0 auto;display:flex;min-height:0}
+
+.side{position:fixed;left:0;top:calc(48px + env(safe-area-inset-top,0px));bottom:0;width:230px;
+  overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-right:1px solid var(--line);
+  padding-bottom:24px;z-index:38;transform:translateX(-100%);transition:transform .18s ease;
+  -webkit-overflow-scrolling:touch}
+.shell.navopen .side{transform:none}
+
+.navgroup{padding-bottom:4px}
+.navhead{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--fg-dim);
+  padding:14px 14px 5px}
+.navitem{display:flex;align-items:baseline;gap:9px;width:100%;padding:6px 14px;background:none;border:0;
+  border-left:2px solid transparent;color:var(--fg);text-align:left;font:inherit;font-size:12.5px;cursor:pointer}
+.navitem:hover{background:var(--surface-2)}
+.navitem[aria-current="true"]{background:var(--surface-2);border-left-color:var(--accent);color:var(--accent)}
+.navcode{min-width:40px;font-size:9.5px;letter-spacing:.1em;color:var(--fg-dim)}
+.navitem[aria-current="true"] .navcode{color:var(--accent)}
+.navfoot{margin:14px 14px 0;padding-top:12px;border-top:1px solid var(--line);font-size:10px;
+  line-height:1.6;color:var(--fg-dim)}
+
+.scrim{position:fixed;inset:calc(48px + env(safe-area-inset-top,0px)) 0 0 0;z-index:37;border:0;
+  background:rgba(0,0,0,.55);cursor:pointer}
+
+.stage{flex:1;min-width:0;padding:18px max(16px,env(safe-area-inset-left,0px)) 40px;
+  transition:padding-left .18s ease}
+@media(min-width:900px){
+  .shell.navopen .stage{padding-left:calc(230px + 24px)}
+  .scrim{display:none}
+}
+
+.foot{margin-top:32px;padding-top:14px;border-top:1px solid var(--line);font-size:10.5px;
+  color:var(--fg-dim);line-height:1.7}
+
+/* ---- Front page ---------------------------------------------------------- */
+
+.band{border:1px solid var(--line);background:var(--surface);margin-bottom:18px}
+.bandhead{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;
+  border-bottom:1px solid var(--line);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--fg-dim)}
+.bandrows{display:flex;overflow-x:auto;scrollbar-width:thin}
+.bandcell{flex:none;min-width:148px;padding:9px 12px;border-right:1px solid var(--line)}
+.bandcell:last-child{border-right:0}
+.bn{display:block;font-size:10px;color:var(--fg-dim);margin-bottom:3px;white-space:nowrap}
+.bp{font-size:14px;font-variant-numeric:tabular-nums}
+.bc{margin-left:7px;font-size:11px;font-variant-numeric:tabular-nums}
+
+.cols{display:grid;gap:22px}
+@media(min-width:880px){ .cols{grid-template-columns:1.65fr 1fr;gap:28px} }
+.col{min-width:0;display:flex;flex-direction:column;gap:10px}
+.col.aside{border-left:0}
+@media(min-width:880px){ .col.aside{border-left:1px solid var(--line);padding-left:24px} }
+
+.newslist{list-style:none;margin:2px 0 8px;padding:0}
+.newslist li{padding:9px 0;border-bottom:1px solid var(--line)}
+.newslist li:last-child{border-bottom:0}
+.newslist a{color:var(--fg);text-decoration:none;font-size:13.5px;line-height:1.45;display:block}
+.newslist a:hover{color:var(--accent)}
+.newsmeta{display:block;margin-top:4px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--fg-dim)}
+
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--fg-dim);font:inherit;
+  font-size:12px;padding:8px 11px;cursor:pointer;margin-bottom:-1px}
+.tab:hover{color:var(--fg)}
+.tab[aria-current="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+
+.sessgrid{display:grid;gap:9px}
+@media(min-width:720px){ .sessgrid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.sesscard{display:grid;gap:5px;text-align:left;padding:11px 13px;background:var(--surface);
+  border:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer}
+.sesscard:hover{border-color:var(--accent)}
+.sl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-dim)}
+.sh{font-size:13px;line-height:1.45}
+.st{font-size:10px;color:var(--fg-dim);font-variant-numeric:tabular-nums}

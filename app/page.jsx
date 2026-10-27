@@ -14,7 +14,37 @@ import { Markdown } from "@/lib/markdown";
 /* screens                                                                    */
 /* ========================================================================== */
 
+/**
+ * The sidebar's shape.
+ *
+ * Twenty-six codes in a flat strip across the top gave everything equal
+ * weight and permanent presence, which is exhausting and tells a newcomer
+ * nothing about where to start. Grouping them puts the daily reasons to visit
+ * at the top, the reference material below, and lets the whole thing fold
+ * away when you want to read.
+ */
+const NAV_GROUPS = [
+  { g: "Daily", items: ["HOME", "NEWS"] },
+  { g: "Markets", items: ["WLD", "ASIA", "EMEA", "AMER", "MAC"] },
+  { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
+  { g: "Analysis", items: ["FLOW", "SRC"] },
+  { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
+  { g: "Learn", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
+  { g: "Yours", items: ["AGN", "JRN", "SET"] },
+  { g: "About", items: ["TERMS", "HELP"] }
+];
+
+/** The four news streams. Labels only — fetching happens in /api/news. */
+const NEWS_TABS = [
+  { k: "finance", t: "Finance", d: "Markets, central banks, earnings." },
+  { k: "politics", t: "Politics", d: "Budgets, elections, legislation. Fiscal policy is a market input." },
+  { k: "ir", t: "Intl relations", d: "Conflict, sanctions, trade policy — where supply chains reroute." },
+  { k: "law", t: "Law & regulation", d: "Rulings and rulemaking reprice sectors faster than earnings." }
+];
+
 const SCREENS = [
+  { c: "HOME",  t: "Home",       d: "Today's headlines and the state of the markets" },
+  { c: "NEWS",  t: "News",       d: "Finance, politics, international relations and law" },
   { c: "START", t: "Start",      d: "Never traded before? Begin here" },
   { c: "RISK",  t: "Risk",       d: "How money is actually lost — the evidence and the six mechanisms" },
   { c: "TUT",   t: "Tutorials",  d: "Sixteen lessons from zero. TUT 7 opens lesson seven" },
@@ -263,6 +293,93 @@ function TVWidget({ widget, config, label }) {
   );
 }
 
+
+/** "3h ago" — undated items say nothing rather than guessing. */
+function ago(when) {
+  const t = Date.parse(when || "");
+  if (!isFinite(t)) return "";
+  const mins = Math.round((Date.now() - t) / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return `${days}d ago`;
+}
+
+/**
+ * A stream of headlines.
+ *
+ * Headlines only, linking out. We are not republishing anyone's reporting —
+ * a headline, its publisher and a link is what a newsstand does, and it is
+ * what makes this section free to run.
+ */
+function NewsList({ items, limit, empty = "No headlines retrieved." }) {
+  const rows = limit ? items.slice(0, limit) : items;
+  if (!rows.length) return <div className="empty">{empty}</div>;
+  return (
+    <ul className="newslist">
+      {rows.map((a, i) => (
+        <li key={`${a.url || a.title}-${i}`}>
+          <a href={a.url || undefined} target="_blank" rel="noopener noreferrer">
+            {a.title}
+          </a>
+          <span className="newsmeta">
+            {a.source}
+            {ago(a.when) && <> &middot; {ago(a.when)}</>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The verified figures, flattened across every zone.
+ *
+ * These are the numbers we are allowed to store and reason over — Treasury
+ * yields, ECB reference rates, BIS policy rates, EIA oil — as opposed to the
+ * equity levels that live inside TradingView's iframe. Showing them on the
+ * front page puts the state of the world above the headlines without
+ * pretending to be a trading screen.
+ */
+function FiguresBand({ reads, onOpen }) {
+  const rows = [];
+  const seen = new Set();
+  for (const r of Object.values(reads || {})) {
+    for (const row of r.rows || []) {
+      if (seen.has(row.nm)) continue;
+      seen.add(row.nm);
+      rows.push(row);
+    }
+  }
+  if (!rows.length) return null;
+
+  // Rates and the dollar first: they explain more of any given day than a
+  // single currency pair does.
+  const weight = (nm) =>
+    /Treasury|policy rate|Dollar index/i.test(nm) ? 0 : /crude|oil|fertil/i.test(nm) ? 1 : 2;
+  rows.sort((a, b) => weight(a.nm) - weight(b.nm));
+
+  return (
+    <div className="band">
+      <div className="bandhead">
+        <span>Verified figures</span>
+        <button className="del" onClick={() => onOpen("SRC")}>sources</button>
+      </div>
+      <div className="bandrows">
+        {rows.slice(0, 12).map((r) => (
+          <div className="bandcell" key={r.nm}>
+            <span className="bn">{r.nm}</span>
+            <span className="bp">{r.px}</span>
+            {r.ch && <span className={"bc " + (r.dir || "flat")}>{r.ch}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Collapsible({ num, title, sub, done, onToggleDone, children }) {
   const [open, setOpen] = useState(false);
   return (
@@ -436,7 +553,16 @@ function FlowCard({ flow, num, onAsk }) {
 export default function Terminal() {
   const supabase = useMemo(() => browserClient(), []);
 
-  const [screen, setScreen] = useState("START");
+  const [screen, setScreen] = useState("HOME");
+  // The sidebar starts open on a wide screen and closed on a phone, then
+  // remembers whatever you do to it for the rest of the session.
+  const [navOpen, setNavOpen] = useState(false);
+  // The command bar was permanently in the way. It is still here, still with
+  // history, but behind a key now: press / or the button.
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [news, setNews] = useState(null);
+  const [newsTopic, setNewsTopic] = useState("finance");
+  const [newsBusy, setNewsBusy] = useState(false);
   const [cmd, setCmd] = useState("");
   const [history, setHistory] = useState([]);
   const [histIdx, setHistIdx] = useState(-1);
@@ -504,6 +630,26 @@ export default function Terminal() {
     } catch {}
   }, []);
 
+  /**
+   * Headlines for every stream at once.
+   *
+   * Deliberately not no-store: the route is cached at the edge for ten
+   * minutes because the headlines are identical for every visitor. One fetch
+   * serves everybody, which is why a news section costs nothing to run.
+   */
+  const loadNews = useCallback(async () => {
+    setNewsBusy(true);
+    try {
+      const r = await fetch("/api/news");
+      const j = await r.json();
+      if (j?.streams) setNews(j);
+    } catch {
+      // Leave whatever we had; an empty section says so for itself.
+    } finally {
+      setNewsBusy(false);
+    }
+  }, []);
+
   const loadJournal = useCallback(async () => {
     try {
       const r = await fetch("/api/journal", { cache: "no-store" });
@@ -517,6 +663,34 @@ export default function Terminal() {
     const id = setInterval(loadFeed, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [loadFeed]);
+
+  useEffect(() => {
+    loadNews();
+    const id = setInterval(loadNews, 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [loadNews]);
+
+  // Open the sidebar by default on a wide screen only. On a phone it would
+  // cover the thing you came to read.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 900) setNavOpen(true);
+  }, []);
+
+  // "/" opens the command bar from anywhere, unless you are typing.
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || "");
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        setCmdOpen(true);
+        setTimeout(() => document.getElementById("cmd")?.focus(), 30);
+      } else if (e.key === "Escape") {
+        setCmdOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -683,27 +857,49 @@ export default function Terminal() {
   /* ====================================================================== */
   return (
     <>
-      <div className="chrome gut">
-        <div className="wrap">
-          <div className="statusline">
-            <span className="sysname">AG·DESK</span>
-            <span className="sep">│</span>
-            <span className="stat">
-              <span className={"dot " + (agLive || Object.keys(reads).length ? "live" : "warn")} />
-              <span>{Object.keys(reads).length ? `${Object.keys(reads).length} ZONES LIVE` : "SNAPSHOT"}</span>
-            </span>
-            <span className="sep">│</span>
-            <span>{clock}</span>
-            <button
-              className="petoggle"
-              aria-pressed={peOn}
-              onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}
-              title="Explain jargon inline"
-            >
-              Plain English
-            </button>
-          </div>
+      <header className="topbar">
+        <button
+          className="navtoggle"
+          aria-expanded={navOpen}
+          aria-label={navOpen ? "Hide sections" : "Show sections"}
+          onClick={() => setNavOpen((v) => !v)}
+        >
+          <span /><span /><span />
+        </button>
 
+        <span className="sysname">AG&middot;DESK</span>
+
+        <span className="tstat">
+          <span className={"dot " + (agLive || Object.keys(reads).length ? "live" : "warn")} />
+          {Object.keys(reads).length ? `${Object.keys(reads).length} zones` : "snapshot"}
+        </span>
+
+        <span className="tclock">{clock}</span>
+
+        <span className="tspacer" />
+
+        <button
+          className="tbtn"
+          aria-pressed={peOn}
+          onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}
+          title="Make jargon tappable everywhere"
+        >
+          Plain English
+        </button>
+        <button
+          className="tbtn"
+          onClick={() => {
+            setCmdOpen((v) => !v);
+            setTimeout(() => document.getElementById("cmd")?.focus(), 30);
+          }}
+          title="Jump to a screen by code — or press /"
+        >
+          <span className="kbd">/</span> Command
+        </button>
+      </header>
+
+      {cmdOpen && (
+        <div className="cmdwrap">
           <div className="cmdbar">
             <span className="caret">&gt;</span>
             <input
@@ -711,7 +907,7 @@ export default function Terminal() {
               value={cmd}
               onChange={(e) => setCmd(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); runCmd(); }
+                if (e.key === "Enter") { e.preventDefault(); runCmd(); setCmdOpen(false); }
                 else if (e.key === "ArrowUp") {
                   e.preventDefault();
                   if (history.length) {
@@ -727,28 +923,162 @@ export default function Terminal() {
               autoComplete="off"
               autoCapitalize="characters"
               spellCheck="false"
-              placeholder="type a code — HELP for the list"
+              placeholder="type a code — HELP for the list, Esc to close"
             />
-            <button className="go" onClick={runCmd}>GO</button>
-          </div>
-
-          <div className="fkeys">
-            {SCREENS.map((s) => (
-              <button
-                key={s.c}
-                className="fk"
-                aria-current={screen === s.c}
-                onClick={() => go(s.c)}
-              >
-                <b>{s.c}</b> {s.t.toUpperCase()}
-              </button>
-            ))}
+            <button className="go" onClick={() => { runCmd(); setCmdOpen(false); }}>GO</button>
           </div>
         </div>
-      </div>
+      )}
 
-      <main className="gut">
-        <div className="wrap">
+      <div className={"shell" + (navOpen ? " navopen" : "")}>
+        <nav className="side" aria-label="Sections">
+          {NAV_GROUPS.map(({ g, items }) => (
+            <div className="navgroup" key={g}>
+              <div className="navhead">{g}</div>
+              {items.map((code) => {
+                const sc = SCREENS.find((x) => x.c === code);
+                if (!sc) return null;
+                return (
+                  <button
+                    key={code}
+                    className="navitem"
+                    aria-current={screen === code}
+                    title={sc.d}
+                    onClick={() => {
+                      go(code);
+                      if (window.innerWidth < 900) setNavOpen(false);
+                    }}
+                  >
+                    <span className="navcode">{code}</span>
+                    <span className="navname">{sc.t}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          <div className="navfoot">
+            Educational material, not investment advice.
+          </div>
+        </nav>
+
+        {/* Tapping the page closes the drawer on a phone. */}
+        {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
+
+        <main className="stage">
+          <div className="wrap">
+
+          {/* ---------------- HOME ---------------- */}
+          {screen === "HOME" && (
+            <>
+              <FiguresBand reads={reads} onOpen={go} />
+
+              <Panel
+                code="HOME"
+                title="Today"
+                meta={news?.at ? `HEADLINES ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : newsBusy ? "LOADING" : ""}
+              >
+                <div className="cols">
+                  <div className="col main">
+                    <h3>Finance</h3>
+                    <NewsList
+                      items={news?.streams?.finance?.items || []}
+                      limit={9}
+                      empty={newsBusy ? "Fetching headlines…" : "No headlines retrieved. Publisher feeds may be unreachable."}
+                    />
+                    <button className="btn" onClick={() => { setNewsTopic("finance"); go("NEWS"); }}>
+                      More finance news
+                    </button>
+                  </div>
+
+                  <div className="col aside">
+                    <h3>Why these three matter</h3>
+                    <p className="prose dim">
+                      Politics sets fiscal policy, international relations decides whether goods move, and regulators
+                      reprice whole sectors in an afternoon. Markets react to all three before they react to earnings.
+                    </p>
+                    {NEWS_TABS.filter((t) => t.k !== "finance").map((t) => (
+                      <div className="sec" key={t.k}>
+                        <div className="trackhead">
+                          <span className="tl">{t.t}</span>
+                          <button className="del" onClick={() => { setNewsTopic(t.k); go("NEWS"); }}>open</button>
+                        </div>
+                        <NewsList items={news?.streams?.[t.k]?.items || []} limit={4} empty="—" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Panel>
+
+              <Panel code="SESSIONS" title="Where the sessions stand">
+                <p className="prose dim">
+                  Each zone is read at its open, midday and close. Figures come from official statistics; the
+                  interpretation is written against them.
+                </p>
+                <div className="sessgrid">
+                  {Object.keys(ZONES).map((k) => {
+                    const r = reads[k];
+                    return (
+                      <button className="sesscard" key={k} onClick={() => go(ZONES[k].screen)}>
+                        <span className="sl">{ZONES[k].label}</span>
+                        <span className="sh">{r?.headline || "Awaiting the next scheduled read."}</span>
+                        <span className="st">{r?.stamp || "—"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Panel>
+            </>
+          )}
+
+          {/* ---------------- NEWS ---------------- */}
+          {screen === "NEWS" && (() => {
+            const tab = NEWS_TABS.find((t) => t.k === newsTopic) || NEWS_TABS[0];
+            const stream = news?.streams?.[tab.k];
+            return (
+              <Panel
+                code="NEWS"
+                title={tab.t}
+                meta={news?.at ? new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }).toUpperCase() : "LOADING"}
+              >
+                <div className="tabs">
+                  {NEWS_TABS.map((t) => (
+                    <button
+                      key={t.k}
+                      className="tab"
+                      aria-current={newsTopic === t.k}
+                      onClick={() => setNewsTopic(t.k)}
+                    >
+                      {t.t}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="prose dim">{tab.d}</p>
+
+                <NewsList
+                  items={stream?.items || []}
+                  empty={newsBusy ? "Fetching headlines…" : "Nothing retrieved for this stream."}
+                />
+
+                <div className="sec">
+                  <h3>Coverage</h3>
+                  <p className="prose dim">
+                    {stream?.ok?.length
+                      ? `Answered: ${stream.ok.join(", ")}.`
+                      : "No publisher answered this stream on the last refresh."}
+                    {stream?.failed?.length ? ` Unreachable: ${stream.failed.length}.` : ""}
+                  </p>
+                  <p className="prose dim">
+                    Headlines and links only, drawn from each publisher&apos;s own feed and refreshed every ten
+                    minutes. Follow a link to read the article at its source.
+                  </p>
+                  <button className="btn" onClick={loadNews} disabled={newsBusy}>
+                    {newsBusy ? "Refreshing…" : "Refresh now"}
+                  </button>
+                </div>
+              </Panel>
+            );
+          })()}
 
           {/* ---------------- START ---------------- */}
           {screen === "START" && (
@@ -1679,16 +2009,15 @@ export default function Terminal() {
             </Panel>
           )}
 
-        </div>
-      </main>
+          </div>
 
-      <footer className="gut">
-        <div className="wrap">
-          Educational material, not investment advice. Futures and options are leveraged — losses can exceed the amount
-          deposited. Nothing here is a recommendation to buy or sell anything.{" "}
-          <button className="del" style={{ color: "var(--accent-2)" }} onClick={() => go("TERMS")}>Terms &amp; disclaimer</button>
-        </div>
-      </footer>
+          <footer className="foot">
+            Educational material, not investment advice. Futures and options are leveraged — losses can exceed the
+            amount deposited. Nothing here is a recommendation to buy or sell anything.{" "}
+            <button className="del" style={{ color: "var(--accent-2)" }} onClick={() => go("TERMS")}>Terms &amp; disclaimer</button>
+          </footer>
+        </main>
+      </div>
     </>
   );
 }
