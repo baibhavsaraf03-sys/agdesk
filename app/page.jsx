@@ -560,6 +560,7 @@ export default function Terminal() {
   // The command bar was permanently in the way. It is still here, still with
   // history, but behind a key now: press / or the button.
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
   const [news, setNews] = useState(null);
   const [newsTopic, setNewsTopic] = useState("finance");
   const [newsBusy, setNewsBusy] = useState(false);
@@ -669,6 +670,25 @@ export default function Terminal() {
     const id = setInterval(loadNews, 10 * 60 * 1000);
     return () => clearInterval(id);
   }, [loadNews]);
+
+  // Pick up whatever the inline boot script applied, so the button starts in
+  // agreement with the page it is sitting on.
+  useEffect(() => {
+    try {
+      setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+    } catch {}
+  }, []);
+
+  const flipTheme = useCallback(() => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem("agdesk-theme", next);
+    } catch {
+      // Private windows refuse storage; the choice simply will not persist.
+    }
+  }, [theme]);
 
   // Open the sidebar by default on a wide screen only. On a phone it would
   // cover the thing you came to read.
@@ -888,6 +908,13 @@ export default function Terminal() {
         </button>
         <button
           className="tbtn"
+          onClick={flipTheme}
+          title={theme === "dark" ? "Switch to light" : "Switch to dark"}
+        >
+          {theme === "dark" ? "Light" : "Dark"}
+        </button>
+        <button
+          className="tbtn"
           onClick={() => {
             setCmdOpen((v) => !v);
             setTimeout(() => document.getElementById("cmd")?.focus(), 30);
@@ -972,42 +999,91 @@ export default function Terminal() {
             <>
               <FiguresBand reads={reads} onOpen={go} />
 
-              <Panel
-                code="HOME"
-                title="Today"
-                meta={news?.at ? `HEADLINES ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : newsBusy ? "LOADING" : ""}
-              >
-                <div className="cols">
-                  <div className="col main">
-                    <h3>Finance</h3>
-                    <NewsList
-                      items={news?.streams?.finance?.items || []}
-                      limit={9}
-                      empty={newsBusy ? "Fetching headlines…" : "No headlines retrieved. Publisher feeds may be unreachable."}
-                    />
-                    <button className="btn" onClick={() => { setNewsTopic("finance"); go("NEWS"); }}>
-                      More finance news
-                    </button>
-                  </div>
-
-                  <div className="col aside">
-                    <h3>Why these three matter</h3>
-                    <p className="prose dim">
-                      Politics sets fiscal policy, international relations decides whether goods move, and regulators
-                      reprice whole sectors in an afternoon. Markets react to all three before they react to earnings.
-                    </p>
-                    {NEWS_TABS.filter((t) => t.k !== "finance").map((t) => (
-                      <div className="sec" key={t.k}>
-                        <div className="trackhead">
-                          <span className="tl">{t.t}</span>
-                          <button className="del" onClick={() => { setNewsTopic(t.k); go("NEWS"); }}>open</button>
-                        </div>
-                        <NewsList items={news?.streams?.[t.k]?.items || []} limit={4} empty="—" />
+              {(() => {
+                const fin = news?.streams?.finance?.items || [];
+                const [lead, ...rest] = fin;
+                return (
+                  <Panel
+                    code="HOME"
+                    title="Today"
+                    meta={
+                      news?.at
+                        ? `Updated ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+                        : newsBusy
+                        ? "Loading"
+                        : ""
+                    }
+                  >
+                    {!fin.length && (
+                      <div className="empty">
+                        {newsBusy
+                          ? "Fetching headlines…"
+                          : "No headlines retrieved. Publisher feeds may be unreachable — see Coverage under News."}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </Panel>
+                    )}
+
+                    <div className="cols">
+                      <div className="col main">
+                        {lead && (
+                          <article className="lead">
+                            <a className="leadtitle" href={lead.url || undefined} target="_blank" rel="noopener noreferrer">
+                              {lead.title}
+                            </a>
+                            <div className="newsmeta">
+                              {lead.source}
+                              {ago(lead.when) && <> &middot; {ago(lead.when)}</>}
+                            </div>
+                          </article>
+                        )}
+
+                        {rest.length > 0 && (
+                          <div className="secondary">
+                            {rest.slice(0, 4).map((a, i) => (
+                              <article key={`${a.url || a.title}-${i}`}>
+                                <a href={a.url || undefined} target="_blank" rel="noopener noreferrer">
+                                  {a.title}
+                                </a>
+                                <div className="newsmeta">
+                                  {a.source}
+                                  {ago(a.when) && <> &middot; {ago(a.when)}</>}
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+
+                        {rest.length > 4 && (
+                          <div className="sec">
+                            <h3>Also today</h3>
+                            <NewsList items={rest.slice(4)} limit={8} />
+                            <button className="btn" onClick={() => { setNewsTopic("finance"); go("NEWS"); }}>
+                              All finance news
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="col aside">
+                        <h3>Beyond the markets</h3>
+                        <p className="prose dim">
+                          Politics sets fiscal policy, international relations decides whether goods move, and
+                          regulators reprice whole sectors in an afternoon. Markets answer to all three before they
+                          answer to earnings.
+                        </p>
+                        {NEWS_TABS.filter((t) => t.k !== "finance").map((t) => (
+                          <div className="sec asidesec" key={t.k}>
+                            <div className="trackhead">
+                              <span className="tl">{t.t}</span>
+                              <button className="del" onClick={() => { setNewsTopic(t.k); go("NEWS"); }}>more</button>
+                            </div>
+                            <NewsList items={news?.streams?.[t.k]?.items || []} limit={4} empty="—" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Panel>
+                );
+              })()}
 
               <Panel code="SESSIONS" title="Where the sessions stand">
                 <p className="prose dim">
