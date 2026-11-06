@@ -12,7 +12,7 @@ import {
   POSITIONS, CONTAGION_STATS, CONTAGION_CARDS, CONTAGION_CHAIN,
   PLAYBOOK, COUNTER_STATS, COUNTER_ARGS, VERDICT,
   CAPEX_VS_REVENUE, HYPERSCALER_FCF, ROI_GAP, SCENARIOS,
-  RISK_MODEL, STRESS_TEST, REVISED_STRATEGY,
+  RISK_MODEL, STRESS_TEST, REVISED_STRATEGY, VENDOR_COMMITS,
   SOURCES as DOOM_SOURCES
 } from "@/lib/doomsday";
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
@@ -832,6 +832,8 @@ export default function Terminal() {
   const [histIdx, setHistIdx] = useState(-1);
   const [unknown, setUnknown] = useState("");
   const [doomTab, setDoomTab] = useState("crash");
+  const [posCap, setPosCap] = useState(5000);
+  const [posRisk, setPosRisk] = useState(2);
   const [clock, setClock] = useState("--:--:--");
   const [, tickWorld] = useState(0);
 
@@ -2399,16 +2401,46 @@ export default function Terminal() {
                             </div>
                           ))}
                         </div>
-                        <h4 style={{ marginTop: "1.25rem" }}>Capex-to-Revenue Ratios</h4>
-                        <p className="prose dim">How much each company spends building AI infrastructure relative to AI revenue. Above 50% is unsustainable long-term.</p>
-                        <div className="grid">
-                          {CAPEX_RATIOS.map(r => (
-                            <div className="grow" key={r.name}>
-                              <span className="gnm">{r.name}</span>
-                              <span className="gpx">Capex/Revenue</span>
-                              <span className={`gch ${r.ratio > 50 ? "dn" : r.ratio > 40 ? "flat" : "up"}`}>{r.ratio}%</span>
-                            </div>
-                          ))}
+                        <h4 style={{ marginTop: "1.25rem" }}>Capex-to-Revenue Ratio vs Dot-Com Peak</h4>
+                        <p className="prose dim">How much each company spends building AI infrastructure relative to AI revenue. The dot-com peak was 32%. Most AI companies are well above.</p>
+                        <div style={{ overflowX: "auto", margin: "1rem 0" }}>
+                          <svg viewBox="0 0 520 180" style={{ width: "100%", maxWidth: "520px", height: "auto" }}>
+                            <line x1="50" y1="140" x2="490" y2="140" stroke="var(--rule)" strokeWidth="1"/>
+                            {/* Dot-com reference line */}
+                            <line x1="50" y1={140 - (32/90)*120} x2="490" y2={140 - (32/90)*120} stroke="var(--accent-2)" strokeWidth="1" strokeDasharray="6"/>
+                            <text x="485" y={140 - (32/90)*120 - 4} fill="var(--accent-2)" fontFamily="var(--sans)" fontSize="8" textAnchor="end">Dot-com peak: 32%</text>
+                            {CAPEX_RATIOS.map((r, i) => {
+                              const x = 60 + i * 70;
+                              const h = (r.ratio / 90) * 120;
+                              const clr = r.ratio > 50 ? "var(--dn)" : r.ratio > 32 ? "var(--accent-2)" : "var(--up)";
+                              return (
+                                <g key={r.name}>
+                                  <rect x={x} y={140 - h} width="48" height={h} rx="3" fill={clr} opacity="0.8"/>
+                                  <text x={x + 24} y={140 - h - 4} fill={clr} fontFamily="var(--sans)" fontSize="9" fontWeight="700" textAnchor="middle">{r.ratio}%</text>
+                                  <text x={x + 24} y="155" fill="var(--fg)" fontFamily="var(--sans)" fontSize="8" textAnchor="middle" opacity="0.6">{r.name}</text>
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        </div>
+
+                        <h4 style={{ marginTop: "1.25rem" }}>OpenAI Vendor Commitments ($B)</h4>
+                        <p className="prose dim">$1.15T in total vendor commitments against $33B run-rate revenue. Leverage ratio: 35x.</p>
+                        <div style={{ overflowX: "auto", margin: "1rem 0" }}>
+                          <svg viewBox="0 0 520 180" style={{ width: "100%", maxWidth: "520px", height: "auto" }}>
+                            <line x1="50" y1="150" x2="490" y2="150" stroke="var(--rule)" strokeWidth="1"/>
+                            {VENDOR_COMMITS.map((v, i) => {
+                              const x = 55 + i * 62;
+                              const h = (v.value / 370) * 120;
+                              return (
+                                <g key={v.name}>
+                                  <rect x={x} y={150 - h} width="50" height={h} rx="3" fill="var(--dn)" opacity={0.9 - i * 0.06}/>
+                                  <text x={x + 25} y={150 - h - 4} fill="var(--dn)" fontFamily="var(--sans)" fontSize="8" fontWeight="700" textAnchor="middle">${v.value}B</text>
+                                  <text x={x + 25} y="163" fill="var(--fg)" fontFamily="var(--sans)" fontSize="7" textAnchor="middle" opacity="0.6">{v.name}</text>
+                                </g>
+                              );
+                            })}
+                          </svg>
                         </div>
                       </div>
                     )}
@@ -2448,32 +2480,47 @@ export default function Terminal() {
                         <h3>Economic Models</h3>
                         <p className="prose dim">Charts and data models mapping capex trajectories, free cash flow burn, enterprise ROI gaps, and scenario analysis.</p>
 
-                        {/* Capex vs AI Revenue bar chart */}
+                        {/* Capex vs AI Revenue SVG chart */}
                         <h4 style={{ marginTop: "1.25rem" }}>Hyperscaler Capex vs AI Revenue ($B)</h4>
                         <p className="prose dim">Aggregate Big-5 (MSFT, GOOG, AMZN, META, ORCL). The gap between the bars is money spent that hasn&apos;t come back yet.</p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", margin: "1rem 0" }}>
-                          {CAPEX_VS_REVENUE.map((d, i) => {
-                            const maxVal = 900;
-                            return (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
-                                <span style={{ width: "5rem", textAlign: "right", fontWeight: 600, flexShrink: 0 }}>{d.year}</span>
-                                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                                    <div style={{ height: "14px", width: `${(d.capex / maxVal) * 100}%`, background: "var(--dn)", borderRadius: "2px", minWidth: "2px" }} />
-                                    <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>${d.capex}B capex</span>
-                                  </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                                    <div style={{ height: "14px", width: `${(d.aiRev / maxVal) * 100}%`, background: "var(--up)", borderRadius: "2px", minWidth: "2px" }} />
-                                    <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>${d.aiRev}B AI rev</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", opacity: 0.6, marginBottom: "1.5rem" }}>
-                          <span><span style={{ display: "inline-block", width: "10px", height: "10px", background: "var(--dn)", borderRadius: "2px", marginRight: "4px" }}/>Capex</span>
-                          <span><span style={{ display: "inline-block", width: "10px", height: "10px", background: "var(--up)", borderRadius: "2px", marginRight: "4px" }}/>AI Revenue</span>
+                        <div style={{ overflowX: "auto", margin: "1rem 0" }}>
+                          <svg viewBox="0 0 600 280" style={{ width: "100%", maxWidth: "600px", height: "auto" }}>
+                            {/* Grid */}
+                            <line x1="60" y1="30" x2="60" y2="230" stroke="var(--rule)" strokeWidth="1"/>
+                            <line x1="60" y1="230" x2="570" y2="230" stroke="var(--rule)" strokeWidth="1"/>
+                            {[0, 250, 500, 750, 1000].map((v, i) => {
+                              const y = 230 - (v / 1000) * 200;
+                              return (
+                                <g key={v}>
+                                  <line x1="60" y1={y} x2="570" y2={y} stroke="var(--rule)" strokeWidth="0.5" strokeDasharray="4"/>
+                                  <text x="55" y={y + 3} fill="var(--fg)" fontFamily="var(--sans)" fontSize="8" textAnchor="end" opacity="0.5">${v}B</text>
+                                </g>
+                              );
+                            })}
+                            {/* Bars */}
+                            {CAPEX_VS_REVENUE.map((d, i) => {
+                              const x = 75 + i * 72;
+                              const capH = (d.capex / 1000) * 200;
+                              const revH = (d.aiRev / 1000) * 200;
+                              return (
+                                <g key={i}>
+                                  <rect x={x} y={230 - capH} width="28" height={capH} rx="2" fill="var(--dn)" opacity="0.8"/>
+                                  <rect x={x + 30} y={230 - revH} width="28" height={revH} rx="2" fill="var(--up)" opacity="0.8"/>
+                                  <text x={x + 14} y={230 - capH - 3} fill="var(--dn)" fontFamily="var(--sans)" fontSize="7" fontWeight="700" textAnchor="middle">${d.capex}B</text>
+                                  <text x={x + 44} y={230 - revH - 3} fill="var(--up)" fontFamily="var(--sans)" fontSize="7" fontWeight="700" textAnchor="middle">${d.aiRev}B</text>
+                                  <text x={x + 29} y="245" fill="var(--fg)" fontFamily="var(--sans)" fontSize="8" textAnchor="middle" opacity="0.6">{d.year}</text>
+                                </g>
+                              );
+                            })}
+                            {/* 2025 gap annotation */}
+                            <line x1={75 + 3*72 + 58} y1={230 - (370/1000)*200} x2={75 + 3*72 + 58} y2={230 - (190/1000)*200} stroke="var(--accent-2)" strokeWidth="1.5" strokeDasharray="3"/>
+                            <text x={75 + 3*72 + 65} y={230 - (280/1000)*200} fill="var(--accent-2)" fontFamily="var(--sans)" fontSize="8" fontWeight="700">$180B gap</text>
+                            {/* Legend */}
+                            <rect x="65" y="258" width="10" height="10" rx="1" fill="var(--dn)" opacity="0.8"/>
+                            <text x="80" y="267" fill="var(--fg)" fontFamily="var(--sans)" fontSize="9" opacity="0.6">Capex</text>
+                            <rect x="125" y="258" width="10" height="10" rx="1" fill="var(--up)" opacity="0.8"/>
+                            <text x="140" y="267" fill="var(--fg)" fontFamily="var(--sans)" fontSize="9" opacity="0.6">AI Revenue</text>
+                          </svg>
                         </div>
 
                         {/* FCF snapshot */}
@@ -2558,32 +2605,75 @@ export default function Terminal() {
                     {doomTab === "positions" && (
                       <div className="sec">
                         <h3>Short Positions — Spread Betting</h3>
-                        <p className="prose dim">Via IG Markets or CMC Markets. Spread betting is tax-free in the UK (no CGT). These are the proposed entries, stops and targets. <strong>Not financial advice.</strong></p>
-                        {[1, 2, 3].map(tier => (
-                          <div key={tier}>
-                            <h4 style={{ marginTop: "1rem" }}>Tier {tier} {tier === 1 ? "(Highest conviction)" : tier === 2 ? "(Add if Tier 1 works)" : "(Macro hedge)"}</h4>
-                            <div className="grid">
-                              {POSITIONS.filter(p => p.tier === tier).map(p => (
-                                <div className="grow" key={p.ticker}>
-                                  <span className="gnm">
-                                    <code>{p.ticker}</code> {p.name}
-                                    <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", padding: "0.1rem 0.35rem", borderRadius: "3px",
-                                      background: p.conviction === "high" ? "var(--dn)" : p.conviction === "med" ? "var(--accent-2)" : "var(--rule)",
-                                      color: p.conviction === "high" ? "#fff" : "inherit", opacity: p.conviction === "low" ? 0.6 : 1 }}>
-                                      {p.conviction}
-                                    </span>
-                                  </span>
-                                  <span className="gpx">
-                                    Entry ${p.entry} &middot; Stop ${p.stop} &middot; Target ${p.target}
-                                  </span>
-                                  <span className="gch flat" style={{ fontSize: "0.75rem" }}>{p.reason}</span>
-                                </div>
-                              ))}
-                            </div>
+                        <p className="prose dim">Via IG Markets or CMC Markets. Spread betting is tax-free in the UK (no CGT). <strong>Not financial advice.</strong></p>
+
+                        {/* Interactive position sizer */}
+                        <div style={{ padding: "1rem", border: "1px solid var(--accent)", borderRadius: "8px", margin: "1rem 0" }}>
+                          <h4 style={{ margin: "0 0 0.75rem", color: "var(--accent)" }}>Position Sizer</h4>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                            <label style={{ fontSize: "0.78rem", opacity: 0.7, minWidth: "100px" }}>Starting capital</label>
+                            <input type="range" min="500" max="50000" step="500" value={posCap}
+                              onChange={e => setPosCap(Number(e.target.value))}
+                              style={{ flex: 1, minWidth: "120px", accentColor: "var(--dn)" }}/>
+                            <span style={{ fontWeight: 700, color: "var(--dn)", fontSize: "0.85rem", minWidth: "60px", textAlign: "right" }}>
+                              £{posCap.toLocaleString()}
+                            </span>
                           </div>
-                        ))}
-                        <div style={{ marginTop: "1rem", padding: "0.75rem", background: "var(--rule)", borderRadius: "6px", fontSize: "0.82rem" }}>
-                          <strong>Risk per trade:</strong> Risk at most 0.5-1% of total capital per position. With spread betting leverage (typically 5-20x), a 5% move against you can wipe 50-100% of margin. Size positions accordingly.
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                            <label style={{ fontSize: "0.78rem", opacity: 0.7, minWidth: "100px" }}>Max risk per trade</label>
+                            <input type="range" min="0.5" max="5" step="0.5" value={posRisk}
+                              onChange={e => setPosRisk(Number(e.target.value))}
+                              style={{ flex: 1, minWidth: "120px", accentColor: "var(--dn)" }}/>
+                            <span style={{ fontWeight: 700, color: "var(--dn)", fontSize: "0.85rem", minWidth: "60px", textAlign: "right" }}>
+                              {posRisk}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Position table */}
+                        <div style={{ overflowX: "auto", margin: "1rem 0" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                            <thead>
+                              <tr style={{ borderBottom: "1px solid var(--rule)" }}>
+                                {["Tier", "Target", "Entry", "Stop", "Target $", "Size", "Risk £"].map(h => (
+                                  <th key={h} style={{ padding: "0.5rem", textAlign: "left", fontSize: "0.7rem", textTransform: "uppercase",
+                                    letterSpacing: "0.06em", opacity: 0.6, whiteSpace: "nowrap" }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {POSITIONS.map(p => {
+                                const riskPerTrade = posCap * (posRisk / 100);
+                                const stopDist = Math.abs(p.stop - p.entry);
+                                const ppl = stopDist > 0 ? riskPerTrade / stopDist : 0;
+                                return (
+                                  <tr key={p.ticker} style={{ borderBottom: "1px solid var(--rule)" }}>
+                                    <td style={{ padding: "0.5rem" }}>
+                                      <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "0.15rem 0.4rem", borderRadius: "3px",
+                                        background: p.tier === 1 ? "var(--dn)" : p.tier === 2 ? "var(--accent-2)" : "var(--rule)",
+                                        color: p.tier <= 2 ? "#fff" : "inherit" }}>Tier {p.tier}</span>
+                                    </td>
+                                    <td style={{ padding: "0.5rem" }}>
+                                      <strong><code>{p.ticker}</code></strong>
+                                      <div style={{ fontSize: "0.7rem", opacity: 0.6, maxWidth: "180px" }}>{p.reason}</div>
+                                    </td>
+                                    <td style={{ padding: "0.5rem", fontVariantNumeric: "tabular-nums" }}>${p.entry}</td>
+                                    <td style={{ padding: "0.5rem", color: "var(--dn)", fontVariantNumeric: "tabular-nums" }}>${p.stop}</td>
+                                    <td style={{ padding: "0.5rem", color: "var(--up)", fontVariantNumeric: "tabular-nums" }}>${p.target}</td>
+                                    <td style={{ padding: "0.5rem", fontVariantNumeric: "tabular-nums" }}>£{ppl.toFixed(2)}/pt</td>
+                                    <td style={{ padding: "0.5rem", color: "var(--dn)", fontVariantNumeric: "tabular-nums" }}>£{riskPerTrade.toFixed(0)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style={{ fontSize: "0.7rem", opacity: 0.5, marginBottom: "1rem" }}>
+                          Sizes auto-calculated from your capital and risk %. Prices from Nov 5 close.
+                        </div>
+
+                        <div style={{ padding: "0.75rem", background: "var(--rule)", borderRadius: "6px", fontSize: "0.82rem" }}>
+                          <strong>Risk rules:</strong> Never risk more than {posRisk}% of capital per position. Max 3 positions at once. Always use a stop loss. Take profit in thirds: close ⅓ at +15%, move stop to breakeven, trail the rest. If drawdown hits 10%, close everything.
                         </div>
                       </div>
                     )}
