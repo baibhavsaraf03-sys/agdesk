@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { browserClient, supabaseConfigured } from "@/lib/supabase-browser";
-import { PREMIUM_SCREENS, isPro } from "@/lib/subscription";
 import {
   EXCHANGES, GLOSSARY, METHOD, TUTORIALS, RISKS, FALLBACK_FEED, ZONES
 } from "@/lib/content";
@@ -95,7 +94,7 @@ const ALIAS = {
   WORLD: "WLD", EXCHANGES: "WLD", GLOBAL: "WLD", US: "AMER", AMERICAS: "AMER",
   EUROPE: "EMEA", UK: "EMEA", APAC: "ASIA", PACIFIC: "ASIA",
   BEGIN: "START", LEARN: "TUT", TUTORIAL: "TUT", TUTORIALS: "TUT", BASICS: "TUT",
-  GLOSSARY: "GLOS", TERMS: "GLOS", DEFINE: "GLOS", OPTIONS: "TUT", FUTURES: "TUT",
+  GLOSSARY: "GLOS", DEFINE: "GLOS", OPTIONS: "TUT", FUTURES: "TUT",
   DANGER: "RISK", LOSS: "RISK", LOSSES: "RISK",
   SETTINGS: "SET", KEY: "SET", ACCOUNT: "SET", LOGIN: "SET", SIGNIN: "SET",
   ECONOMICS: "ECON", MICRO: "ECON", MACRO2: "ECON",
@@ -848,7 +847,6 @@ export default function Terminal() {
 
   const [reads, setReads] = useState({});
   const [user, setUser] = useState(null);
-  const [plan, setPlan] = useState("free");
   const [apiKey, setApiKey] = useState("");
   const [quota, setQuota] = useState(null);
 
@@ -998,14 +996,6 @@ export default function Terminal() {
     return () => sub?.subscription?.unsubscribe();
   }, [supabase]);
 
-  // Fetch subscription plan whenever user changes.
-  useEffect(() => {
-    if (!supabase || !user) { setPlan("free"); return; }
-    supabase.from("profiles").select("plan").eq("id", user.id).single()
-      .then(({ data }) => setPlan(data?.plan || "free"))
-      .catch(() => setPlan("free"));
-  }, [supabase, user]);
-
   useEffect(() => {
     if (user) loadJournal();
     else setEntries([]);
@@ -1127,28 +1117,7 @@ export default function Terminal() {
     if (!supabase) return;
     await supabase.auth.signOut();
     setMsgs([]);
-    setPlan("free");
   }
-
-  async function startCheckout() {
-    try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else setToast(data.error || "Could not start checkout");
-    } catch { setToast("Could not connect to payments"); }
-  }
-
-  async function openPortal() {
-    try {
-      const res = await fetch("/api/stripe/portal", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else setToast(data.error || "Could not open portal");
-    } catch { setToast("Could not connect to payments"); }
-  }
-
-  const pro = isPro(plan);
 
   /* ---- derived ---- */
   const ag = reads.ag || FALLBACK_FEED;
@@ -1185,28 +1154,6 @@ export default function Terminal() {
     try { localStorage.setItem("agdesk.seen", "1"); } catch {}
   }
 
-  /** Gate shown in place of a premium screen when the user is on the free plan. */
-  function PremiumGate({ code, title }) {
-    return (
-      <Panel code={code} title={title} meta="Pro">
-        <div className="sec" style={{ textAlign: "center", padding: "3rem 1rem" }}>
-          <h3 style={{ fontSize: "1.5rem", marginBottom: "0.75rem" }}>This is a Pro feature</h3>
-          <p className="prose dim" style={{ maxWidth: 440, margin: "0 auto 1.5rem" }}>
-            Upgrade to Ag Desk Pro for $10/month to unlock the {title}, plus the analyst, journal and every premium screen.
-          </p>
-          {!user ? (
-            <div className="btnrow" style={{ justifyContent: "center" }}>
-              <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
-            </div>
-          ) : (
-            <div className="btnrow" style={{ justifyContent: "center" }}>
-              <button className="btn pri" onClick={startCheckout}>Upgrade to Pro — $10/mo</button>
-            </div>
-          )}
-        </div>
-      </Panel>
-    );
-  }
 
   /* ====================================================================== */
   if (showLanding) {
@@ -1243,14 +1190,14 @@ export default function Terminal() {
 
           <div className="landing-cta">
             <button className="landing-enter" onClick={enterDesk}>
-              Open the desk — free
+              Open the desk →
             </button>
             {supabase && (
               <button className="landing-signin" onClick={() => signIn("google")}>
                 Sign in with Google
               </button>
             )}
-            <p className="landing-note">Free tier includes news, world clocks and 16 tutorials. Pro unlocks the analyst, journal and Doomsday thesis for $10/mo.</p>
+            <p className="landing-note">Free. 160+ news sources, 29 exchanges, 16 tutorials. No sign-up required.</p>
           </div>
 
           <div className="landing-foot">
@@ -1364,7 +1311,6 @@ export default function Terminal() {
                   >
                     <span className="navcode">{code}</span>
                     <span className="navname">{sc.t}</span>
-                    {PREMIUM_SCREENS.has(code) && !pro && <span className="navpro">PRO</span>}
                   </button>
                 );
               })}
@@ -1940,8 +1886,7 @@ export default function Terminal() {
           )}
 
           {/* ---------------- AGN ---------------- */}
-          {screen === "AGN" && !pro && !apiKey && <PremiumGate code="AGN" title="Analyst" />}
-          {screen === "AGN" && (pro || apiKey) && (
+          {screen === "AGN" && (
             <Panel
               code="AGN"
               title="Analyst"
@@ -2218,8 +2163,7 @@ export default function Terminal() {
           )}
 
           {/* ---------------- JRN ---------------- */}
-          {screen === "JRN" && !pro && <PremiumGate code="JRN" title="Journal" />}
-          {screen === "JRN" && pro && (
+          {screen === "JRN" && (
             <Panel code="JRN" title="Journal">
               {!user && (
                 <div className="gate">
@@ -2283,8 +2227,7 @@ export default function Terminal() {
           )}
 
           {/* ---------------- SRC ---------------- */}
-          {screen === "SRC" && !pro && <PremiumGate code="SRC" title="Sources" />}
-          {screen === "SRC" && pro && (
+          {screen === "SRC" && (
             <Panel code="SRC" title="Sources">
               {Object.entries(reads).length === 0 && (ag.sources || []).length === 0 && (
                 <div className="empty">No reads published yet, so there are no sources to list.</div>
@@ -2319,38 +2262,11 @@ export default function Terminal() {
                 ) : (
                   <>
                     <p className="prose dim">
-                      Signing in is free. It gives you access to the desk. Upgrade to Pro for $10/month
-                      to unlock the analyst, journal and Doomsday thesis.
+                      Sign in to save your journal entries and get analyst messages. Everything else works without an account.
                     </p>
                     <div className="btnrow">
                       <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
                     </div>
-                  </>
-                )}
-              </div>
-
-              <div className="sec">
-                <h3>Subscription</h3>
-                {pro ? (
-                  <>
-                    <p className="prose dim">You are on the <strong>Pro</strong> plan. Thank you for supporting Ag Desk.</p>
-                    <div className="btnrow">
-                      <button className="btn" onClick={openPortal}>Manage subscription</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="prose dim">
-                      You are on the <strong>Free</strong> plan. Pro unlocks the Doomsday thesis, AI analyst,
-                      trading journal and source analysis for $10/month.
-                    </p>
-                    {user ? (
-                      <div className="btnrow">
-                        <button className="btn pri" onClick={startCheckout}>Upgrade to Pro — $10/mo</button>
-                      </div>
-                    ) : (
-                      <p className="prose dim">Sign in above to upgrade.</p>
-                    )}
                   </>
                 )}
               </div>
@@ -2402,7 +2318,6 @@ export default function Terminal() {
                 <h3>Status</h3>
                 <div className="grid">
                   <div className="grow"><span className="gnm">Account</span><span className="gpx" /><span className={"gch " + (user ? "up" : "flat")}>{user ? "SIGNED IN" : "SIGNED OUT"}</span></div>
-                  <div className="grow"><span className="gnm">Plan</span><span className="gpx" /><span className={"gch " + (pro ? "up" : "flat")}>{pro ? "PRO" : "FREE"}</span></div>
                   <div className="grow"><span className="gnm">Own API key</span><span className="gpx" /><span className={"gch " + (apiKey ? "up" : "flat")}>{apiKey ? "SET" : "NOT SET"}</span></div>
                   <div className="grow"><span className="gnm">Messages left today</span><span className="gpx" /><span className="gch flat">{apiKey ? "unlimited" : quota != null ? quota : "—"}</span></div>
                   <div className="grow"><span className="gnm">Zones published</span><span className="gpx" /><span className="gch flat">{Object.keys(reads).length}</span></div>
@@ -2500,8 +2415,7 @@ export default function Terminal() {
           )}
 
           {/* ---------------- DOOM ---------------- */}
-          {screen === "DOOM" && !pro && <PremiumGate code="DOOM" title="Doomsday" />}
-          {screen === "DOOM" && pro && (
+          {screen === "DOOM" && (
             <Panel code="DOOM" title="Doomsday" meta="AI bubble short thesis + counter-thesis">
               {(() => {
                 const DOOM_TABS = [
@@ -2532,7 +2446,7 @@ export default function Terminal() {
                     {/* ── CRASH DATA ── */}
                     {doomTab === "crash" && (
                       <div className="sec">
-                        <h3>Nov 5 2026 — The First Break</h3>
+                        <h3>The First Break — 5 Nov 2026</h3>
                         <p className="prose dim">The day the AI bubble showed its first crack. Semiconductor stocks posted their worst single-day loss on record.</p>
                         <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
                           {CRASH_STATS.map((s, i) => (
@@ -2549,7 +2463,7 @@ export default function Terminal() {
                             <div className="grow" key={r.ticker}>
                               <span className="gnm"><code>{r.ticker}</code> {r.name}</span>
                               <span className="gpx">{r.close}</span>
-                              <span className={`gch ${r.drop.startsWith("-") ? "dn" : "up"}`}>{r.drop}</span>
+                              <span className={`gch ${r.drop.startsWith("-") ? "down" : "up"}`}>{r.drop}</span>
                             </div>
                           ))}
                         </div>
