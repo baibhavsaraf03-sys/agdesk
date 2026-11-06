@@ -1770,6 +1770,7 @@ export default function Terminal() {
               meta={zoneKeysFor(screen).map((k) => reads[k]?.stamp).filter(Boolean)[0]?.toUpperCase() || "AWAITING FIRST RUN"}
             >
               <TVWidget
+                key={screen}
                 widget="market-quotes"
                 config={TV_CONFIGS[screen]}
                 label="Index levels, live from TradingView"
