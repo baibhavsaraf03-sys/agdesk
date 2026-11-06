@@ -495,6 +495,10 @@ h3{font-family:var(--sans);font-weight:600;font-size:12.5px;letter-spacing:0.01e
 #cmd{font-size:15px;letter-spacing:0.02em}
 .chip{font-family:var(--sans);font-size:12.5px;border-radius:3px}
 .empty{font-family:var(--sans);font-size:14px;color:var(--fg-dim)}
+@keyframes dotpulse{0%,80%{opacity:0}40%{opacity:1}}
+.loadingdots span{animation:dotpulse 1.4s infinite both}
+.loadingdots span:nth-child(2){animation-delay:0.2s}
+.loadingdots span:nth-child(3){animation-delay:0.4s}
 
 /* Dark mode wants slightly less contrast on the serif, or it glares. */
 :root[data-theme="dark"] .prose{color:#dcd9d1}
@@ -546,3 +550,34 @@ a.dgleadtitle:hover{color:var(--accent)}
 .del{background:none;border:0;padding:0;font-family:var(--sans);font-size:12px;color:var(--fg-dim);
   cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .del:hover{color:var(--accent)}
+
+/* ==========================================================================
+   Landing page.
+   ========================================================================== */
+.landing{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);padding:max(16px,env(safe-area-inset-left,0px))}
+.landing-inner{max-width:720px;width:100%;padding:3rem 1rem;text-align:center}
+.landing-hero{margin-bottom:3rem}
+.landing-title{font-family:var(--mono);font-size:clamp(2.5rem,8vw,4rem);font-weight:700;
+  letter-spacing:-0.02em;color:var(--fg);margin:0 0 0.75rem}
+.landing-dot{color:var(--accent)}
+.landing-sub{font-family:var(--serif);font-size:clamp(1.1rem,3vw,1.4rem);color:var(--fg-dim);
+  margin:0;letter-spacing:-0.01em}
+.landing-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;
+  text-align:left;margin-bottom:3rem}
+.landing-feat{padding:1.25rem;border:1px solid var(--line);border-radius:8px;
+  background:var(--surface)}
+.landing-feat-icon{font-size:1.5rem;margin-bottom:0.5rem}
+.landing-feat h3{font-family:var(--sans);font-size:0.95rem;font-weight:600;margin:0 0 0.4rem;
+  color:var(--fg)}
+.landing-feat p{font-family:var(--serif);font-size:0.85rem;line-height:1.55;margin:0;
+  color:var(--fg-dim)}
+.landing-cta{margin-bottom:2rem}
+.landing-enter{font-family:var(--sans);font-size:1.1rem;font-weight:600;padding:0.85rem 2.5rem;
+  background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;
+  letter-spacing:0.01em;transition:background 0.15s}
+.landing-enter:hover{background:#0a4a40}
+:root[data-theme="dark"] .landing-enter:hover{background:#4da892}
+.landing-note{font-family:var(--sans);font-size:0.8rem;color:var(--fg-dim);margin:0.75rem 0 0}
+.landing-foot{border-top:1px solid var(--line);padding-top:1.5rem}
+.landing-foot p{font-family:var(--serif);font-size:0.85rem;color:var(--fg-dim);margin:0}

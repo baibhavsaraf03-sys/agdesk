@@ -348,7 +348,15 @@ function Digest({ streams, busy }) {
   }, [streams]);
 
   if (!picked.length) {
-    return <div className="empty">{busy ? "Gathering the day…" : "No headlines retrieved."}</div>;
+    return (
+      <div className="empty">
+        {busy ? (
+          <span>Gathering headlines<span className="loadingdots">...</span></span>
+        ) : (
+          <span>Headlines refresh every 10 minutes. <button className="del" style={{ marginLeft: "0.5rem" }} onClick={() => window.location.reload()}>Refresh now</button></span>
+        )}
+      </div>
+    );
   }
 
   const [lead, ...rest] = picked;
@@ -856,6 +864,7 @@ export default function Terminal() {
   const [semMode, setSemMode] = useState("seminar");
   const [semQ, setSemQ] = useState("");
   const [toast, setToast] = useState("");
+  const [showLanding, setShowLanding] = useState(true);
 
   const lessonRefs = useRef({});
   const tutRefs = useRef({});
@@ -866,9 +875,9 @@ export default function Terminal() {
       const h = (location.hash || "").replace("#", "").toUpperCase();
       const saved = localStorage.getItem("agdesk.screen");
       const seen = localStorage.getItem("agdesk.seen") === "1";
-      if (CODES.includes(h)) setScreen(h);
-      else if (seen && CODES.includes(saved)) setScreen(saved);
-      localStorage.setItem("agdesk.seen", "1");
+      if (CODES.includes(h)) { setScreen(h); setShowLanding(false); }
+      else if (seen && CODES.includes(saved)) { setScreen(saved); setShowLanding(false); }
+      else if (seen) setShowLanding(false);
       setDone(JSON.parse(localStorage.getItem("agdesk.done") || "{}"));
       setTdone(JSON.parse(localStorage.getItem("agdesk.tdone") || "{}"));
       setApiKey(localStorage.getItem("agdesk.key") || "");
@@ -1140,7 +1149,59 @@ export default function Terminal() {
 
   const zoneKeysFor = (sc) => Object.keys(ZONES).filter((k) => ZONES[k].screen === sc);
 
+  function enterDesk() {
+    setShowLanding(false);
+    try { localStorage.setItem("agdesk.seen", "1"); } catch {}
+  }
+
   /* ====================================================================== */
+  if (showLanding) {
+    return (
+      <div className="landing">
+        <div className="landing-inner">
+          <div className="landing-hero">
+            <h1 className="landing-title">AG<span className="landing-dot">&middot;</span>DESK</h1>
+            <p className="landing-sub">Markets intelligence. No noise.</p>
+          </div>
+
+          <div className="landing-features">
+            <div className="landing-feat">
+              <div className="landing-feat-icon">📡</div>
+              <h3>160+ sources</h3>
+              <p>Finance, politics, law and international relations — the four inputs that move prices, merged and deduplicated every 10 minutes.</p>
+            </div>
+            <div className="landing-feat">
+              <div className="landing-feat-icon">🌍</div>
+              <h3>29 exchanges</h3>
+              <p>Live session status across five time zones. Asia, EMEA and Americas reads written against the numbers, not about them.</p>
+            </div>
+            <div className="landing-feat">
+              <div className="landing-feat-icon">📉</div>
+              <h3>AI bubble thesis</h3>
+              <p>$300B capex vs $20B revenue. Interactive charts, position sizer, contagion mapping and the counter-arguments — all in one place.</p>
+            </div>
+            <div className="landing-feat">
+              <div className="landing-feat-icon">🎓</div>
+              <h3>Learn from zero</h3>
+              <p>16 tutorials, economics, law, IR and politics frameworks. Plain English mode makes every term tappable.</p>
+            </div>
+          </div>
+
+          <div className="landing-cta">
+            <button className="landing-enter" onClick={enterDesk}>
+              Open the desk →
+            </button>
+            <p className="landing-note">Free. No sign-up required.</p>
+          </div>
+
+          <div className="landing-foot">
+            <p>Built for traders, students and anyone who reads markets seriously.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <header className="topbar">
@@ -1327,11 +1388,11 @@ export default function Terminal() {
                   >
                     {!hasAny && !newsBusy && (
                       <div className="empty">
-                        No headlines retrieved yet. <button className="del" onClick={loadNews}>Refresh</button>
+                        Headlines refresh every 10 minutes. <button className="del" onClick={loadNews}>Refresh now</button>
                       </div>
                     )}
                     {!hasAny && newsBusy && (
-                      <div className="empty">Fetching headlines…</div>
+                      <div className="empty">Fetching headlines<span className="loadingdots">...</span></div>
                     )}
                     <div className="deskgrid">
                       {NEWS_TABS.map((t) => (
@@ -1378,8 +1439,8 @@ export default function Terminal() {
                     return (
                       <button className="sesscard" key={k} onClick={() => go(ZONES[k].screen)}>
                         <span className="sl">{ZONES[k].label}</span>
-                        <span className="sh">{r?.headline || "Awaiting the next scheduled read."}</span>
-                        <span className="st">{r?.stamp || "—"}</span>
+                        <span className="sh">{r?.headline || "Tap to view session details →"}</span>
+                        <span className="st">{r?.stamp || new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
                       </button>
                     );
                   })}
