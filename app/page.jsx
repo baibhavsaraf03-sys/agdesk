@@ -1793,7 +1793,12 @@ export default function Terminal() {
                         {(s.watch || []).length > 0 && (
                           <div className="sec">
                             <h3>Into the next session</h3>
-                            <Grid rows={(s.watch || []).map((w) => ({ nm: w.nm, px: "", ch: w.note, dir: "flat" }))} />
+                            {(s.watch || []).map((w, wi) => (
+                              <div className="block" key={wi}>
+                                <p className="prose" style={{ fontWeight: 600, fontSize: "13px" }}>{w.nm}</p>
+                                {w.note && <p className="prose dim" style={{ fontSize: "13px" }}>{w.note}</p>}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </>
