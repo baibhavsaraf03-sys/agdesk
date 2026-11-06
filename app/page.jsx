@@ -7,8 +7,14 @@ import {
 } from "@/lib/content";
 import { DISCIPLINES, ALL_FRAMEWORKS, SEMINAR_MODES } from "@/lib/disciplines";
 import { FLOWS, FLOWS_PREFACE, FLOW_TAGS } from "@/lib/flows";
+import {
+  CRASH_STATS, CRASH_TABLE, CAPEX_RATIOS, CIRCULAR_STATS, LOOPS,
+  POSITIONS, CONTAGION_STATS, CONTAGION_CARDS, CONTAGION_CHAIN,
+  PLAYBOOK, COUNTER_STATS, COUNTER_ARGS, VERDICT, SOURCES as DOOM_SOURCES
+} from "@/lib/doomsday";
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
-import { Markdown } from "@/lib/markdown";
+import { Markdown, safeHref } from "@/lib/markdown";
+import { cluster, digestPick } from "@/lib/alerts";
 
 /* ========================================================================== */
 /* screens                                                                    */
@@ -25,9 +31,9 @@ import { Markdown } from "@/lib/markdown";
  */
 const NAV_GROUPS = [
   { g: "Daily", items: ["HOME", "NEWS"] },
-  { g: "Markets", items: ["WLD", "ASIA", "EMEA", "AMER", "MAC"] },
+  { g: "Markets", items: ["WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
   { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
-  { g: "Analysis", items: ["FLOW", "SRC"] },
+  { g: "Analysis", items: ["FLOW", "SRC", "DOOM"] },
   { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
   { g: "Learn", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
   { g: "Yours", items: ["AGN", "JRN", "SET"] },
@@ -59,6 +65,7 @@ const SCREENS = [
   { c: "TRD",   t: "Underrated", d: "Markets the coverage is missing, contradiction-screened" },
   { c: "WCH",   t: "Watch",      d: "What decides the next few sessions" },
   { c: "MAC",   t: "Macro",      d: "Dollar, crude, rates, freight and fertiliser" },
+  { c: "FX",    t: "Currencies", d: "Policy rates, two-year yields, speculative positioning and the releases that move the majors" },
   { c: "AGN",   t: "Analyst",    d: "Ask anything — it reads the live feed and remembers the thread" },
   { c: "ECON",  t: "Economics",  d: "14 models you are examined on, each applicable to today's reads" },
   { c: "LAW",   t: "Law",        d: "Doctrine, leading cases and regulators across UK, EU and US" },
@@ -66,6 +73,7 @@ const SCREENS = [
   { c: "POL",   t: "Politics",   d: "Comparative politics and political economy frameworks" },
   { c: "SEM",   t: "Seminar",    d: "Turn any framework plus today's news into a contribution, essay plan or exam answer" },
   { c: "FLOW",  t: "Flows",      d: "The world's largest capital reallocations, and what each is and is not evidence for" },
+  { c: "DOOM",  t: "Doomsday",   d: "AI bubble short thesis — crash data, circular fraud, positions, contagion and counter-thesis" },
   { c: "MTD",   t: "Method",     d: "Nine lessons. MTD 4 opens lesson four" },
   { c: "JRN",   t: "Journal",    d: "Your own daily read, saved to your account" },
   { c: "SRC",   t: "Sources",    d: "Where the current reads came from" },
@@ -92,7 +100,8 @@ const ALIAS = {
   POLITICS: "POL", POLSCI: "POL", COMPARATIVE: "POL",
   ESSAY: "SEM", EXAM: "SEM", REVISION: "SEM", STUDY: "SEM",
   LEGALNOTICE: "TERMS", DISCLAIMER: "TERMS", PRIVACY: "TERMS", TOS: "TERMS",
-  FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW"
+  FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
+  DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
 };
 
 /* ========================================================================== */
@@ -314,6 +323,73 @@ function ago(when) {
  * a headline, its publisher and a link is what a newsstand does, and it is
  * what makes this section free to run.
  */
+/**
+ * The day's digest: the strongest stories across all four streams.
+ *
+ * This is the same selection that goes to the phone each morning, computed by
+ * the same functions in lib/alerts.mjs. One ranking, two surfaces: if the
+ * notification led with a story, it leads here too, and a reader who saw the
+ * digest on their phone is not shown a different front page an hour later.
+ *
+ * It sits above everything because a reader arriving at a markets site wants
+ * to know what happened, not to be told what the site is for.
+ */
+function Digest({ streams, busy }) {
+  const picked = useMemo(() => {
+    if (!streams) return [];
+    const byStream = {};
+    for (const [key, s] of Object.entries(streams)) {
+      byStream[key] = cluster(s?.items || []);
+    }
+    return digestPick(byStream, { digestSize: 8, digestPerStreamMin: 1 });
+  }, [streams]);
+
+  if (!picked.length) {
+    return <div className="empty">{busy ? "Gathering the day…" : "No headlines retrieved."}</div>;
+  }
+
+  const [lead, ...rest] = picked;
+  const label = (k) => NEWS_TABS.find((t) => t.k === k)?.t || k;
+
+  return (
+    <div className="digest">
+      <article className="dglead">
+        <span className="dgtag">{label(lead.stream)}</span>
+        {safeHref(lead.lead.url) ? (
+          <a className="dgleadtitle" href={safeHref(lead.lead.url)} target="_blank" rel="noopener noreferrer nofollow">
+            {lead.lead.title}
+          </a>
+        ) : (
+          <span className="dgleadtitle">{lead.lead.title}</span>
+        )}
+        <span className="dgmeta">
+          {lead.sources.slice(0, 4).join(", ")}
+          {lead.sources.length > 1 && ` · ${lead.sources.length} publishers`}
+        </span>
+      </article>
+
+      <ul className="dglist">
+        {rest.map((c, i) => (
+          <li key={`${c.fingerprint}-${i}`}>
+            <span className="dgtag">{label(c.stream)}</span>
+            {safeHref(c.lead.url) ? (
+              <a href={safeHref(c.lead.url)} target="_blank" rel="noopener noreferrer nofollow">
+                {c.lead.title}
+              </a>
+            ) : (
+              <span className="newsplain">{c.lead.title}</span>
+            )}
+            <span className="dgmeta">
+              {c.sources[0]}
+              {c.sources.length > 1 && ` +${c.sources.length - 1}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function NewsList({ items, limit, empty = "No headlines retrieved." }) {
   const rows = limit ? items.slice(0, limit) : items;
   if (!rows.length) return <div className="empty">{empty}</div>;
@@ -321,9 +397,16 @@ function NewsList({ items, limit, empty = "No headlines retrieved." }) {
     <ul className="newslist">
       {rows.map((a, i) => (
         <li key={`${a.url || a.title}-${i}`}>
-          <a href={a.url || undefined} target="_blank" rel="noopener noreferrer">
-            {a.title}
-          </a>
+          {/* The href comes from a third-party feed, so it is untrusted: only
+              http and https are allowed through, and anything else renders as
+              plain text rather than becoming a clickable javascript: link. */}
+          {safeHref(a.url) ? (
+            <a href={safeHref(a.url)} target="_blank" rel="noopener noreferrer nofollow">
+              {a.title}
+            </a>
+          ) : (
+            <span className="newsplain">{a.title}</span>
+          )}
           <span className="newsmeta">
             {a.source}
             {ago(a.when) && <> &middot; {ago(a.when)}</>}
@@ -550,6 +633,183 @@ function FlowCard({ flow, num, onAsk }) {
   );
 }
 
+/* ========================================================================== */
+/* FX: rates, positioning and the release calendar for the major pairs        */
+/* ========================================================================== */
+
+const FX_PAIRS = ["EUR_USD", "GBP_USD", "USD_JPY"];
+const FX_NAMES = { USD: "US dollar", EUR: "Euro", GBP: "Pound", JPY: "Yen" };
+const FX_BANKS = { USD: "Federal Reserve", EUR: "ECB", GBP: "Bank of England", JPY: "Bank of Japan" };
+// Minutes either side of a release, by tier. A major release gets a wider
+// berth than a second-tier one because it moves the whole dollar complex.
+const FX_WINDOWS = { 1: [45, 20], 2: [15, 10] };
+
+function fxUK(iso, withDay = true) {
+  const d = new Date(iso);
+  return d.toLocaleString("en-GB", { timeZone: "Europe/London", weekday: withDay ? "short" : undefined,
+    day: withDay ? "numeric" : undefined, month: withDay ? "short" : undefined, hour: "2-digit", minute: "2-digit" });
+}
+
+function fxIn(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return `${h} h ${m % 60} min`;
+  return `${Math.round(h / 24)} days`;
+}
+
+function fxTouches(ev, pair) {
+  const [b, q] = pair.split("_");
+  const c = ev.currencies || [];
+  return c.includes(b) || c.includes(q) || c.includes("ALL");
+}
+
+function fxStatus(pair, events, now) {
+  for (const e of events) {
+    if (!fxTouches(e, pair)) continue;
+    const at = Date.parse(e.at), [pre, post] = FX_WINDOWS[e.tier === 1 ? 1 : 2];
+    if (now >= at - pre * 60000 && now <= at + post * 60000) {
+      return { paused: true, until: at + post * 60000, why: e.name };
+    }
+  }
+  const next = events.find((e) => fxTouches(e, pair) && Date.parse(e.at) > now);
+  return { paused: false, next };
+}
+
+function Spark({ values }) {
+  if (!values || values.length < 2) return null;
+  const lo = Math.min(...values, 0), hi = Math.max(...values, 0), rng = hi - lo || 1;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * 200},${38 - ((v - lo) / rng) * 34}`).join(" ");
+  const zero = 38 - ((0 - lo) / rng) * 34;
+  return (
+    <svg viewBox="0 0 200 40" className="fxspark" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" x2="200" y1={zero} y2={zero} className="fxzero" />
+      <polyline points={pts} />
+    </svg>
+  );
+}
+
+function FXScreen() {
+  const [data, setData] = useState(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    let alive = true;
+    const load = () => fetch("/api/fx", { cache: "no-store" }).then((r) => r.json()).then((j) => alive && setData(j)).catch(() => {});
+    load();
+    const a = setInterval(load, 10 * 60000), b = setInterval(() => setNow(Date.now()), 30000);
+    return () => { alive = false; clearInterval(a); clearInterval(b); };
+  }, []);
+
+  if (!data) return <div className="empty">Loading the currency data…</div>;
+  const { rates = {}, positioning = {}, events = [] } = data;
+  const nothing = !Object.keys(rates).length && !Object.keys(positioning).length && !events.length;
+  if (nothing) {
+    // The original line told the reader to run the ingest script, which only
+    // makes sense to whoever owns the machine. On a public page it is noise, so
+    // say what is true and show the reason if there is one.
+    return <div className="empty">Currency data isn&apos;t available right now.{data.error ? ` (${data.error})` : ""}</div>;
+  }
+  const r2 = (v) => (v == null ? "–" : `${Number(v).toFixed(2)}%`);
+  const gap = (a, b, f) => (rates[a]?.[f] != null && rates[b]?.[f] != null ? Number(rates[a][f]) - Number(rates[b][f]) : null);
+
+  return (
+    <>
+      <div className="sec">
+        <h3>Right now</h3>
+        <div className="fxpairs">
+          {FX_PAIRS.map((p) => {
+            const s = fxStatus(p, events, now);
+            return (
+              <div key={p} className={"fxpair" + (s.paused ? " paused" : "")}>
+                <div className="fxpn">{p.replace("_", "/")}</div>
+                <div className={"fxst " + (s.paused ? "down" : "up")}>{s.paused ? "High event risk" : "Clear"}</div>
+                <div className="fxsub">
+                  {s.paused
+                    ? `${s.why} — window ends ${fxUK(new Date(s.until).toISOString(), false)}`
+                    : s.next ? `Next: ${s.next.name} in ${fxIn(Date.parse(s.next.at) - now)}` : "Nothing scheduled"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="fxnote">In the 45 minutes before a major release and the 20 after it — 15 and 10 for smaller ones — a currency can move further in a second than a normal stop-loss allows, and the spread widens at the same moment. Systematic strategies commonly stand aside across these windows rather than guess the number.</p>
+      </div>
+
+      <div className="sec">
+        <h3>Interest rates</h3>
+        <div className="grid">
+          <div className="ghead"><span>Currency</span><span>Policy rate · 2-year yield</span></div>
+          {["USD", "EUR", "GBP", "JPY"].filter((c) => rates[c]).map((c) => (
+            <div className="grow" key={c}>
+              <span className="gnm">{FX_NAMES[c]} <span className="fxdim">· {FX_BANKS[c]}</span></span>
+              <span className="gpx">{r2(rates[c].policy_rate)}</span>
+              <span className="gch flat">{r2(rates[c].yield_2y)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="grid">
+          <div className="ghead"><span>Pair</span><span>Rate gap · 2-year gap</span></div>
+          {FX_PAIRS.map((p) => {
+            const [b, q] = p.split("_"), g1 = gap(b, q, "policy_rate"), g2 = gap(b, q, "yield_2y");
+            const f = (v) => (v == null ? "–" : `${v > 0 ? "+" : ""}${v.toFixed(2)}`);
+            return (
+              <div className="grow" key={p}>
+                <span className="gnm">{p.replace("_", "/")}</span>
+                <span className={"gpx " + (g1 > 0 ? "up" : g1 < 0 ? "down" : "")}>{f(g1)}</span>
+                <span className={"gch " + (g2 > 0 ? "up" : g2 < 0 ? "down" : "flat")}>{f(g2)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="fxnote">A positive gap means the first currency pays more interest, which tends to support the pair over months, not minutes. The 2-year yield is what markets expect rates to average over the next two years, so it moves before the central bank does. No free source publishes UK or Japanese 2-year yields.{rates.USD?.asof ? ` Updated ${rates.USD.asof}.` : ""}</p>
+      </div>
+
+      <div className="sec">
+        <h3>What big traders are betting</h3>
+        {["EUR", "GBP", "JPY", "USD"].filter((c) => positioning[c]?.length).map((c) => {
+          const rows = positioning[c], last = rows[rows.length - 1], rank = last.pct_rank;
+          const tone = rank == null ? "" : rank >= 90 || rank <= 10 ? " extreme" : "";
+          return (
+            <div className={"fxpos" + tone} key={c}>
+              <div className="fxposh">
+                <b>{FX_NAMES[c]}</b>
+                <span className={last.net_contracts >= 0 ? "up" : "down"}>
+                  {last.net_contracts >= 0 ? "net long " : "net short "}{Math.abs(last.net_contracts).toLocaleString("en-GB")}
+                </span>
+              </div>
+              <div className="fxbar" title="Where this sits against the last three years">
+                <span style={{ left: `${rank ?? 50}%` }} />
+              </div>
+              <div className="fxsub">
+                {rank == null ? "Not enough history to rank yet" : `${Math.round(rank)} / 100 against the last 3 years`}
+                {tone && " · near an extreme"} · week of {last.report_date}
+              </div>
+              <Spark values={rows.slice(-52).map((r) => r.net_contracts)} />
+            </div>
+          );
+        })}
+        <p className="fxnote">Hedge funds' futures positions from the CFTC, published each Friday for the Tuesday before. Near an extreme means a crowded bet: worth knowing, because when everyone is on one side the exit can be sudden. It's background, not a trigger.</p>
+      </div>
+
+      <div className="sec">
+        <h3>Release calendar</h3>
+        <div className="grid">
+          <div className="ghead"><span>Release (UK time)</span><span>Moves</span></div>
+          {events.slice(0, 16).map((e, i) => (
+            <div className="grow" key={i}>
+              <span className="gnm">{e.name}{e.tier === 1 && <span className="fxtier">MAJOR</span>}</span>
+              <span className="gpx">{fxUK(e.at)}</span>
+              <span className="gch flat">{(e.currencies || []).join(" ")}</span>
+            </div>
+          ))}
+          {!events.length && <div className="grow"><span className="gnm fxdim">No upcoming releases stored.</span><span /><span /></div>}
+        </div>
+        <p className="fxnote">Dates from the Fed, ECB, Bank of England, Bank of Japan, BLS, ONS and Eurostat. The Bank of Japan has no fixed announcement time, so it's covered by an early and a late marker.</p>
+      </div>
+    </>
+  );
+}
+
 export default function Terminal() {
   const supabase = useMemo(() => browserClient(), []);
 
@@ -568,6 +828,7 @@ export default function Terminal() {
   const [history, setHistory] = useState([]);
   const [histIdx, setHistIdx] = useState(-1);
   const [unknown, setUnknown] = useState("");
+  const [doomTab, setDoomTab] = useState("crash");
   const [clock, setClock] = useState("--:--:--");
   const [, tickWorld] = useState(0);
 
@@ -997,15 +1258,28 @@ export default function Terminal() {
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (
             <>
+              <Panel
+                code="DIGEST"
+                title="The digest"
+                meta={
+                  news?.at
+                    ? `Updated ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+                    : newsBusy
+                    ? "Loading"
+                    : ""
+                }
+              >
+                <Digest streams={news?.streams} busy={newsBusy} />
+              </Panel>
+
               <FiguresBand reads={reads} onOpen={go} />
 
               {(() => {
                 const fin = news?.streams?.finance?.items || [];
-                const [lead, ...rest] = fin;
                 return (
                   <Panel
                     code="HOME"
-                    title="Today"
+                    title="By desk"
                     meta={
                       news?.at
                         ? `Updated ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
@@ -1022,64 +1296,19 @@ export default function Terminal() {
                       </div>
                     )}
 
-                    <div className="cols">
-                      <div className="col main">
-                        {lead && (
-                          <article className="lead">
-                            <a className="leadtitle" href={lead.url || undefined} target="_blank" rel="noopener noreferrer">
-                              {lead.title}
-                            </a>
-                            <div className="newsmeta">
-                              {lead.source}
-                              {ago(lead.when) && <> &middot; {ago(lead.when)}</>}
-                            </div>
-                          </article>
-                        )}
-
-                        {rest.length > 0 && (
-                          <div className="secondary">
-                            {rest.slice(0, 4).map((a, i) => (
-                              <article key={`${a.url || a.title}-${i}`}>
-                                <a href={a.url || undefined} target="_blank" rel="noopener noreferrer">
-                                  {a.title}
-                                </a>
-                                <div className="newsmeta">
-                                  {a.source}
-                                  {ago(a.when) && <> &middot; {ago(a.when)}</>}
-                                </div>
-                              </article>
-                            ))}
+                    {/* Four desks across the full width. This used to be a
+                        narrow rail beside a lead story; with the lead now in
+                        the digest above, the space belongs to the desks. */}
+                    <div className="deskgrid">
+                      {NEWS_TABS.map((t) => (
+                        <div className="sec asidesec" key={t.k}>
+                          <div className="trackhead">
+                            <span className="tl">{t.t}</span>
+                            <button className="del" onClick={() => { setNewsTopic(t.k); go("NEWS"); }}>more</button>
                           </div>
-                        )}
-
-                        {rest.length > 4 && (
-                          <div className="sec">
-                            <h3>Also today</h3>
-                            <NewsList items={rest.slice(4)} limit={8} />
-                            <button className="btn" onClick={() => { setNewsTopic("finance"); go("NEWS"); }}>
-                              All finance news
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="col aside">
-                        <h3>Beyond the markets</h3>
-                        <p className="prose dim">
-                          Politics sets fiscal policy, international relations decides whether goods move, and
-                          regulators reprice whole sectors in an afternoon. Markets answer to all three before they
-                          answer to earnings.
-                        </p>
-                        {NEWS_TABS.filter((t) => t.k !== "finance").map((t) => (
-                          <div className="sec asidesec" key={t.k}>
-                            <div className="trackhead">
-                              <span className="tl">{t.t}</span>
-                              <button className="del" onClick={() => { setNewsTopic(t.k); go("NEWS"); }}>more</button>
-                            </div>
-                            <NewsList items={news?.streams?.[t.k]?.items || []} limit={4} empty="—" />
-                          </div>
-                        ))}
-                      </div>
+                          <NewsList items={news?.streams?.[t.k]?.items || []} limit={4} empty="—" />
+                        </div>
+                      ))}
                     </div>
                   </Panel>
                 );
@@ -1514,6 +1743,12 @@ export default function Terminal() {
               <TVWidget widget="market-quotes" config={TV_CONFIGS.MAC} label="Rates, dollar and energy, live" />
               {(ag.macro || []).map((s, i) => <Block key={i} {...s} />)}
               {(ag.macro || []).length === 0 && <div className="empty">No macro section in the current read.</div>}
+            </Panel>
+          )}
+
+          {screen === "FX" && (
+            <Panel code="FX" title="Currencies" meta="EUR/USD · GBP/USD · USD/JPY">
+              <FXScreen />
             </Panel>
           )}
 
@@ -2044,6 +2279,249 @@ export default function Terminal() {
                   honest, not a substitute for advice from a solicitor.
                 </p>
               </div>
+            </Panel>
+          )}
+
+          {/* ---------------- DOOM ---------------- */}
+          {screen === "DOOM" && (
+            <Panel code="DOOM" title="Doomsday" meta="AI bubble short thesis + counter-thesis">
+              {(() => {
+                const DOOM_TABS = [
+                  { k: "crash", t: "Crash Data" },
+                  { k: "circular", t: "Circular Fraud" },
+                  { k: "positions", t: "Positions" },
+                  { k: "contagion", t: "Contagion" },
+                  { k: "playbook", t: "Playbook" },
+                  { k: "counter", t: "Counter-Thesis" },
+                ];
+                return (
+                  <>
+                    <div className="tabs" style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+                      {DOOM_TABS.map(tb => (
+                        <button key={tb.k} className={`tab ${doomTab === tb.k ? "on" : ""}`}
+                          style={{
+                            padding: "0.35rem 0.75rem", border: "1px solid var(--rule)",
+                            borderRadius: "4px", cursor: "pointer", fontSize: "0.82rem",
+                            background: doomTab === tb.k ? "var(--accent)" : "transparent",
+                            color: doomTab === tb.k ? "#fff" : "var(--fg)",
+                          }}
+                          onClick={() => setDoomTab(tb.k)}>{tb.t}</button>
+                      ))}
+                    </div>
+
+                    {/* ── CRASH DATA ── */}
+                    {doomTab === "crash" && (
+                      <div className="sec">
+                        <h3>Nov 5 2026 — The First Break</h3>
+                        <p className="prose dim">The day the AI bubble showed its first crack. Semiconductor stocks posted their worst single-day loss on record.</p>
+                        <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
+                          {CRASH_STATS.map((s, i) => (
+                            <div key={i} style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "6px", borderLeft: `3px solid ${s.tone === "red" ? "var(--dn)" : "var(--accent-2)"}` }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: s.tone === "red" ? "var(--dn)" : "var(--accent-2)" }}>{s.value}</div>
+                              <div style={{ fontSize: "0.82rem", fontWeight: 600 }}>{s.label}</div>
+                              <div style={{ fontSize: "0.75rem", opacity: 0.6 }}>{s.note}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <h4>Closing Prices</h4>
+                        <div className="grid">
+                          {CRASH_TABLE.map(r => (
+                            <div className="grow" key={r.ticker}>
+                              <span className="gnm"><code>{r.ticker}</code> {r.name}</span>
+                              <span className="gpx">{r.close}</span>
+                              <span className={`gch ${r.drop.startsWith("-") ? "dn" : "up"}`}>{r.drop}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <h4 style={{ marginTop: "1.25rem" }}>Capex-to-Revenue Ratios</h4>
+                        <p className="prose dim">How much each company spends building AI infrastructure relative to AI revenue. Above 50% is unsustainable long-term.</p>
+                        <div className="grid">
+                          {CAPEX_RATIOS.map(r => (
+                            <div className="grow" key={r.name}>
+                              <span className="gnm">{r.name}</span>
+                              <span className="gpx">Capex/Revenue</span>
+                              <span className={`gch ${r.ratio > 50 ? "dn" : r.ratio > 40 ? "flat" : "up"}`}>{r.ratio}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── CIRCULAR FRAUD ── */}
+                    {doomTab === "circular" && (
+                      <div className="sec">
+                        <h3>Circular Financing — The Thesis</h3>
+                        <p className="prose">AI companies are buying into each other to inflate revenue and capex figures. The same money circulates, each entity counts it as revenue, and the stock prices rise on those figures. This is the Nortel/Enron playbook.</p>
+                        <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
+                          {CIRCULAR_STATS.map((s, i) => (
+                            <div key={i} style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "6px", borderLeft: `3px solid ${s.tone === "red" ? "var(--dn)" : "var(--accent-2)"}` }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: s.tone === "red" ? "var(--dn)" : "var(--accent-2)" }}>{s.value}</div>
+                              <div style={{ fontSize: "0.82rem", fontWeight: 600 }}>{s.label}</div>
+                              <div style={{ fontSize: "0.75rem", opacity: 0.6 }}>{s.note}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <h4>The Five Loops</h4>
+                        {LOOPS.map((l, i) => (
+                          <Block key={i} title={l.name} startOpen={i === 0}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", margin: "0.5rem 0", fontSize: "0.85rem" }}>
+                              <code style={{ padding: "0.2rem 0.5rem", background: "var(--rule)", borderRadius: "4px" }}>{l.from}</code>
+                              <span style={{ opacity: 0.5 }}>{l.action} &rarr;</span>
+                              <code style={{ padding: "0.2rem 0.5rem", background: "var(--rule)", borderRadius: "4px" }}>{l.to}</code>
+                              <span style={{ opacity: 0.5 }}>&rarr; {l.back}</span>
+                            </div>
+                            <p className="prose dim">{l.note}</p>
+                          </Block>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── POSITIONS ── */}
+                    {doomTab === "positions" && (
+                      <div className="sec">
+                        <h3>Short Positions — Spread Betting</h3>
+                        <p className="prose dim">Via IG Markets or CMC Markets. Spread betting is tax-free in the UK (no CGT). These are the proposed entries, stops and targets. <strong>Not financial advice.</strong></p>
+                        {[1, 2, 3].map(tier => (
+                          <div key={tier}>
+                            <h4 style={{ marginTop: "1rem" }}>Tier {tier} {tier === 1 ? "(Highest conviction)" : tier === 2 ? "(Add if Tier 1 works)" : "(Macro hedge)"}</h4>
+                            <div className="grid">
+                              {POSITIONS.filter(p => p.tier === tier).map(p => (
+                                <div className="grow" key={p.ticker}>
+                                  <span className="gnm">
+                                    <code>{p.ticker}</code> {p.name}
+                                    <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", padding: "0.1rem 0.35rem", borderRadius: "3px",
+                                      background: p.conviction === "high" ? "var(--dn)" : p.conviction === "med" ? "var(--accent-2)" : "var(--rule)",
+                                      color: p.conviction === "high" ? "#fff" : "inherit", opacity: p.conviction === "low" ? 0.6 : 1 }}>
+                                      {p.conviction}
+                                    </span>
+                                  </span>
+                                  <span className="gpx">
+                                    Entry ${p.entry} &middot; Stop ${p.stop} &middot; Target ${p.target}
+                                  </span>
+                                  <span className="gch flat" style={{ fontSize: "0.75rem" }}>{p.reason}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <div style={{ marginTop: "1rem", padding: "0.75rem", background: "var(--rule)", borderRadius: "6px", fontSize: "0.82rem" }}>
+                          <strong>Risk per trade:</strong> Risk at most 0.5-1% of total capital per position. With spread betting leverage (typically 5-20x), a 5% move against you can wipe 50-100% of margin. Size positions accordingly.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── CONTAGION ── */}
+                    {doomTab === "contagion" && (
+                      <div className="sec">
+                        <h3>Contagion Map</h3>
+                        <p className="prose dim">The AI bust doesn&apos;t stay in tech. These are the knock-on sectors already showing stress.</p>
+                        <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
+                          {CONTAGION_STATS.map((s, i) => (
+                            <div key={i} style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "6px", borderLeft: `3px solid ${s.tone === "red" ? "var(--dn)" : "var(--accent-2)"}` }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: s.tone === "red" ? "var(--dn)" : "var(--accent-2)" }}>{s.value}</div>
+                              <div style={{ fontSize: "0.82rem", fontWeight: 600 }}>{s.label}</div>
+                              <div style={{ fontSize: "0.75rem", opacity: 0.6 }}>{s.note}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <h4>Sector Impact</h4>
+                        {CONTAGION_CARDS.map((c, i) => (
+                          <Block key={i} title={c.title} startOpen={i < 2}>
+                            <p className="prose dim">{c.body}</p>
+                          </Block>
+                        ))}
+                        <h4 style={{ marginTop: "1.25rem" }}>Contagion Chain</h4>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          {CONTAGION_CHAIN.map((s, i) => (
+                            <div key={i} style={{
+                              padding: "0.6rem 0.75rem", borderRadius: "6px", fontSize: "0.85rem",
+                              borderLeft: `3px solid ${s.tone === "red" ? "var(--dn)" : s.tone === "amber" ? "var(--accent-2)" : "var(--rule)"}`,
+                              background: "var(--rule)", opacity: s.tone === "dim" ? 0.6 : 1,
+                            }}>
+                              <strong>{s.stage}:</strong> {s.text}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── PLAYBOOK ── */}
+                    {doomTab === "playbook" && (
+                      <div className="sec">
+                        <h3>Execution Playbook</h3>
+                        <p className="prose dim">Step-by-step timeline for entering short positions via UK spread betting. Read the Counter-Thesis tab first.</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
+                          {PLAYBOOK.map((p, i) => (
+                            <div key={i} style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "6px" }}>
+                              <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--accent)", marginBottom: "0.35rem" }}>{p.when}</div>
+                              <p className="prose dim" style={{ margin: 0 }}>{p.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── COUNTER-THESIS ── */}
+                    {doomTab === "counter" && (
+                      <div className="sec">
+                        <h3>Counter-Thesis — What Blows This Up</h3>
+                        <p className="prose">Every short thesis needs a kill list: the things that, if true, make you wrong. These are the strongest counterarguments and the evidence behind them.</p>
+                        <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
+                          {COUNTER_STATS.map((s, i) => (
+                            <div key={i} style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "6px", borderLeft: "3px solid var(--up)" }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--up)" }}>{s.value}</div>
+                              <div style={{ fontSize: "0.82rem", fontWeight: 600 }}>{s.label}</div>
+                              <div style={{ fontSize: "0.75rem", opacity: 0.6 }}>{s.note}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {COUNTER_ARGS.map((c, i) => (
+                          <Block key={i} title={`${c.risk === "CRITICAL" ? "⚠️ " : ""}${c.title}`} startOpen={i < 3}>
+                            <div style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.4rem", borderRadius: "3px", display: "inline-block", marginBottom: "0.5rem",
+                              background: c.risk === "CRITICAL" ? "var(--dn)" : c.risk === "HIGH" ? "var(--accent-2)" : "var(--rule)",
+                              color: c.risk === "CRITICAL" ? "#fff" : "inherit" }}>
+                              RISK: {c.risk}
+                            </div>
+                            <p className="prose dim">{c.body}</p>
+                            <p className="prose" style={{ fontStyle: "italic", opacity: 0.8 }}>{c.implication}</p>
+                          </Block>
+                        ))}
+
+                        <div style={{ marginTop: "1.5rem", padding: "1rem", border: "2px solid var(--accent)", borderRadius: "8px" }}>
+                          <h4 style={{ margin: "0 0 0.5rem" }}>Verdict: {VERDICT.thesis_score}</h4>
+                          <p className="prose dim">{VERDICT.summary}</p>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "0.75rem" }}>
+                            <div style={{ padding: "0.5rem", borderRadius: "6px", background: "var(--rule)" }}>
+                              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--up)", marginBottom: "0.25rem" }}>STRONGEST POINT</div>
+                              <div style={{ fontSize: "0.82rem" }}>{VERDICT.strongest_point}</div>
+                            </div>
+                            <div style={{ padding: "0.5rem", borderRadius: "6px", background: "var(--rule)" }}>
+                              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--dn)", marginBottom: "0.25rem" }}>WEAKEST POINT</div>
+                              <div style={{ fontSize: "0.82rem" }}>{VERDICT.weakest_point}</div>
+                            </div>
+                          </div>
+                          <div style={{ marginTop: "0.75rem", padding: "0.5rem", borderRadius: "6px", background: "var(--rule)" }}>
+                            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)", marginBottom: "0.25rem" }}>RECOMMENDATION</div>
+                            <div style={{ fontSize: "0.82rem" }}>{VERDICT.recommendation}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="sec" style={{ marginTop: "1.5rem" }}>
+                      <h4>Sources</h4>
+                      <div className="grid">
+                        {DOOM_SOURCES.map((s, i) => (
+                          <div className="grow" key={i}>
+                            <span className="gnm">{s.t}</span>
+                            <a href={s.u} target="_blank" rel="noopener noreferrer" className="gpx" style={{ fontSize: "0.75rem", wordBreak: "break-all" }}>{s.u}</a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </Panel>
           )}
 
