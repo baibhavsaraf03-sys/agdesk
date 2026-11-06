@@ -10,7 +10,10 @@ import { FLOWS, FLOWS_PREFACE, FLOW_TAGS } from "@/lib/flows";
 import {
   CRASH_STATS, CRASH_TABLE, CAPEX_RATIOS, CIRCULAR_STATS, LOOPS,
   POSITIONS, CONTAGION_STATS, CONTAGION_CARDS, CONTAGION_CHAIN,
-  PLAYBOOK, COUNTER_STATS, COUNTER_ARGS, VERDICT, SOURCES as DOOM_SOURCES
+  PLAYBOOK, COUNTER_STATS, COUNTER_ARGS, VERDICT,
+  CAPEX_VS_REVENUE, HYPERSCALER_FCF, ROI_GAP, SCENARIOS,
+  RISK_MODEL, STRESS_TEST, REVISED_STRATEGY,
+  SOURCES as DOOM_SOURCES
 } from "@/lib/doomsday";
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
 import { Markdown, safeHref } from "@/lib/markdown";
@@ -2289,10 +2292,12 @@ export default function Terminal() {
                 const DOOM_TABS = [
                   { k: "crash", t: "Crash Data" },
                   { k: "circular", t: "Circular Fraud" },
+                  { k: "models", t: "Models" },
                   { k: "positions", t: "Positions" },
                   { k: "contagion", t: "Contagion" },
                   { k: "playbook", t: "Playbook" },
                   { k: "counter", t: "Counter-Thesis" },
+                  { k: "stress", t: "Stress Test" },
                 ];
                 return (
                   <>
@@ -2373,6 +2378,118 @@ export default function Terminal() {
                             <p className="prose dim">{l.note}</p>
                           </Block>
                         ))}
+                      </div>
+                    )}
+
+                    {/* ── MODELS ── */}
+                    {doomTab === "models" && (
+                      <div className="sec">
+                        <h3>Economic Models</h3>
+                        <p className="prose dim">Charts and data models mapping capex trajectories, free cash flow burn, enterprise ROI gaps, and scenario analysis.</p>
+
+                        {/* Capex vs AI Revenue bar chart */}
+                        <h4 style={{ marginTop: "1.25rem" }}>Hyperscaler Capex vs AI Revenue ($B)</h4>
+                        <p className="prose dim">Aggregate Big-5 (MSFT, GOOG, AMZN, META, ORCL). The gap between the bars is money spent that hasn&apos;t come back yet.</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", margin: "1rem 0" }}>
+                          {CAPEX_VS_REVENUE.map((d, i) => {
+                            const maxVal = 900;
+                            return (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
+                                <span style={{ width: "5rem", textAlign: "right", fontWeight: 600, flexShrink: 0 }}>{d.year}</span>
+                                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                    <div style={{ height: "14px", width: `${(d.capex / maxVal) * 100}%`, background: "var(--dn)", borderRadius: "2px", minWidth: "2px" }} />
+                                    <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>${d.capex}B capex</span>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                    <div style={{ height: "14px", width: `${(d.aiRev / maxVal) * 100}%`, background: "var(--up)", borderRadius: "2px", minWidth: "2px" }} />
+                                    <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>${d.aiRev}B AI rev</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div style={{ display: "flex", gap: "1rem", fontSize: "0.75rem", opacity: 0.6, marginBottom: "1.5rem" }}>
+                          <span><span style={{ display: "inline-block", width: "10px", height: "10px", background: "var(--dn)", borderRadius: "2px", marginRight: "4px" }}/>Capex</span>
+                          <span><span style={{ display: "inline-block", width: "10px", height: "10px", background: "var(--up)", borderRadius: "2px", marginRight: "4px" }}/>AI Revenue</span>
+                        </div>
+
+                        {/* FCF snapshot */}
+                        <h4>Free Cash Flow Snapshot — Q1 2026 ($B)</h4>
+                        <p className="prose dim">Cash flow after capex. Negative FCF means the company is spending more on AI infrastructure than it generates. Amazon is already there.</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", margin: "1rem 0" }}>
+                          {HYPERSCALER_FCF.map((h, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", border: "1px solid var(--rule)", borderRadius: "6px",
+                              borderLeft: `3px solid ${h.fcf < 0 ? "var(--dn)" : h.fcf < 15 ? "var(--accent-2)" : "var(--up)"}` }}>
+                              <span style={{ fontWeight: 700, width: "5.5rem", flexShrink: 0 }}>{h.name}</span>
+                              <div style={{ flex: 1, display: "flex", gap: "1rem", fontSize: "0.82rem", flexWrap: "wrap" }}>
+                                <span>OpCF: ${h.opCF}B</span>
+                                <span>Capex: ${h.capex}B</span>
+                                <span style={{ fontWeight: 700, color: h.fcf < 0 ? "var(--dn)" : "var(--up)" }}>FCF: {h.fcf < 0 ? "-" : ""}${Math.abs(h.fcf)}B</span>
+                                <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>YoY: {h.fcfYoY}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* ROI Gap */}
+                        <h4 style={{ marginTop: "1.5rem" }}>Enterprise AI ROI Gap</h4>
+                        <p className="prose">{ROI_GAP.headline}</p>
+                        <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
+                          {ROI_GAP.stats.map((s, i) => (
+                            <div key={i} style={{ padding: "0.6rem", border: "1px solid var(--rule)", borderRadius: "6px", borderLeft: `3px solid ${s.tone === "red" ? "var(--dn)" : "var(--accent-2)"}` }}>
+                              <div style={{ fontSize: "1.3rem", fontWeight: 700, color: s.tone === "red" ? "var(--dn)" : "var(--accent-2)" }}>{s.value}</div>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 600 }}>{s.label}</div>
+                              <div style={{ fontSize: "0.7rem", opacity: 0.5 }}>{s.source}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ padding: "0.75rem", background: "var(--rule)", borderRadius: "6px", fontSize: "0.85rem", fontStyle: "italic" }}>
+                          {ROI_GAP.paradox}
+                        </div>
+
+                        {/* Scenario analysis */}
+                        <h4 style={{ marginTop: "1.5rem" }}>Scenario Analysis</h4>
+                        <p className="prose dim">Three paths for the AI economy and what each means for the short thesis.</p>
+                        {SCENARIOS.map((sc, i) => (
+                          <Block key={i} title={`${sc.name} — ${sc.probability}`} startOpen={i === 1}>
+                            <div style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.4rem", borderRadius: "3px", display: "inline-block", marginBottom: "0.5rem",
+                              background: sc.tone === "green" ? "var(--up)" : sc.tone === "red" ? "var(--dn)" : "var(--accent-2)",
+                              color: "#fff" }}>
+                              {sc.thesis_outcome}
+                            </div>
+                            <p className="prose dim">{sc.description}</p>
+                            <div style={{ fontSize: "0.82rem", fontWeight: 600, margin: "0.5rem 0 0.25rem" }}>Triggers:</div>
+                            <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.82rem", opacity: 0.8 }}>
+                              {sc.triggers.map((t, j) => <li key={j}>{t}</li>)}
+                            </ul>
+                            <div style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem", borderRadius: "6px", background: "var(--rule)", fontSize: "0.82rem" }}>
+                              <strong>Position impact:</strong> {sc.position_impact}
+                            </div>
+                            {sc.what_you_lose && (
+                              <div style={{ marginTop: "0.35rem", padding: "0.5rem 0.75rem", borderRadius: "6px", background: "var(--rule)", fontSize: "0.82rem" }}>
+                                <strong>Capital at risk:</strong> {sc.what_you_lose}
+                              </div>
+                            )}
+                          </Block>
+                        ))}
+
+                        {/* Leverage risk table */}
+                        <h4 style={{ marginTop: "1.5rem" }}>Leverage Risk Calculator (10x spread bet)</h4>
+                        <p className="prose dim">What happens to your margin at typical 10x spread betting leverage. A 5% move against you isn&apos;t a 5% loss — it&apos;s a 50% loss.</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", margin: "1rem 0" }}>
+                          {RISK_MODEL.scenarios.map((s, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", fontSize: "0.82rem",
+                              border: "1px solid var(--rule)", borderRadius: "6px",
+                              borderLeft: `3px solid ${s.survive ? "var(--up)" : "var(--dn)"}`,
+                              opacity: s.survive ? 1 : 0.85 }}>
+                              <span style={{ fontWeight: 700, width: "3.5rem", flexShrink: 0, color: s.move.startsWith("+") ? "var(--dn)" : "var(--up)" }}>{s.move}</span>
+                              <span style={{ width: "4.5rem", flexShrink: 0 }}>{s.leveraged}</span>
+                              <span style={{ flex: 1 }}>{s.margin}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -2504,6 +2621,93 @@ export default function Terminal() {
                             <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)", marginBottom: "0.25rem" }}>RECOMMENDATION</div>
                             <div style={{ fontSize: "0.82rem" }}>{VERDICT.recommendation}</div>
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── STRESS TEST ── */}
+                    {doomTab === "stress" && (
+                      <div className="sec">
+                        <h3>Thesis Stress Test</h3>
+                        <p className="prose">Factor-by-factor scoring: bull case vs bear case, weighted by importance to the trade. This is the honest answer to &quot;should I actually do this?&quot;</p>
+
+                        {/* Factor bars */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", margin: "1.25rem 0" }}>
+                          {STRESS_TEST.factors.map((f, i) => {
+                            const total = f.bull_score + f.bear_score;
+                            const bullPct = (f.bull_score / 10) * 100;
+                            const bearPct = (f.bear_score / 10) * 100;
+                            return (
+                              <Block key={i} title={`${f.name} (weight: ${f.weight}%)`} startOpen={i < 2}>
+                                <div style={{ display: "flex", gap: "0.5rem", margin: "0.5rem 0", fontSize: "0.82rem" }}>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--up)", marginBottom: "0.2rem" }}>BULL: {f.bull_score}/10</div>
+                                    <div style={{ height: "8px", background: "var(--rule)", borderRadius: "4px", overflow: "hidden" }}>
+                                      <div style={{ height: "100%", width: `${bullPct}%`, background: "var(--up)", borderRadius: "4px" }} />
+                                    </div>
+                                    <p className="prose dim" style={{ margin: "0.35rem 0 0", fontSize: "0.78rem" }}>{f.bull_case}</p>
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--dn)", marginBottom: "0.2rem" }}>BEAR: {f.bear_score}/10</div>
+                                    <div style={{ height: "8px", background: "var(--rule)", borderRadius: "4px", overflow: "hidden" }}>
+                                      <div style={{ height: "100%", width: `${bearPct}%`, background: "var(--dn)", borderRadius: "4px" }} />
+                                    </div>
+                                    <p className="prose dim" style={{ margin: "0.35rem 0 0", fontSize: "0.78rem" }}>{f.bear_case}</p>
+                                  </div>
+                                </div>
+                                <div style={{ padding: "0.5rem 0.75rem", background: "var(--rule)", borderRadius: "6px", fontSize: "0.82rem", fontStyle: "italic", marginTop: "0.5rem" }}>
+                                  {f.verdict}
+                                </div>
+                              </Block>
+                            );
+                          })}
+                        </div>
+
+                        {/* Overall score */}
+                        <div style={{ padding: "1rem", border: "2px solid var(--accent)", borderRadius: "8px", marginTop: "1.5rem" }}>
+                          <h4 style={{ margin: "0 0 0.75rem" }}>Overall Score</h4>
+                          <div style={{ display: "flex", gap: "1rem", marginBottom: "0.75rem" }}>
+                            <div style={{ flex: 1, padding: "0.75rem", borderRadius: "6px", background: "var(--rule)", textAlign: "center" }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--up)" }}>{STRESS_TEST.overall.bull_weighted}</div>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 600 }}>Bull (counter-thesis)</div>
+                            </div>
+                            <div style={{ flex: 1, padding: "0.75rem", borderRadius: "6px", background: "var(--rule)", textAlign: "center" }}>
+                              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--dn)" }}>{STRESS_TEST.overall.bear_weighted}</div>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 600 }}>Bear (your thesis)</div>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", height: "12px", borderRadius: "6px", overflow: "hidden", marginBottom: "0.75rem" }}>
+                            <div style={{ width: `${(STRESS_TEST.overall.bull_weighted / (STRESS_TEST.overall.bull_weighted + STRESS_TEST.overall.bear_weighted)) * 100}%`, background: "var(--up)" }} />
+                            <div style={{ flex: 1, background: "var(--dn)" }} />
+                          </div>
+                          <p className="prose" style={{ fontStyle: "italic" }}>{STRESS_TEST.overall.interpretation}</p>
+                        </div>
+
+                        {/* Revised strategy */}
+                        <h3 style={{ marginTop: "2rem" }}>{REVISED_STRATEGY.headline}</h3>
+                        <p className="prose">{REVISED_STRATEGY.tl_dr}</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
+                          {REVISED_STRATEGY.adjustments.map((a, i) => (
+                            <div key={i} style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "6px",
+                              borderLeft: `3px solid ${a.action.startsWith("DROP") ? "var(--dn)" : a.action.startsWith("KEEP") ? "var(--up)" : a.action.startsWith("WATCH") ? "var(--accent-2)" : "var(--accent)"}` }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+                                <span style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.4rem", borderRadius: "3px",
+                                  background: a.action.startsWith("DROP") ? "var(--dn)" : a.action.startsWith("KEEP") ? "var(--up)" : a.action.startsWith("WATCH") ? "var(--accent-2)" : "var(--accent)",
+                                  color: "#fff" }}>
+                                  {a.action}
+                                </span>
+                                {a.tickers && a.tickers.map(t => (
+                                  <code key={t} style={{ fontSize: "0.78rem", padding: "0.1rem 0.35rem", background: "var(--rule)", borderRadius: "3px" }}>{t}</code>
+                                ))}
+                              </div>
+                              <p className="prose dim" style={{ margin: 0 }}>{a.reason || a.detail}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div style={{ marginTop: "1.5rem", padding: "1rem", background: "var(--rule)", borderRadius: "8px" }}>
+                          <h4 style={{ margin: "0 0 0.5rem", color: "var(--accent)" }}>Bottom line</h4>
+                          <p className="prose" style={{ margin: 0 }}>The counter-thesis doesn&apos;t destroy your position — it sharpens it. The circular financing observation is real. The enterprise ROI gap is real. The FCF deterioration is real. But the original playbook was too aggressive: too many positions, too much leverage, too short a time horizon, and it included targets (NVDA, META) where the counter-thesis is strongest. Drop those. Focus on neoclouds. Reduce leverage. Extend your timeline. And paper trade first — being right about the thesis but wrong about the timing is the same as being wrong.</p>
                         </div>
                       </div>
                     )}
