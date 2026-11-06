@@ -1261,9 +1261,42 @@ export default function Terminal() {
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (
             <>
+              {/* ── Welcome hero ── */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 700, margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
+                  AG·DESK
+                </h2>
+                <p className="prose dim" style={{ margin: 0, fontSize: "0.88rem" }}>
+                  Markets terminal. Agricultural commodities. World exchanges. Analysis desk.
+                </p>
+              </div>
+
+              {/* ── Quick-access grid ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                {[
+                  { code: "NEWS", label: "Headlines", desc: "Live news feeds", icon: "◉" },
+                  { code: "DESK", label: "Ag Brief", desc: "Commodity analysis", icon: "◈" },
+                  { code: "WLD",  label: "World", desc: "29 exchanges", icon: "◎" },
+                  { code: "DOOM", label: "Doomsday", desc: "AI bubble thesis", icon: "◆" },
+                  { code: "AGN",  label: "Analyst", desc: "Ask anything", icon: "◇" },
+                  { code: "FLOW", label: "Flows", desc: "Capital movements", icon: "◊" },
+                ].map(q => (
+                  <button key={q.code} onClick={() => go(q.code)}
+                    style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "8px", cursor: "pointer",
+                      background: "transparent", textAlign: "left", display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+                    <span style={{ fontSize: "1rem", fontWeight: 700, color: "var(--fg)" }}>{q.icon} {q.label}</span>
+                    <span style={{ fontSize: "0.75rem", opacity: 0.6, color: "var(--fg)" }}>{q.desc}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* ── Market figures ── */}
+              <FiguresBand reads={reads} onOpen={go} />
+
+              {/* ── Headlines digest ── */}
               <Panel
                 code="DIGEST"
-                title="The digest"
+                title="Headlines"
                 meta={
                   news?.at
                     ? `Updated ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
@@ -1275,10 +1308,9 @@ export default function Terminal() {
                 <Digest streams={news?.streams} busy={newsBusy} />
               </Panel>
 
-              <FiguresBand reads={reads} onOpen={go} />
-
+              {/* ── News by desk ── */}
               {(() => {
-                const fin = news?.streams?.finance?.items || [];
+                const hasAny = NEWS_TABS.some(t => (news?.streams?.[t.k]?.items || []).length > 0);
                 return (
                   <Panel
                     code="HOME"
@@ -1291,17 +1323,14 @@ export default function Terminal() {
                         : ""
                     }
                   >
-                    {!fin.length && (
+                    {!hasAny && !newsBusy && (
                       <div className="empty">
-                        {newsBusy
-                          ? "Fetching headlines…"
-                          : "No headlines retrieved. Publisher feeds may be unreachable — see Coverage under News."}
+                        No headlines retrieved yet. <button className="del" onClick={loadNews}>Refresh</button>
                       </div>
                     )}
-
-                    {/* Four desks across the full width. This used to be a
-                        narrow rail beside a lead story; with the lead now in
-                        the digest above, the space belongs to the desks. */}
+                    {!hasAny && newsBusy && (
+                      <div className="empty">Fetching headlines…</div>
+                    )}
                     <div className="deskgrid">
                       {NEWS_TABS.map((t) => (
                         <div className="sec asidesec" key={t.k}>
@@ -1317,6 +1346,25 @@ export default function Terminal() {
                 );
               })()}
 
+              {/* ── Doomsday quick glance ── */}
+              <Panel code="DOOMGLANCE" title="Doomsday — AI bubble monitor">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                  {CRASH_STATS.slice(0, 4).map((s, i) => (
+                    <div key={i} style={{ padding: "0.5rem", border: "1px solid var(--rule)", borderRadius: "6px", borderLeft: `3px solid ${s.tone === "red" ? "var(--dn)" : "var(--accent-2)"}` }}>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 700, color: s.tone === "red" ? "var(--dn)" : "var(--accent-2)" }}>{s.value}</div>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 600 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button className="btn" onClick={() => go("DOOM")} style={{ fontSize: "0.82rem" }}>Open Doomsday</button>
+                  <span className="prose dim" style={{ fontSize: "0.78rem", alignSelf: "center" }}>
+                    Thesis score: {VERDICT.thesis_score} · Crash data, circular fraud, positions, counter-thesis
+                  </span>
+                </div>
+              </Panel>
+
+              {/* ── Sessions ── */}
               <Panel code="SESSIONS" title="Where the sessions stand">
                 <p className="prose dim">
                   Each zone is read at its open, midday and close. Figures come from official statistics; the
@@ -1333,6 +1381,19 @@ export default function Terminal() {
                       </button>
                     );
                   })}
+                </div>
+              </Panel>
+
+              {/* ── Getting started ── */}
+              <Panel code="GETSTARTED" title="New here?">
+                <p className="prose dim" style={{ margin: "0 0 0.75rem" }}>
+                  Never traded before? This terminal assumes nothing.
+                  Turn on <strong>Plain English</strong> at the top and any jargon becomes tappable.
+                </p>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button className="btn" onClick={() => go("START")}>Start from zero</button>
+                  <button className="btn" onClick={() => go("RISK")} style={{ opacity: 0.8 }}>How people lose money</button>
+                  <button className="btn" onClick={() => go("TUT")} style={{ opacity: 0.8 }}>Tutorials</button>
                 </div>
               </Panel>
             </>
