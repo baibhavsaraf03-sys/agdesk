@@ -198,4 +198,5 @@ export function Markdown({ text, className = "md" }) {
   return <div className={className}>{blocks}</div>;
 }
 
+export { safeHref };
 export default Markdown;
