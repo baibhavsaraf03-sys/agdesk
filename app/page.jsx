@@ -88,7 +88,7 @@ const CODES = SCREENS.map((s) => s.c);
 const ALIAS = {
   "1": "START", "2": "RISK", "3": "TUT", "4": "GLOS", "5": "WLD",
   "6": "AGN", "7": "DESK", "8": "MTD", "9": "JRN",
-  "?": "HELP", H: "HELP", BRIEF: "DESK", HOME: "START", AGENT: "AGN", ASK: "AGN",
+  "?": "HELP", H: "HELP", BRIEF: "DESK", AGENT: "AGN", ASK: "AGN",
   GRAIN: "GRN", GRAINS: "GRN", SOFT: "SFT", SOFTS: "SFT", TRADES: "TRD", WATCH: "WCH",
   MACRO: "MAC", METHOD: "MTD", JOURNAL: "JRN", SOURCES: "SRC",
   WORLD: "WLD", EXCHANGES: "WLD", GLOBAL: "WLD", US: "AMER", AMERICAS: "AMER",
