@@ -357,34 +357,34 @@ function Digest({ streams, busy }) {
   return (
     <div className="digest">
       <article className="dglead">
-        <span className="dgtag">{label(lead.stream)}</span>
-        {safeHref(lead.lead.url) ? (
-          <a className="dgleadtitle" href={safeHref(lead.lead.url)} target="_blank" rel="noopener noreferrer nofollow">
-            {lead.lead.title}
+        <span className="dgtag">{label(lead._stream)}</span>
+        {safeHref(lead.url) ? (
+          <a className="dgleadtitle" href={safeHref(lead.url)} target="_blank" rel="noopener noreferrer nofollow">
+            {lead.title}
           </a>
         ) : (
-          <span className="dgleadtitle">{lead.lead.title}</span>
+          <span className="dgleadtitle">{lead.title}</span>
         )}
         <span className="dgmeta">
-          {lead.sources.slice(0, 4).join(", ")}
-          {lead.sources.length > 1 && ` · ${lead.sources.length} publishers`}
+          {lead.source}
+          {lead.when && <> &middot; {ago(lead.when)}</>}
         </span>
       </article>
 
       <ul className="dglist">
         {rest.map((c, i) => (
-          <li key={`${c.fingerprint}-${i}`}>
-            <span className="dgtag">{label(c.stream)}</span>
-            {safeHref(c.lead.url) ? (
-              <a href={safeHref(c.lead.url)} target="_blank" rel="noopener noreferrer nofollow">
-                {c.lead.title}
+          <li key={`${c.url || c.title}-${i}`}>
+            <span className="dgtag">{label(c._stream)}</span>
+            {safeHref(c.url) ? (
+              <a href={safeHref(c.url)} target="_blank" rel="noopener noreferrer nofollow">
+                {c.title}
               </a>
             ) : (
-              <span className="newsplain">{c.lead.title}</span>
+              <span className="newsplain">{c.title}</span>
             )}
             <span className="dgmeta">
-              {c.sources[0]}
-              {c.sources.length > 1 && ` +${c.sources.length - 1}`}
+              {c.source}
+              {c.when && <> &middot; {ago(c.when)}</>}
             </span>
           </li>
         ))}
