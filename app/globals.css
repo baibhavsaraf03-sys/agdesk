@@ -523,6 +523,23 @@ h3{font-family:var(--sans);font-weight:600;font-size:12.5px;letter-spacing:0.01e
 .asidesec{padding-bottom:14px;border-bottom:1px solid var(--line)}
 .asidesec:last-child{border-bottom:0}
 .asidesec .newslist a{font-size:14.5px;line-height:1.38}
+
+/* Digest (home headline mix) */
+.digest{margin:0}
+.dglead{padding:12px 0;border-bottom:1px solid var(--line)}
+.dgtag{display:inline-block;font-family:var(--sans);font-size:10px;font-weight:600;
+  letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);margin-right:8px;
+  vertical-align:baseline}
+.dgleadtitle{color:var(--fg);text-decoration:none;font-size:16.5px;line-height:1.4;
+  letter-spacing:-0.006em}
+a.dgleadtitle:hover{color:var(--accent)}
+.dgmeta{display:block;margin-top:4px;font-size:10px;letter-spacing:0.01em;
+  text-transform:uppercase;color:var(--fg-dim);font-family:var(--sans)}
+.dglist{list-style:none;margin:0;padding:0}
+.dglist li{padding:10px 0;border-bottom:1px solid var(--line);display:block}
+.dglist li:last-child{border-bottom:0}
+.dglist a{color:var(--fg);text-decoration:none;font-size:14.5px;line-height:1.4}
+.dglist a:hover{color:var(--accent)}
 .asidesec .trackhead{margin-bottom:2px}
 .trackhead .tl{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.07em;
   text-transform:uppercase;color:var(--accent)}
