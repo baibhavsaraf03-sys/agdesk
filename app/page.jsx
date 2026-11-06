@@ -705,7 +705,7 @@ function FXScreen() {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     let alive = true;
-    const load = () => fetch("/api/fx", { cache: "no-store" }).then((r) => r.json()).then((j) => alive && setData(j)).catch(() => {});
+    const load = () => fetch("/api/fx", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((j) => alive && setData(j)).catch(() => alive && setData({ error: "FX API not configured" }));
     load();
     const a = setInterval(load, 10 * 60000), b = setInterval(() => setNow(Date.now()), 30000);
     return () => { alive = false; clearInterval(a); clearInterval(b); };
@@ -2936,12 +2936,9 @@ export default function Terminal() {
 
                     <div className="sec" style={{ marginTop: "1.5rem" }}>
                       <h4>Sources</h4>
-                      <div className="grid">
+                      <div className="srcs">
                         {DOOM_SOURCES.map((s, i) => (
-                          <div className="grow" key={i}>
-                            <span className="gnm">{s.t}</span>
-                            <a href={s.u} target="_blank" rel="noopener noreferrer" className="gpx" style={{ fontSize: "0.75rem", wordBreak: "break-all" }}>{s.u}</a>
-                          </div>
+                          <a key={i} href={s.u} target="_blank" rel="noopener noreferrer">{s.t}</a>
                         ))}
                       </div>
                     </div>
