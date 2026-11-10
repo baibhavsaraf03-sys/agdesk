@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Ag Desk",
+  title: "Ledge Desk",
   description:
     "Markets, news and the reasoning behind both: 29 world exchanges by session, commodities in depth, sixteen tutorials from zero, and an analyst you can question.",
   manifest: "/manifest.webmanifest"

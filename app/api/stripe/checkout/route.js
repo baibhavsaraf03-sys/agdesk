@@ -11,7 +11,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 /**
  * POST /api/stripe/checkout
  *
- * Creates a Stripe Checkout session for the $10/month Ag Desk Pro plan.
+ * Creates a Stripe Checkout session for the $10/month Ledge Desk Pro plan.
  * The user must be signed in — we attach their Supabase user id as
  * client_reference_id so the webhook can link the subscription back.
  */

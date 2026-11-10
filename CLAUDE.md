@@ -1,4 +1,4 @@
-# agdesk — notes for Claude
+# Ledge Desk (repo: agdesk) — notes for Claude
 
 Read this instead of exploring. Grep for the names below; do not read `app/page.jsx` whole.
 
@@ -19,6 +19,9 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - Blank or error: `CBOT:`, `NYMEX:`, `ICEUS:`, `ICEEUR:` futures; `TVC:` yields; `CBOE:`; `AMEX:`; `ASX:`, `NZX:`, `TSE:`, `TWSE:`, `NSE:`, `MIL:`, `BIST:`, `TADAWUL:`, `JSE:`; `PEPPERSTONE:AU200AUD`; `FOREXCOM:DJI`.
 - A symbol existing on tradingview.com does not mean the widget shows it. Remove a blank row rather than guess a replacement.
 - Iframes that change config need a `key` or React keeps the old one.
+
+## Naming
+- The site is called Ledge Desk (drawn as LEDGE·DESK). The repo, the Vercel URL and the `agdesk.*` localStorage keys keep the old name on purpose: renaming the keys would wipe visitors' saved progress.
 
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.

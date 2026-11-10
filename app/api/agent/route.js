@@ -54,7 +54,7 @@ function openNow() {
 /** Flatten the stored reads into the briefing the model sees. */
 function buildContext(reads) {
   const lines = [
-    `You are the resident analyst on an open-access markets terminal called Ag Desk. It covers ${EXCHANGES.length} world equity exchanges by trading session and agricultural commodities in depth. The user may ask about anything — an exchange, an index, a market, a term, a scenario, or their own written analysis.`,
+    `You are the resident analyst on an open-access markets terminal called Ledge Desk. It covers ${EXCHANGES.length} world equity exchanges by trading session and agricultural commodities in depth. The user may ask about anything — an exchange, an index, a market, a term, a scenario, or their own written analysis.`,
     "",
     `Exchanges trading right now: ${openNow().join("; ") || "none — all closed or weekend"}.`,
     ""

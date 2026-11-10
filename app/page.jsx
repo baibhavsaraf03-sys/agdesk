@@ -1161,7 +1161,7 @@ export default function Terminal() {
       <div className="landing">
         <div className="landing-inner">
           <div className="landing-hero">
-            <h1 className="landing-title">AG<span className="landing-dot">&middot;</span>DESK</h1>
+            <h1 className="landing-title">LEDGE<span className="landing-dot">&middot;</span>DESK</h1>
             <p className="landing-sub">Markets intelligence. No noise.</p>
           </div>
 
@@ -1220,7 +1220,7 @@ export default function Terminal() {
           <span /><span /><span />
         </button>
 
-        <span className="sysname">AG&middot;DESK</span>
+        <span className="sysname">LEDGE&middot;DESK</span>
 
         <span className="tstat">
           <span className={"dot " + (agLive || Object.keys(reads).length ? "live" : "warn")} />
@@ -1333,7 +1333,7 @@ export default function Terminal() {
               {/* ── Welcome hero ── */}
               <div style={{ marginBottom: "1.5rem" }}>
                 <h2 style={{ fontSize: "1.4rem", fontWeight: 700, margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-                  AG·DESK
+                  LEDGE·DESK
                 </h2>
                 <p className="prose dim" style={{ margin: 0, fontSize: "0.88rem" }}>
                   Markets terminal. Agricultural commodities. World exchanges. Analysis desk.

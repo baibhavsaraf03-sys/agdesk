@@ -1,4 +1,4 @@
-/* Ag Desk terminal styles.
+/* Ledge Desk terminal styles.
    Ported from the artifact; the reset below replaces what the artifact host
    used to inject, so the page stands on its own. */
 *, *::before, *::after { box-sizing: border-box; }
