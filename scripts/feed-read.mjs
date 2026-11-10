@@ -66,6 +66,14 @@ const ZONE_SPEC = {
     extra:
       "Cover Federal Reserve policy, the latest US inflation and jobs data, the dollar index and Treasury yields, and market breadth. Where the index move is driven by a handful of very large companies, say so explicitly rather than calling it a broad move."
   },
+  doom: {
+    label: "The AI trade",
+    tz: "America/New_York",
+    exchanges:
+      "Nasdaq and NYSE: Nvidia, AMD, Micron, Broadcom, CoreWeave, Oracle, Nebius, Microsoft, Meta and the Philadelphia Semiconductor index; plus the private AI labs whose spending commitments sit behind those companies' order books.",
+    extra:
+      "This feeds a screen that argues AI spending has run ahead of AI revenue and that vendor financing is circular. Your job is not to agree with it. Report what today's headlines add to the case and, with equal weight, what they take away from it: earnings, capital spending guidance, financing deals, chip export rules, credit conditions. Give one section to evidence for the thesis and one to evidence against, and say which side today's news favoured or that it favoured neither. Treat any single day's share move as noise unless the headlines give a reason for it."
+  },
   ag: {
     label: "Agricultural commodities",
     tz: "Europe/London",

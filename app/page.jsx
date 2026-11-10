@@ -17,6 +17,7 @@ import {
 } from "@/lib/doomsday";
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
+import { AI_TRADE_RE } from "@/lib/doomsday";
 import { Markdown, safeHref } from "@/lib/markdown";
 import { cluster, digestPick } from "@/lib/alerts";
 
@@ -2572,6 +2573,42 @@ export default function Terminal() {
                 <button className="textlink" onClick={() => go("RISK")}>Risk</button> and the{" "}
                 <button className="textlink" onClick={() => go("TUT")}>tutorials</button> first.
               </p>
+              {/* The live layer. Everything under the tabs is the standing
+                  argument and changes only when it is edited; this part is
+                  rewritten by the scheduled read three times each US session
+                  and the headlines refresh every ten minutes. */}
+              {(() => {
+                const d = reads.doom;
+                const live = (news?.streams?.finance?.items || []).filter((a) => AI_TRADE_RE.test(a.title || ""));
+                return (
+                  <div className="sec doomlive">
+                    <div className="trackhead">
+                      <span className="tl">LATEST</span>
+                      <span className="tt">What today adds to the argument, and what it takes away</span>
+                      <span className="tc">{d?.stamp || "awaiting first run"}</span>
+                    </div>
+                    {d ? (
+                      <>
+                        {d.headline && <h2>{d.headline}</h2>}
+                        {d.lede && <p className="prose dim">{d.lede}</p>}
+                        <InShort items={d.short} />
+                        {(d.sections || []).map((x, i) => <Block key={i} {...x} />)}
+                        {(d.watch || []).map((w, i) => (
+                          <div className="block" key={i}>
+                            <p className="prose" style={{ fontWeight: 600, fontSize: "13px" }}>{w.nm}</p>
+                            {w.note && <p className="prose dim" style={{ fontSize: "13px" }}>{w.note}</p>}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="empty">No read yet. The scheduled job writes this before the US open, at midday and after the close.</div>
+                    )}
+                    <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.DOOM} label="Names in the thesis, live" />
+                    <h3>AI-trade headlines</h3>
+                    <NewsList items={live} limit={8} empty="Nothing on the AI trade in the current finance feeds." />
+                  </div>
+                );
+              })()}
               {(() => {
                 const DOOM_TABS = [
                   { k: "crash", t: "Crash Data" },
@@ -2601,7 +2638,7 @@ export default function Terminal() {
                     {/* ── CRASH DATA ── */}
                     {doomTab === "crash" && (
                       <div className="sec">
-                        <h3>The First Break — 5 Nov 2026</h3>
+                        <h3>The First Break — 5 Nov 2026 (fixed record of that day; live prices are above)</h3>
                         <p className="prose dim">The day the AI bubble showed its first crack. Semiconductor stocks posted their worst single-day loss on record.</p>
                         <div className="figures-band" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", margin: "1rem 0" }}>
                           {CRASH_STATS.map((s, i) => (

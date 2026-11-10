@@ -28,6 +28,7 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - No emoji or glyph icons, no feature-card grids, no inline `style={{}}` for new work. Use the tokens and classes in `globals.css`; serif for headings, sans for text, mono only for codes and figures.
 - Sidebar order (`NAV_GROUPS`) runs beginner to advanced on purpose: Start here, Your desk, Daily, Markets, Commodities, Disciplines, Advanced.
 - The analyst renders from `analystBody(side)` both on the AGN screen and in the side panel (`agnOpen`). `ask(text, shown)` opens the panel; `shown` is the label displayed instead of a long prompt.
+- DOOM has a live layer above its tabs: `reads.doom` (zone `doom`, three scheduled reads per US session, news filtered by `AI_TRADE_RE` in `lib/doomsday.js`), a TradingView tile (`TV_GROUPS.DOOM`) and live headlines. The tabs below it are the static argument in `lib/doomsday.js`.
 - Reads carry `short` (three plain sentences, shown by `InShort`) and, for `ag`, `macro`.
 - To look at the site locally: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-dummy npx next build` then `next start` with the same two variables. Without them every page returns a 500. News and widgets are empty offline.
 
@@ -47,6 +48,7 @@ Not yet confirmed on the live site:
 - `INDEX:FTSEMIB` (EMEA), `BLACKBULL:US30` (AMER).
 - GRN, SFT and MAC widgets (`BMFBOVESPA:`, `CMCMARKETS:`, `TVC:USOIL`, `TVC:UKOIL`).
 - The macro section and the "In short" summaries: appear after the next scheduled read of each zone (or a manual run of the Market reads action).
+- DOOM live layer: the `NASDAQ:`/`NYSE:` stock tiles in the widget, and the first `doom` read (run the action with zone `doom`).
 - GEO headline matching against live feeds (tested only on sample headlines).
 - USD/TRY in the EMEA verified figures.
 
