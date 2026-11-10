@@ -26,3 +26,21 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - Never give the owner a command containing a placeholder value.
 - Running costs must stay at zero: Gemini free tier first, Anthropic only as fallback.
 - Supabase `service_role` key is server-only: never `NEXT_PUBLIC_`, never in the browser.
+
+## State at 10 Nov 2026 (update or delete as items close)
+Done: widget symbols cleaned in `lib/tv.js`; widget re-mounts per screen; agricultural read publishes a `macro` array shown on MAC (falls back to the 20 Oct snapshot until a read lands); DOOM sources and watch-item layout fixed; FX screen shows an "unavailable" message.
+
+Not yet confirmed on the live site:
+- `INDEX:FTSEMIB` (EMEA), `BLACKBULL:US30` (AMER).
+- GRN, SFT and MAC widgets (`BMFBOVESPA:`, `CMCMARKETS:`, `TVC:USOIL`, `TVC:UKOIL`).
+- The macro section: needs one run of the Market reads action, zone `ag`, phase `close`.
+- USD/TRY in the EMEA verified figures.
+
+Open tasks:
+1. Check the items above; remove anything still blank.
+2. Build `/api/fx` so the Currencies screen has data.
+3. Split `app/page.jsx` into one file per screen.
+4. Key rotation (owner does this by hand; never ask for keys in chat):
+   - Anthropic key: used as `ANTHROPIC_API_KEY` in Vercel env and GitHub Actions secrets. Set a spend cap at the same time.
+   - Groq key: used only by the tradebot on the Pi, not by this repo.
+   - Google OAuth client secret: used by the Supabase Auth Google provider, not by this repo's env.
