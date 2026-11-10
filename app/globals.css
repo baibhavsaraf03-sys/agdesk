@@ -554,34 +554,98 @@ a.dgleadtitle:hover{color:var(--accent)}
 /* ==========================================================================
    Landing page.
    ========================================================================== */
-.landing{min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:var(--bg);padding:max(16px,env(safe-area-inset-left,0px))}
-.landing-inner{max-width:720px;width:100%;padding:3rem 1rem;text-align:center}
-.landing-hero{margin-bottom:3rem}
-.landing-title{font-family:var(--mono);font-size:clamp(2.5rem,8vw,4rem);font-weight:700;
-  letter-spacing:-0.02em;color:var(--fg);margin:0 0 0.75rem}
-.landing-dot{color:var(--accent)}
-.landing-sub{font-family:var(--serif);font-size:clamp(1.1rem,3vw,1.4rem);color:var(--fg-dim);
-  margin:0;letter-spacing:-0.01em}
-.landing-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;
-  text-align:left;margin-bottom:3rem}
-.landing-feat{padding:1.25rem;border:1px solid var(--line);border-radius:8px;
-  background:var(--surface)}
-.landing-feat-icon{font-size:1.5rem;margin-bottom:0.5rem}
-.landing-feat h3{font-family:var(--sans);font-size:0.95rem;font-weight:600;margin:0 0 0.4rem;
-  color:var(--fg)}
-.landing-feat p{font-family:var(--serif);font-size:0.85rem;line-height:1.55;margin:0;
-  color:var(--fg-dim)}
-.landing-cta{margin-bottom:2rem}
-.landing-enter{font-family:var(--sans);font-size:1.1rem;font-weight:600;padding:0.85rem 2.5rem;
-  background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;
-  letter-spacing:0.01em;transition:background 0.15s}
-.landing-enter:hover{background:#0a4a40}
-:root[data-theme="dark"] .landing-enter:hover{background:#4da892}
-.landing-signin{font-family:var(--sans);font-size:0.95rem;font-weight:500;padding:0.7rem 2rem;
-  background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:6px;cursor:pointer;
-  margin-top:0.75rem;letter-spacing:0.01em;transition:background 0.15s,color 0.15s}
-.landing-signin:hover{background:var(--accent);color:#fff}
-.landing-note{font-family:var(--sans);font-size:0.8rem;color:var(--fg-dim);margin:0.75rem 0 0}
-.landing-foot{border-top:1px solid var(--line);padding-top:1.5rem}
-.landing-foot p{font-family:var(--serif);font-size:0.85rem;color:var(--fg-dim);margin:0}
+
+/* ==========================================================================
+   Landing.
+
+   One statement, two ways in, a plain list of what is inside. No icon cards
+   and no counts: a page of tiles with emoji on them reads as a template, and
+   a newcomer needs to be told where to begin more than they need features.
+   ========================================================================== */
+.landing{min-height:100vh;background:var(--bg);display:flex;justify-content:center;
+  padding:clamp(28px,7vh,88px) max(20px,env(safe-area-inset-left,0px)) 48px max(20px,env(safe-area-inset-right,0px))}
+.landing-inner{width:100%;max-width:680px;display:flex;flex-direction:column;gap:26px}
+.landing-mark{font-family:var(--serif);font-weight:700;font-size:17px;letter-spacing:-0.01em;color:var(--fg);
+  padding-bottom:14px;border-bottom:1px solid var(--line)}
+.landing-title{margin:10px 0 0;font-family:var(--serif);font-weight:600;font-size:clamp(30px,5.2vw,46px);
+  line-height:1.1;letter-spacing:-0.02em;text-wrap:balance;color:var(--fg)}
+.landing-sub{margin:0;font-family:var(--serif);font-size:18px;line-height:1.55;color:var(--fg-dim);max-width:60ch}
+.landing-paths{display:grid;grid-template-columns:1fr;border-top:1px solid var(--fg)}
+@media(min-width:620px){ .landing-paths{grid-template-columns:1fr 1fr}
+  .landing-path + .landing-path{border-left:1px solid var(--line);padding-left:22px} }
+.landing-path{appearance:none;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:5px;padding:18px 22px 20px 0;color:var(--fg);font-family:var(--sans)}
+.landing-path:hover .lp-t,.landing-path:focus-visible .lp-t{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.landing-path:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.lp-k{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim)}
+.lp-t{font-family:var(--serif);font-size:22px;font-weight:600;line-height:1.2}
+.lp-t::after{content:" \2192";color:var(--accent)}
+.lp-d{font-size:13.5px;line-height:1.5;color:var(--fg-dim)}
+.landing-list{margin:0;display:flex;flex-direction:column}
+.landing-list > div{display:grid;grid-template-columns:84px 1fr;gap:14px;padding:9px 0;border-bottom:1px solid var(--line)}
+.landing-list dt{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim);padding-top:3px}
+.landing-list dd{margin:0;font-family:var(--sans);font-size:14px;line-height:1.5;color:var(--fg)}
+.landing-note{margin:0;font-family:var(--sans);font-size:13.5px;color:var(--fg-dim)}
+.landing-link,.textlink{appearance:none;background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;
+  text-decoration:underline;text-underline-offset:2px}
+.landing-foot{margin:0;font-family:var(--sans);font-size:12px;line-height:1.55;color:var(--fg-dim);max-width:62ch}
+
+/* ==========================================================================
+   Home lead, sidebar notes, summaries, the analyst panel, political risk.
+   ========================================================================== */
+.homelead{display:flex;flex-direction:column;gap:4px;margin-bottom:20px}
+.homelead h1{margin:0;font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.15;letter-spacing:-0.01em}
+.homelead p{margin:0;font-size:13.5px;color:var(--fg-dim);max-width:68ch}
+
+.navnote{display:block;margin-top:2px;font-size:10.5px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--fg-dim)}
+
+.inshort{border-left:2px solid var(--accent);padding:2px 0 2px 14px;margin:4px 0 2px}
+.inshort-h{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.inshort ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.inshort li{font-family:var(--sans);font-size:14px;line-height:1.5}
+
+.agnside{position:fixed;right:0;top:calc(54px + env(safe-area-inset-top,0px));bottom:0;z-index:38;
+  width:min(400px,100vw);background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.agnhead{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.agntitle{font-family:var(--serif);font-weight:700;font-size:16px}
+.agnmeta{font-size:11px;color:var(--fg-dim);margin-right:auto}
+.agnbody{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.agnbody .thread{flex:1}
+.agnbody .gate{border:0;padding:0}
+.chip-pri{border-color:var(--accent);color:var(--accent)}
+.chip:disabled{opacity:.5;cursor:default}
+@media(min-width:1180px){ .shell.agnopen .stage{padding-right:calc(400px + 24px)} }
+
+.geogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border-top:1px solid var(--fg);border-bottom:1px solid var(--line)}
+.geocard{display:flex;flex-direction:column;gap:2px;padding:12px 14px 13px 0;color:var(--fg);text-decoration:none;min-width:0}
+.geocard:hover .geoname{text-decoration:underline;text-underline-offset:3px}
+.geoname{font-family:var(--serif);font-weight:600;font-size:16px;line-height:1.25}
+.geolevel{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim)}
+.geocard.watch .geolevel,.geolevel.watch{color:var(--warn)}
+.geocard.elevated .geolevel,.geolevel.elevated{color:var(--down)}
+.geocount{font-size:12px;color:var(--fg-dim)}
+.geosec{scroll-margin-top:70px;margin-top:6px}
+.geosec .trackhead .tt{font-family:var(--serif);font-size:17px}
+.geomarkers{margin:0;display:flex;flex-direction:column}
+.geomarkers > div{display:grid;grid-template-columns:1fr;gap:2px;padding:8px 0;border-top:1px solid var(--line)}
+@media(min-width:620px){ .geomarkers > div{grid-template-columns:150px 1fr;gap:14px} }
+.geomarkers dt{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim);padding-top:2px}
+.geomarkers dd{margin:0;font-size:13.5px;line-height:1.55}
+.geomarkers .on dt{color:var(--fg)}
+.geoflag{display:block;margin-top:2px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--warn)}
+
+/* The widget frame follows the page instead of carrying its own dark panel. */
+.tvwrap{background:var(--surface);border:1px solid var(--line)}
+.tvlabel{background:var(--surface-2);color:var(--fg-dim)}
+
+/* Four controls do not fit a phone's top bar. The command line is a keyboard
+   feature, so it is the one that goes. */
+@media(max-width:620px){ .tbtn-cmd{display:none} .topbar{gap:8px} }
+
+/* The body is a flex column, so on any page taller than the window the top
+   bar was being squeezed from 54px to about 32px, leaving the sidebar and
+   panels hanging below a gap. Pin it, and hang everything else off one value. */
+.topbar{flex:0 0 54px;height:54px}
+.side{top:calc(54px + env(safe-area-inset-top,0px))}
+.scrim{inset:calc(54px + env(safe-area-inset-top,0px)) 0 0 0}
+.notice{border-left:2px solid var(--warn);padding:2px 0 2px 14px;font-size:13.5px;line-height:1.55;color:var(--fg)}

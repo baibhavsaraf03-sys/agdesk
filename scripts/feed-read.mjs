@@ -126,6 +126,12 @@ const READ_TOOL = {
           "One sharp sentence naming this session's main tension. Not a generic label."
       },
       lede: { type: "string", description: "One sentence: when compiled and from what." },
+      short: {
+        type: "array",
+        description:
+          "The read in three plain sentences for someone new to markets: what happened, why it matters, what to watch. No jargon, no figures that are not in the sections.",
+        items: { type: "string" }
+      },
       sections: {
         type: "array",
         items: {
@@ -184,14 +190,14 @@ const READ_TOOL = {
         }
       }
     },
-    required: ["headline"]
+    required: ["headline", "short"]
   }
 };
 
 // The macro overlay belongs to the agricultural read. Asking every equity zone
 // for one would be sixteen copies of the same paragraph a day, so the field is
 // removed from their schema and required in this one.
-if (zone === "ag") READ_TOOL.input_schema.required = ["headline", "macro"];
+if (zone === "ag") READ_TOOL.input_schema.required = ["headline", "short", "macro"];
 else delete READ_TOOL.input_schema.properties.macro;
 
 /**
@@ -221,7 +227,8 @@ Return the finished read in the required structure, and nothing else — no prea
 Requirements:
 - ${phase === "close" ? "3-4" : "2-3"} sections, ${phase === "close" ? "4-6" : "3-5"} watch items, 3-6 sources.
 ${zone === "ag" ? `- Also fill the macro array with one to three blocks: the dollar, crude oil, interest rates, and freight and fertiliser where the material supports them. Build each on the verified figures above, with their dates, and say what it is doing to crop prices now — the dollar caps export demand, crude sets the floor under ethanol and biodiesel, rates price the cost of carrying inventory, fertiliser feeds next year's acreage. If the material says nothing about freight, say so rather than filling the gap. This is separate from the sections and must not repeat them.
-` : ""}- Do not restate the verified figures as a list. Use them: explain what they imply, where they agree or disagree with the equity move, and what would change the reading.
+` : ""}- Fill "short" with exactly three plain sentences a newcomer could follow: what happened, why it matters, what to watch next. It must agree with the sections and add no figure they do not contain.
+- Do not restate the verified figures as a list. Use them: explain what they imply, where they agree or disagree with the equity move, and what would change the reading.
 - Every other figure must come from something you actually retrieved in this session. Never carry a number forward unverified. Omit anything you cannot verify rather than guessing.
 - Say explicitly when a figure is a forecast or projection rather than a traded level.
 - No buy or sell calls and no investment advice. Explain reasoning instead.
@@ -451,6 +458,7 @@ async function main() {
   payload = deepStrip(payload);
   payload.sections = Array.isArray(payload.sections) ? payload.sections : [];
   payload.watch = Array.isArray(payload.watch) ? payload.watch : [];
+  payload.short = (Array.isArray(payload.short) ? payload.short : []).filter((x) => typeof x === "string" && x.trim()).slice(0, 4);
   if (zone === "ag") {
     payload.macro = (Array.isArray(payload.macro) ? payload.macro : []).filter((m) => m && m.body);
     if (!payload.macro.length) console.warn("  warning: published with no macro overlay");

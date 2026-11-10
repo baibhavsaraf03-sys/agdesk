@@ -16,6 +16,7 @@ import {
   SOURCES as DOOM_SOURCES
 } from "@/lib/doomsday";
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
+import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { Markdown, safeHref } from "@/lib/markdown";
 import { cluster, digestPick } from "@/lib/alerts";
 
@@ -26,20 +27,20 @@ import { cluster, digestPick } from "@/lib/alerts";
 /**
  * The sidebar's shape.
  *
- * Twenty-six codes in a flat strip across the top gave everything equal
- * weight and permanent presence, which is exhausting and tells a newcomer
- * nothing about where to start. Grouping them puts the daily reasons to visit
- * at the top, the reference material below, and lets the whole thing fold
- * away when you want to read.
+ * Ordered for the reader who knows least. Someone who has never bought a
+ * share lands on the lessons and the risk material before they reach a
+ * session read, and the leveraged, opinionated screens sit at the bottom
+ * under a label that says what they are. An experienced reader loses one
+ * scroll; a new one is not handed a short thesis on their first visit.
  */
 const NAV_GROUPS = [
-  { g: "Daily", items: ["HOME", "NEWS"] },
+  { g: "Start here", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
+  { g: "Your desk", items: ["AGN", "JRN", "SET"] },
+  { g: "Daily", items: ["HOME", "NEWS", "GEO"] },
   { g: "Markets", items: ["WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
   { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
-  { g: "Analysis", items: ["FLOW", "SRC", "DOOM"] },
   { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
-  { g: "Learn", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
-  { g: "Yours", items: ["AGN", "JRN", "SET"] },
+  { g: "Advanced", note: "Read the lessons first", items: ["FLOW", "DOOM", "SRC"] },
   { g: "About", items: ["TERMS", "HELP"] }
 ];
 
@@ -54,6 +55,7 @@ const NEWS_TABS = [
 const SCREENS = [
   { c: "HOME",  t: "Home",       d: "Today's headlines and the state of the markets" },
   { c: "NEWS",  t: "News",       d: "Finance, politics, international relations and law" },
+  { c: "GEO",   t: "Political risk", d: "Flashpoints, how much reporting each is getting, and what they would disturb" },
   { c: "START", t: "Start",      d: "Never traded before? Begin here" },
   { c: "RISK",  t: "Risk",       d: "How money is actually lost — the evidence and the six mechanisms" },
   { c: "TUT",   t: "Tutorials",  d: "Sixteen lessons from zero. TUT 7 opens lesson seven" },
@@ -99,7 +101,7 @@ const ALIAS = {
   SETTINGS: "SET", KEY: "SET", ACCOUNT: "SET", LOGIN: "SET", SIGNIN: "SET",
   ECONOMICS: "ECON", MICRO: "ECON", MACRO2: "ECON",
   LEGAL: "LAW", COMPANY: "LAW", CONTRACT: "LAW",
-  INTERNATIONAL: "IR", GEOPOLITICS: "IR", GEO: "IR",
+  INTERNATIONAL: "IR", GEOPOLITICS: "GEO", WAR: "GEO", CONFLICT: "GEO", POLRISK: "GEO",
   POLITICS: "POL", POLSCI: "POL", COMPARATIVE: "POL",
   ESSAY: "SEM", EXAM: "SEM", REVISION: "SEM", STUDY: "SEM",
   LEGALNOTICE: "TERMS", DISCLAIMER: "TERMS", PRIVACY: "TERMS", TOS: "TERMS",
@@ -207,6 +209,21 @@ function Grid({ title, unit, rows }) {
   );
 }
 
+/**
+ * The three-line version of a read, written by the same model that wrote the
+ * long one. Reads published before the field existed simply have none.
+ */
+function InShort({ items }) {
+  const list = (Array.isArray(items) ? items : []).filter((x) => typeof x === "string" && x.trim());
+  if (!list.length) return null;
+  return (
+    <div className="inshort">
+      <div className="inshort-h">In short</div>
+      <ul>{list.slice(0, 4).map((x, i) => <li key={i}>{x}</li>)}</ul>
+    </div>
+  );
+}
+
 function Block({ h, body, read }) {
   const [open, setOpen] = useState(false);
   return (
@@ -266,8 +283,12 @@ function Panel({ code, title, meta, children }) {
  *
  * Their attribution link is required by the widget terms. Leave it in place.
  */
-function TVWidget({ widget, config, label }) {
+function TVWidget({ widget, config, label, theme }) {
   if (!config) return null;
+  // The widget paints its own background, so it has to be told which theme
+  // the page is in or it sits as a dark slab on a light page.
+  const dark = theme === "dark";
+  config = { ...config, colorTheme: dark ? "dark" : "light", backgroundColor: dark ? "#191917" : "#ffffff" };
 
   // The embed script's only job is to build this iframe, reading its config
   // from its own text content. Injecting a script tag from React turned out to
@@ -282,7 +303,10 @@ function TVWidget({ widget, config, label }) {
   return (
     <div className="tvwrap">
       {label && <div className="tvlabel">{label}</div>}
+      {/* Keyed on src: the config lives in the URL fragment, and a browser
+          does not reload an iframe when only the fragment changes. */}
       <iframe
+        key={src}
         src={src}
         title={label || "Market quotes"}
         scrolling="no"
@@ -851,6 +875,7 @@ export default function Terminal() {
   const [quota, setQuota] = useState(null);
 
   const [msgs, setMsgs] = useState([]);
+  const [agnOpen, setAgnOpen] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [agentInput, setAgentInput] = useState("");
   const [entries, setEntries] = useState([]);
@@ -1042,11 +1067,18 @@ export default function Terminal() {
   }
 
   /* ---- agent ---- */
-  async function ask(text) {
+  /**
+   * `shown` is what the thread displays in place of a long prompt: when a
+   * whole screen is sent for summarising, the reader should see "Summarise
+   * this screen", not seven thousand characters of it.
+   */
+  async function ask(text, shown) {
     const body = String(text || "").trim();
     if (!body || thinking) return;
-    go("AGN");
-    const next = [...msgs, { role: "user", content: body }];
+    // Answer beside whatever they were reading rather than taking them away
+    // from it. On the analyst's own screen there is nothing to open.
+    if (screen !== "AGN") setAgnOpen(true);
+    const next = [...msgs, { role: "user", content: body, ...(shown ? { shown } : {}) }];
     setMsgs(next);
     setAgentInput("");
     setThinking(true);
@@ -1054,7 +1086,7 @@ export default function Terminal() {
       const r = await fetch("/api/agent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next, apiKey: apiKey || undefined })
+        body: JSON.stringify({ messages: next.map(({ role, content }) => ({ role, content })), apiKey: apiKey || undefined })
       });
       const j = await r.json();
       if (!r.ok) {
@@ -1068,6 +1100,19 @@ export default function Terminal() {
     } finally {
       setThinking(false);
     }
+  }
+
+  /** Send the visible screen to the analyst and ask for the short version. */
+  function summariseScreen() {
+    const el = document.querySelector("main.stage .wrap");
+    const text = (el?.innerText || "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 7000);
+    if (!text) return;
+    const name = SCREENS.find((x) => x.c === screen)?.t || screen;
+    ask(
+      `Summarise the "${name}" screen below for someone new to investing. Five bullet points at most, in plain English, ` +
+        `then one sentence on what to read next. Use only what is in the text; if it contains no figures, do not add any.\n\n---\n${text}`,
+      `Summarise the ${name} screen`
+    );
   }
 
   /* ---- journal ---- */
@@ -1149,8 +1194,9 @@ export default function Terminal() {
 
   const zoneKeysFor = (sc) => Object.keys(ZONES).filter((k) => ZONES[k].screen === sc);
 
-  function enterDesk() {
+  function enterDesk(dest) {
     setShowLanding(false);
+    if (dest) go(dest);
     try { localStorage.setItem("agdesk.seen", "1"); } catch {}
   }
 
@@ -1160,53 +1206,140 @@ export default function Terminal() {
     return (
       <div className="landing">
         <div className="landing-inner">
-          <div className="landing-hero">
-            <h1 className="landing-title">LEDGE<span className="landing-dot">&middot;</span>DESK</h1>
-            <p className="landing-sub">Markets intelligence. No noise.</p>
-          </div>
+          <div className="landing-mark">LEDGE&middot;DESK</div>
 
-          <div className="landing-features">
-            <div className="landing-feat">
-              <div className="landing-feat-icon">📡</div>
-              <h3>160+ sources</h3>
-              <p>Finance, politics, law and international relations — the four inputs that move prices, merged and deduplicated every 10 minutes.</p>
-            </div>
-            <div className="landing-feat">
-              <div className="landing-feat-icon">🌍</div>
-              <h3>29 exchanges</h3>
-              <p>Live session status across five time zones. Asia, EMEA and Americas reads written against the numbers, not about them.</p>
-            </div>
-            <div className="landing-feat">
-              <div className="landing-feat-icon">📉</div>
-              <h3>AI bubble thesis</h3>
-              <p>$300B capex vs $20B revenue. Interactive charts, position sizer, contagion mapping and the counter-arguments — all in one place.</p>
-            </div>
-            <div className="landing-feat">
-              <div className="landing-feat-icon">🎓</div>
-              <h3>Learn from zero</h3>
-              <p>16 tutorials, economics, law, IR and politics frameworks. Plain English mode makes every term tappable.</p>
-            </div>
-          </div>
+          <h1 className="landing-title">A markets desk that shows its reasoning.</h1>
+          <p className="landing-sub">
+            Session reads for {EXCHANGES.length} world exchanges and the agricultural markets, each with the
+            working behind it. {TUTORIALS.length} lessons that start from nothing. An analyst you can question
+            about any of it.
+          </p>
 
-          <div className="landing-cta">
-            <button className="landing-enter" onClick={enterDesk}>
-              Open the desk →
+          <div className="landing-paths">
+            <button className="landing-path" onClick={() => enterDesk("START")}>
+              <span className="lp-k">New to investing</span>
+              <span className="lp-t">Start with the lessons</span>
+              <span className="lp-d">What a share, a future and an option are, and how money is actually lost, before any market screen.</span>
             </button>
-            {supabase && (
-              <button className="landing-signin" onClick={() => signIn("google")}>
-                Sign in with Google
-              </button>
-            )}
-            <p className="landing-note">Free. 160+ news sources, 29 exchanges, 16 tutorials. No sign-up required.</p>
+            <button className="landing-path" onClick={() => enterDesk("HOME")}>
+              <span className="lp-k">Already follow markets</span>
+              <span className="lp-t">Go to today&apos;s desk</span>
+              <span className="lp-d">Headlines, verified rates and currencies, and the latest read for each trading session.</span>
+            </button>
           </div>
 
-          <div className="landing-foot">
-            <p>Built for traders, students and anyone who reads markets seriously.</p>
-          </div>
+          <dl className="landing-list">
+            <div><dt>Learn</dt><dd>Lessons, a glossary, and a risk section built on regulators&apos; own loss data.</dd></div>
+            <div><dt>Daily</dt><dd>News across finance, politics, international relations and law, and a political-risk screen for the flashpoints that move shipping and trade.</dd></div>
+            <div><dt>Markets</dt><dd>Asia, Europe and the Americas by session, with grains and softs in depth.</dd></div>
+            <div><dt>Yours</dt><dd>The analyst, and a journal that marks your reasoning rather than your result.</dd></div>
+          </dl>
+
+          <p className="landing-note">
+            Free to read, no account needed.
+            {supabase && (
+              <> <button className="landing-link" onClick={() => signIn("google")}>Sign in with Google</button> to use the analyst and save a journal.</>
+            )}
+          </p>
+          <p className="landing-foot">
+            Educational material, not investment advice. Futures and options are leveraged: losses can exceed the
+            amount deposited, and regulators consistently find that most individual traders lose money.
+          </p>
         </div>
       </div>
     );
   }
+
+  /**
+   * The analyst's thread and composer. Rendered on its own screen and in the
+   * side panel, off the same messages, so a question asked beside a lesson is
+   * still there when the reader opens the full screen.
+   */
+  const analystBody = (side) => (
+    <>
+              {!user && !apiKey && (
+                <div className="gate">
+                  <h3>Sign in to use the analyst</h3>
+                  <p className="prose dim">
+                    The analyst costs money to run, so it needs an account to keep usage fair. Signing in is free and
+                    gives you {process.env.NEXT_PUBLIC_FREE_DAILY || 20} messages a day, plus a journal that saves.
+                    Everything else on this terminal works without an account.
+                  </p>
+                  <div className="btnrow">
+                    <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
+                    <button className="btn" onClick={() => go("SET")}>Use my own API key instead</button>
+                  </div>
+                </div>
+              )}
+
+              {(user || apiKey) && (
+                <>
+                  <div className="chips">
+                    {side && screen !== "AGN" && (
+                      <button className="chip chip-pri" disabled={thinking} onClick={summariseScreen}>SUMMARISE THIS SCREEN</button>
+                    )}
+                    {(side ? [] : [
+                      ["WHAT CHANGED", "What changed in the reads since the last run, and what does it imply?"],
+                      ["SCENARIO", "Give me one realistic scenario drawn from today's reads, 4-6 sentences with plausible numbers, ending in a single question about what I should conclude. Don't give the answer."],
+                      ["QUIZ", "Ask me one multiple-choice question with four options testing part of the method against today's numbers. Don't reveal the answer."],
+                      ["EXPLAIN", "Walk through today's reads and show how each conclusion was reached from the underlying data."],
+                      ["STRESS TEST", "Which market on the terminal today has the weakest evidence behind it, and what would change your mind?"]
+                    ]).map(([label, q]) => (
+                      <button key={label} className="chip" onClick={() => ask(q)}>{label}</button>
+                    ))}
+                  </div>
+
+                  <div className="thread">
+                    {msgs.length === 0 && (
+                      <div className="msg ai">
+                        <span className="who">AGN</span>
+                        <div className="bub">
+                          Terminal ready. Ask about any market on the board, any part of the method, or paste your own
+                          analysis for marking.
+                        </div>
+                      </div>
+                    )}
+                    {msgs.map((m, i) => (
+                      <div className={"msg " + (m.role === "user" ? "me" : m.role === "error" ? "ai err" : "ai")} key={i}>
+                        <span className="who">{m.role === "user" ? "You" : "AGN"}</span>
+                        <div className="bub">
+                          {m.role === "user" ? (m.shown || m.content) : <Markdown text={m.content} />}
+                        </div>
+                      </div>
+                    ))}
+                    {thinking && (
+                      <div className="msg ai">
+                        <span className="who">AGN</span>
+                        <div className="bub">…</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="composer">
+                    <div className="field">
+                      <label htmlFor={side ? "agentInputSide" : "agentInput"}>Question</label>
+                      <textarea
+                        id={side ? "agentInputSide" : "agentInput"}
+                        rows={side ? 2 : 3}
+                        value={agentInput}
+                        onChange={(e) => setAgentInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ask(agentInput); }
+                        }}
+                        placeholder="Ask about any market, term, or paste your own analysis to have it marked"
+                      />
+                    </div>
+                    <div className="btnrow">
+                      <button className="btn pri" disabled={thinking} onClick={() => ask(agentInput)}>
+                        {thinking ? "Working" : "Send"}
+                      </button>
+                      <button className="btn" onClick={() => setMsgs([])}>Clear</button>
+                    </div>
+                  </div>
+                </>
+              )}
+    </>
+  );
 
   return (
     <>
@@ -1241,13 +1374,21 @@ export default function Terminal() {
         </button>
         <button
           className="tbtn"
+          aria-pressed={agnOpen}
+          onClick={() => setAgnOpen((v) => !v)}
+          title="Ask the analyst beside what you are reading"
+        >
+          Analyst
+        </button>
+        <button
+          className="tbtn"
           onClick={flipTheme}
           title={theme === "dark" ? "Switch to light" : "Switch to dark"}
         >
           {theme === "dark" ? "Light" : "Dark"}
         </button>
         <button
-          className="tbtn"
+          className="tbtn tbtn-cmd"
           onClick={() => {
             setCmdOpen((v) => !v);
             setTimeout(() => document.getElementById("cmd")?.focus(), 30);
@@ -1290,11 +1431,11 @@ export default function Terminal() {
         </div>
       )}
 
-      <div className={"shell" + (navOpen ? " navopen" : "")}>
+      <div className={"shell" + (navOpen ? " navopen" : "") + (agnOpen && screen !== "AGN" ? " agnopen" : "")}>
         <nav className="side" aria-label="Sections">
-          {NAV_GROUPS.map(({ g, items }) => (
+          {NAV_GROUPS.map(({ g, items, note }) => (
             <div className="navgroup" key={g}>
-              <div className="navhead">{g}</div>
+              <div className="navhead">{g}{note && <span className="navnote">{note}</span>}</div>
               {items.map((code) => {
                 const sc = SCREENS.find((x) => x.c === code);
                 if (!sc) return null;
@@ -1321,6 +1462,18 @@ export default function Terminal() {
           </div>
         </nav>
 
+        {agnOpen && screen !== "AGN" && (
+          <aside className="agnside" aria-label="Analyst">
+            <div className="agnhead">
+              <span className="agntitle">Analyst</span>
+              <span className="agnmeta">{apiKey ? "your key" : quota != null ? `${quota} left today` : ""}</span>
+              <button className="tbtn" onClick={() => { setAgnOpen(false); go("AGN"); }}>Full screen</button>
+              <button className="tbtn" aria-label="Close analyst" onClick={() => setAgnOpen(false)}>Close</button>
+            </div>
+            <div className="agnbody">{analystBody(true)}</div>
+          </aside>
+        )}
+
         {/* Tapping the page closes the drawer on a phone. */}
         {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
 
@@ -1330,33 +1483,15 @@ export default function Terminal() {
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (
             <>
-              {/* ── Welcome hero ── */}
-              <div style={{ marginBottom: "1.5rem" }}>
-                <h2 style={{ fontSize: "1.4rem", fontWeight: 700, margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-                  LEDGE·DESK
-                </h2>
-                <p className="prose dim" style={{ margin: 0, fontSize: "0.88rem" }}>
-                  Markets terminal. Agricultural commodities. World exchanges. Analysis desk.
+              <div className="homelead">
+                <h1>{new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(new Date())}</h1>
+                <p>
+                  New to this? Read{" "}
+                  <button className="textlink" onClick={() => go("START")}>Start</button> and{" "}
+                  <button className="textlink" onClick={() => go("RISK")}>Risk</button> before the market screens.
+                  Anything unclear, open the <button className="textlink" onClick={() => setAgnOpen(true)}>Analyst</button> beside
+                  the page and ask.
                 </p>
-              </div>
-
-              {/* ── Quick-access grid ── */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.5rem", marginBottom: "1.5rem" }}>
-                {[
-                  { code: "NEWS", label: "Headlines", desc: "Live news feeds", icon: "◉" },
-                  { code: "DESK", label: "Ag Brief", desc: "Commodity analysis", icon: "◈" },
-                  { code: "WLD",  label: "World", desc: "29 exchanges", icon: "◎" },
-                  { code: "DOOM", label: "Doomsday", desc: "AI bubble thesis", icon: "◆" },
-                  { code: "AGN",  label: "Analyst", desc: "Ask anything", icon: "◇" },
-                  { code: "FLOW", label: "Flows", desc: "Capital movements", icon: "◊" },
-                ].map(q => (
-                  <button key={q.code} onClick={() => go(q.code)}
-                    style={{ padding: "0.75rem", border: "1px solid var(--rule)", borderRadius: "8px", cursor: "pointer",
-                      background: "transparent", textAlign: "left", display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-                    <span style={{ fontSize: "1rem", fontWeight: 700, color: "var(--fg)" }}>{q.icon} {q.label}</span>
-                    <span style={{ fontSize: "0.75rem", opacity: 0.6, color: "var(--fg)" }}>{q.desc}</span>
-                  </button>
-                ))}
               </div>
 
               {/* ── Market figures ── */}
@@ -1721,12 +1856,12 @@ export default function Terminal() {
           {/* ---------------- WLD ---------------- */}
           {screen === "WLD" && (
             <Panel code="WLD" title="World exchanges" meta={`${openCount} OPEN NOW`}>
-              <TVWidget widget="ticker-tape" config={TAPE_CONFIG} />
+              <TVWidget theme={theme} widget="ticker-tape" config={TAPE_CONFIG} />
               <p className="prose dim">
                 {EXCHANGES.length} exchanges, their local clock and whether they are trading right now. Computed live
                 from your device clock, so it works whether or not a read has landed. Holidays are not accounted for.
               </p>
-              <TVWidget widget="market-quotes" config={TV_CONFIGS.WLD} label="Benchmark levels, live" />
+              <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.WLD} label="Benchmark levels, live" />
               <div className="glosbar">
                 <input
                   type="text"
@@ -1762,6 +1897,77 @@ export default function Terminal() {
             </Panel>
           )}
 
+          {/* ---------------- political risk ---------------- */}
+          {screen === "GEO" && (() => {
+            const pool = ["ir", "politics", "finance"].flatMap((k) => news?.streams?.[k]?.items || []);
+            const points = scanFlashpoints(pool);
+            const LEVEL = { quiet: "Quiet", watch: "Watch", elevated: "Elevated" };
+            return (
+              <Panel
+                code="GEO"
+                title="Political risk"
+                meta={news?.at ? `HEADLINES ${new Date(news.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "AWAITING HEADLINES"}
+              >
+                <p className="prose dim">
+                  Nobody can detect a war before it starts, and this screen does not claim to. It counts how much of
+                  the last three days&apos; reporting is about each flashpoint and how much of that uses escalation
+                  language, then sets out in advance what each would disturb. The level describes news attention, not
+                  probability.
+                </p>
+
+                <div className="geogrid">
+                  {points.map((f) => (
+                    <a className={"geocard " + f.level} key={f.id} href={"#geo-" + f.id} onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById("geo-" + f.id)?.scrollIntoView({ block: "start", behavior: "smooth" });
+                    }}>
+                      <span className="geoname">{f.name}</span>
+                      <span className="geolevel">{LEVEL[f.level]}</span>
+                      <span className="geocount">
+                        {f.hits.length ? `${f.hits.length} headline${f.hits.length === 1 ? "" : "s"}, ${f.hot} on escalation` : "No headlines today"}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+
+                {points.map((f) => (
+                  <div className="sec geosec" id={"geo-" + f.id} key={f.id}>
+                    <div className="trackhead">
+                      <span className="tt">{f.name}</span>
+                      <span className={"geolevel " + f.level}>{LEVEL[f.level]}</span>
+                      <span className="tc">{f.parties}</span>
+                    </div>
+                    <Prose text={f.why} />
+                    <dl className="geomarkers">
+                      {MARKERS.map((m) => (
+                        <div key={m.k} className={f.touched.includes(m.k) ? "on" : ""}>
+                          <dt>{m.t}{f.touched.includes(m.k) && <span className="geoflag">in today&apos;s headlines</span>}</dt>
+                          <dd>{f.markers[m.k]}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <NewsList items={f.hits} limit={6} empty="No headlines about this in the current feeds. Quiet reporting is not the same as low risk." />
+                    {f.hits.length > 0 && (
+                      <div className="btnrow">
+                        <button
+                          className="btn"
+                          onClick={() => ask(
+                            `These are today's headlines about ${f.name} (${f.parties}):\n` +
+                              f.hits.slice(0, 12).map((h) => `- ${h.title} (${h.source})`).join("\n") +
+                              `\n\nIn plain English: what do they establish, what do they not establish, and which of shipping, trade and air travel would be affected first if this worsened? Do not predict whether there will be a war.`,
+                            `Explain today's ${f.name} headlines`
+                          )}
+                        >
+                          Ask the analyst what these mean
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </Panel>
+            );
+          })()}
+
           {/* ---------------- session screens ---------------- */}
           {["ASIA", "EMEA", "AMER"].includes(screen) && (
             <Panel
@@ -1770,7 +1976,7 @@ export default function Terminal() {
               meta={zoneKeysFor(screen).map((k) => reads[k]?.stamp).filter(Boolean)[0]?.toUpperCase() || "AWAITING FIRST RUN"}
             >
               <TVWidget
-                key={screen}
+                theme={theme}
                 widget="market-quotes"
                 config={TV_CONFIGS[screen]}
                 label="Index levels, live from TradingView"
@@ -1789,6 +1995,7 @@ export default function Terminal() {
                       <>
                         {s.headline && <h2>{s.headline}</h2>}
                         {s.lede && <p className="prose dim">{s.lede}</p>}
+                        <InShort items={s.short} />
                         <Grid title="Index moves" unit={(s.phase || "change").toUpperCase()} rows={s.rows} />
                         {(s.sections || []).map((sec, i) => <Block key={i} {...sec} />)}
                         {(s.watch || []).length > 0 && (
@@ -1816,6 +2023,7 @@ export default function Terminal() {
               <div className="sec">
                 <h2>{ag.headline}</h2>
                 <p className="prose dim">{ag.lede}</p>
+                <InShort items={ag.short} />
               </div>
               {(ag.boards || []).map((b, i) => <Grid key={i} title={b.title} unit={b.unit} rows={b.rows} />)}
               {(ag.sections || []).map((s, i) => <Block key={i} {...s} />)}
@@ -1825,7 +2033,7 @@ export default function Terminal() {
 
           {screen === "GRN" && (
             <Panel code="GRN" title="Grains & oilseeds">
-              <TVWidget widget="market-quotes" config={TV_CONFIGS.GRN} label="Grain futures, live" />
+              <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.GRN} label="Grain futures, live" />
               {(ag.boards || []).filter((b) => b.kind !== "soft").map((b, i) => (
                 <Grid key={i} title={b.title} unit={b.unit} rows={b.rows} />
               ))}
@@ -1838,7 +2046,7 @@ export default function Terminal() {
 
           {screen === "SFT" && (
             <Panel code="SFT" title="Softs">
-              <TVWidget widget="market-quotes" config={TV_CONFIGS.SFT} label="Softs futures, live" />
+              <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.SFT} label="Softs futures, live" />
               {(ag.boards || []).filter((b) => b.kind === "soft").map((b, i) => (
                 <Grid key={i} title={b.title} unit={b.unit} rows={b.rows} />
               ))}
@@ -1879,7 +2087,7 @@ export default function Terminal() {
 
           {screen === "MAC" && (
             <Panel code="MAC" title="Macro overlay">
-              <TVWidget widget="market-quotes" config={TV_CONFIGS.MAC} label="Rates, dollar and energy, live" />
+              <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.MAC} label="Rates, dollar and energy, live" />
               {agLive && (ag.rows || []).length > 0 && (
                 <Grid title="Verified figures" unit={ag.stamp || "latest"} rows={ag.rows} />
               )}
@@ -1910,84 +2118,7 @@ export default function Terminal() {
               title="Analyst"
               meta={apiKey ? "YOUR KEY · UNLIMITED" : quota != null ? `${quota} LEFT TODAY` : "SHARED"}
             >
-              {!user && !apiKey && (
-                <div className="gate">
-                  <h3>Sign in to use the analyst</h3>
-                  <p className="prose dim">
-                    The analyst costs money to run, so it needs an account to keep usage fair. Signing in is free and
-                    gives you {process.env.NEXT_PUBLIC_FREE_DAILY || 20} messages a day, plus a journal that saves.
-                    Everything else on this terminal works without an account.
-                  </p>
-                  <div className="btnrow">
-                    <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
-                    <button className="btn" onClick={() => go("SET")}>Use my own API key instead</button>
-                  </div>
-                </div>
-              )}
-
-              {(user || apiKey) && (
-                <>
-                  <div className="chips">
-                    {[
-                      ["WHAT CHANGED", "What changed in the reads since the last run, and what does it imply?"],
-                      ["SCENARIO", "Give me one realistic scenario drawn from today's reads, 4-6 sentences with plausible numbers, ending in a single question about what I should conclude. Don't give the answer."],
-                      ["QUIZ", "Ask me one multiple-choice question with four options testing part of the method against today's numbers. Don't reveal the answer."],
-                      ["EXPLAIN", "Walk through today's reads and show how each conclusion was reached from the underlying data."],
-                      ["STRESS TEST", "Which market on the terminal today has the weakest evidence behind it, and what would change your mind?"]
-                    ].map(([label, q]) => (
-                      <button key={label} className="chip" onClick={() => ask(q)}>{label}</button>
-                    ))}
-                  </div>
-
-                  <div className="thread">
-                    {msgs.length === 0 && (
-                      <div className="msg ai">
-                        <span className="who">AGN</span>
-                        <div className="bub">
-                          Terminal ready. Ask about any market on the board, any part of the method, or paste your own
-                          analysis for marking.
-                        </div>
-                      </div>
-                    )}
-                    {msgs.map((m, i) => (
-                      <div className={"msg " + (m.role === "user" ? "me" : m.role === "error" ? "ai err" : "ai")} key={i}>
-                        <span className="who">{m.role === "user" ? "You" : "AGN"}</span>
-                        <div className="bub">
-                          {m.role === "user" ? m.content : <Markdown text={m.content} />}
-                        </div>
-                      </div>
-                    ))}
-                    {thinking && (
-                      <div className="msg ai">
-                        <span className="who">AGN</span>
-                        <div className="bub">…</div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="composer">
-                    <div className="field">
-                      <label htmlFor="agentInput">Query</label>
-                      <textarea
-                        id="agentInput"
-                        rows={3}
-                        value={agentInput}
-                        onChange={(e) => setAgentInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ask(agentInput); }
-                        }}
-                        placeholder="Ask about any market, term, or paste your own analysis to have it marked"
-                      />
-                    </div>
-                    <div className="btnrow">
-                      <button className="btn pri" disabled={thinking} onClick={() => ask(agentInput)}>
-                        {thinking ? "Working" : "Send"}
-                      </button>
-                      <button className="btn" onClick={() => setMsgs([])}>Clear</button>
-                    </div>
-                  </div>
-                </>
-              )}
+              {analystBody(false)}
             </Panel>
           )}
 
@@ -2435,6 +2566,12 @@ export default function Terminal() {
           {/* ---------------- DOOM ---------------- */}
           {screen === "DOOM" && (
             <Panel code="DOOM" title="Doomsday" meta="AI bubble short thesis + counter-thesis">
+              <p className="notice">
+                This is one argued position, with its counter-argument, not a forecast. Betting against a market is
+                among the fastest ways to lose more than you put in. If the terms here are new, read{" "}
+                <button className="textlink" onClick={() => go("RISK")}>Risk</button> and the{" "}
+                <button className="textlink" onClick={() => go("TUT")}>tutorials</button> first.
+              </p>
               {(() => {
                 const DOOM_TABS = [
                   { k: "crash", t: "Crash Data" },
@@ -2828,7 +2965,7 @@ export default function Terminal() {
                           ))}
                         </div>
                         {COUNTER_ARGS.map((c, i) => (
-                          <Block key={i} title={`${c.risk === "CRITICAL" ? "⚠️ " : ""}${c.title}`} startOpen={i < 3}>
+                          <Block key={i} title={`${c.title}`} startOpen={i < 3}>
                             <div style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.4rem", borderRadius: "3px", display: "inline-block", marginBottom: "0.5rem",
                               background: c.risk === "CRITICAL" ? "var(--dn)" : c.risk === "HIGH" ? "var(--accent-2)" : "var(--rule)",
                               color: c.risk === "CRITICAL" ? "#fff" : "inherit" }}>

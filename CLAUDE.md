@@ -6,6 +6,7 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - `app/page.jsx` (3,000 lines, the entire UI). Find things by grep: `function TVWidget`, `function Grid`, `function Block`, `function FXScreen`, `screen === "MAC"` (one block per screen code: HOME, WLD, ASIA, EMEA, AMER, GRN, SFT, MAC, FX, DOOM, JRN...).
 - `app/globals.css` — all styles, one line per rule. `.grid/.grow/.gnm/.gpx/.gch` is the three-column quote grid; `.srcs` is the source-link list.
 - `lib/tv.js` — every TradingView symbol (`TAPE`, `TV_GROUPS` keyed by screen code).
+- `lib/geo.js` — political-risk flashpoints, keyword matching and the shipping/trade/air-travel markers for the GEO screen. It reads the existing news streams; it measures reporting, never probability.
 - `lib/content.js` — static copy, `FALLBACK_FEED` (shown when no live read), `ZONES`.
 - `lib/quotes.mjs` — verified figures per zone (ECB FX, Treasury curve, BIS rates, FRED).
 - `lib/news.mjs`, `lib/providers.mjs` — free headlines and the Gemini/Anthropic writers.
@@ -23,6 +24,13 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 ## Naming
 - The site is called Ledge Desk (drawn as LEDGE·DESK). The repo, the Vercel URL and the `agdesk.*` localStorage keys keep the old name on purpose: renaming the keys would wipe visitors' saved progress.
 
+## Interface conventions
+- No emoji or glyph icons, no feature-card grids, no inline `style={{}}` for new work. Use the tokens and classes in `globals.css`; serif for headings, sans for text, mono only for codes and figures.
+- Sidebar order (`NAV_GROUPS`) runs beginner to advanced on purpose: Start here, Your desk, Daily, Markets, Commodities, Disciplines, Advanced.
+- The analyst renders from `analystBody(side)` both on the AGN screen and in the side panel (`agnOpen`). `ask(text, shown)` opens the panel; `shown` is the label displayed instead of a long prompt.
+- Reads carry `short` (three plain sentences, shown by `InShort`) and, for `ag`, `macro`.
+- To look at the site locally: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-dummy npx next build` then `next start` with the same two variables. Without them every page returns a 500. News and widgets are empty offline.
+
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.
 - Ship patches (commits), never bulk copies of the repo.
@@ -31,12 +39,15 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - Supabase `service_role` key is server-only: never `NEXT_PUBLIC_`, never in the browser.
 
 ## State at 10 Nov 2026 (update or delete as items close)
-Done: widget symbols cleaned in `lib/tv.js`; widget re-mounts per screen; agricultural read publishes a `macro` array shown on MAC (falls back to the 20 Oct snapshot until a read lands); DOOM sources and watch-item layout fixed; FX screen shows an "unavailable" message.
+Done (10 Nov, second pass): sidebar reordered beginner-first; landing and home rebuilt without icon cards; analyst side panel with "Summarise this screen"; GEO political-risk screen; `short` summaries added to the read schema; widget follows light/dark theme; top bar height bug fixed.
+
+Done earlier: widget symbols cleaned in `lib/tv.js`; widget re-mounts per screen; agricultural read publishes a `macro` array shown on MAC (falls back to the 20 Oct snapshot until a read lands); DOOM sources and watch-item layout fixed; FX screen shows an "unavailable" message.
 
 Not yet confirmed on the live site:
 - `INDEX:FTSEMIB` (EMEA), `BLACKBULL:US30` (AMER).
 - GRN, SFT and MAC widgets (`BMFBOVESPA:`, `CMCMARKETS:`, `TVC:USOIL`, `TVC:UKOIL`).
-- The macro section: needs one run of the Market reads action, zone `ag`, phase `close`.
+- The macro section and the "In short" summaries: appear after the next scheduled read of each zone (or a manual run of the Market reads action).
+- GEO headline matching against live feeds (tested only on sample headlines).
 - USD/TRY in the EMEA verified figures.
 
 Open tasks:
@@ -47,3 +58,13 @@ Open tasks:
    - Anthropic key: used as `ANTHROPIC_API_KEY` in Vercel env and GitHub Actions secrets. Set a spend cap at the same time.
    - Groq key: used only by the tradebot on the Pi, not by this repo.
    - Google OAuth client secret: used by the Supabase Auth Google provider, not by this repo's env.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
