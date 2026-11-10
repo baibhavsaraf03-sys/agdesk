@@ -142,6 +142,25 @@ const READ_TOOL = {
           required: ["h", "body"]
         }
       },
+      // Only the agricultural read is asked for this; see the schema swap below.
+      macro: {
+        type: "array",
+        description:
+          "The macro overlay, shown on its own screen: one to three blocks on the dollar, crude, rates, freight and fertiliser and what each is doing to crop prices right now.",
+        items: {
+          type: "object",
+          properties: {
+            h: { type: "string", description: "Heading." },
+            body: { type: "string", description: "Three to six sentences built on the verified figures." },
+            read: {
+              type: "string",
+              description:
+                "How to read that backdrop: two or three paragraphs separated by blank lines, about method rather than more facts."
+            }
+          },
+          required: ["h", "body"]
+        }
+      },
       watch: {
         type: "array",
         items: {
@@ -169,6 +188,12 @@ const READ_TOOL = {
   }
 };
 
+// The macro overlay belongs to the agricultural read. Asking every equity zone
+// for one would be sixteen copies of the same paragraph a day, so the field is
+// removed from their schema and required in this one.
+if (zone === "ag") READ_TOOL.input_schema.required = ["headline", "macro"];
+else delete READ_TOOL.input_schema.properties.macro;
+
 /**
  * The quote grid is no longer the model's job. Rates, currencies and oil come
  * from the public-domain sources in lib/quotes.mjs and are handed to the model
@@ -195,7 +220,8 @@ Return the finished read in the required structure, and nothing else — no prea
 
 Requirements:
 - ${phase === "close" ? "3-4" : "2-3"} sections, ${phase === "close" ? "4-6" : "3-5"} watch items, 3-6 sources.
-- Do not restate the verified figures as a list. Use them: explain what they imply, where they agree or disagree with the equity move, and what would change the reading.
+${zone === "ag" ? `- Also fill the macro array with one to three blocks: the dollar, crude oil, interest rates, and freight and fertiliser where the material supports them. Build each on the verified figures above, with their dates, and say what it is doing to crop prices now — the dollar caps export demand, crude sets the floor under ethanol and biodiesel, rates price the cost of carrying inventory, fertiliser feeds next year's acreage. If the material says nothing about freight, say so rather than filling the gap. This is separate from the sections and must not repeat them.
+` : ""}- Do not restate the verified figures as a list. Use them: explain what they imply, where they agree or disagree with the equity move, and what would change the reading.
 - Every other figure must come from something you actually retrieved in this session. Never carry a number forward unverified. Omit anything you cannot verify rather than guessing.
 - Say explicitly when a figure is a forecast or projection rather than a traded level.
 - No buy or sell calls and no investment advice. Explain reasoning instead.
@@ -425,6 +451,10 @@ async function main() {
   payload = deepStrip(payload);
   payload.sections = Array.isArray(payload.sections) ? payload.sections : [];
   payload.watch = Array.isArray(payload.watch) ? payload.watch : [];
+  if (zone === "ag") {
+    payload.macro = (Array.isArray(payload.macro) ? payload.macro : []).filter((m) => m && m.body);
+    if (!payload.macro.length) console.warn("  warning: published with no macro overlay");
+  }
   payload.sources = Array.isArray(payload.sources) ? payload.sources : [];
   if (!payload.sections.length) {
     console.warn("  warning: published with no sections — raise FEED_MAX_TOKENS if this recurs");
@@ -445,7 +475,7 @@ async function main() {
   if (error) throw new Error(`Database write failed: ${error.message}`);
 
   console.log(`[${zone}/${phase}] published — ${payload.headline}`);
-  console.log(`  rows: ${payload.rows.length}, sections: ${(payload.sections || []).length}, sources: ${(payload.sources || []).length}`);
+  console.log(`  rows: ${payload.rows.length}, sections: ${(payload.sections || []).length}, macro: ${(payload.macro || []).length}, sources: ${(payload.sources || []).length}`);
 }
 
 main().catch((err) => {

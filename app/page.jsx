@@ -1880,8 +1880,20 @@ export default function Terminal() {
           {screen === "MAC" && (
             <Panel code="MAC" title="Macro overlay">
               <TVWidget widget="market-quotes" config={TV_CONFIGS.MAC} label="Rates, dollar and energy, live" />
-              {(ag.macro || []).map((s, i) => <Block key={i} {...s} />)}
-              {(ag.macro || []).length === 0 && <div className="empty">No macro section in the current read.</div>}
+              {agLive && (ag.rows || []).length > 0 && (
+                <Grid title="Verified figures" unit={ag.stamp || "latest"} rows={ag.rows} />
+              )}
+              {/* A live read published before the macro overlay existed has no
+                  macro array. Show the embedded one, dated, rather than an
+                  empty screen; the next scheduled read replaces it. */}
+              {(ag.macro || []).length > 0
+                ? ag.macro.map((s, i) => <Block key={i} {...s} />)
+                : (
+                  <>
+                    <div className="empty">Background from the {FALLBACK_FEED.stamp.replace("SNAPSHOT ", "")} snapshot. The next agricultural read replaces it.</div>
+                    {FALLBACK_FEED.macro.map((s, i) => <Block key={i} {...s} />)}
+                  </>
+                )}
             </Panel>
           )}
 
