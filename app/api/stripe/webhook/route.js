@@ -39,47 +39,57 @@ export async function POST(req) {
 
   const db = adminClient();
 
+  /** Which plan a subscription is for, read from its price. */
+  const planOf = (sub) => {
+    const price = sub?.items?.data?.[0]?.price?.id;
+    if (price && price === process.env.STRIPE_PRICE_PRO) return "pro";
+    if (price && price === process.env.STRIPE_PRICE_PLUS) return "plus";
+    return sub?.metadata?.plan === "pro" ? "pro" : "plus";
+  };
+  /** Newer Stripe API versions moved the period end onto the item. */
+  const periodEnd = (sub) => {
+    const t = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end;
+    return t ? new Date(t * 1000).toISOString() : null;
+  };
+
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
       const userId = session.client_reference_id || session.metadata?.supabase_user_id;
-      if (!userId) break;
+      if (!userId || !session.subscription) break;
 
-      // Retrieve the subscription to get its status and period.
       const sub = await stripe.subscriptions.retrieve(session.subscription);
 
       await db.from("profiles").upsert({
-        id: userId,
+        user_id: userId,
         stripe_customer_id: session.customer,
         stripe_subscription_id: sub.id,
         stripe_status: sub.status,
-        plan: "pro",
-        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        plan: planOf(sub),
+        current_period_end: periodEnd(sub),
         updated_at: new Date().toISOString(),
-      }, { onConflict: "id" });
+      }, { onConflict: "user_id" });
       break;
     }
 
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const sub = event.data.object;
-      const customerId = sub.customer;
 
-      // Look up the user by their Stripe customer id.
       const { data: profile } = await db
         .from("profiles")
-        .select("id")
-        .eq("stripe_customer_id", customerId)
+        .select("user_id")
+        .eq("stripe_customer_id", sub.customer)
         .single();
 
       if (profile) {
-        const active = ["active", "trialing"].includes(sub.status);
+        const active = event.type !== "customer.subscription.deleted" && ["active", "trialing"].includes(sub.status);
         await db.from("profiles").update({
           stripe_status: sub.status,
-          plan: active ? "pro" : "free",
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          plan: active ? planOf(sub) : "free",
+          current_period_end: periodEnd(sub),
           updated_at: new Date().toISOString(),
-        }).eq("id", profile.id);
+        }).eq("user_id", profile.user_id);
       }
       break;
     }

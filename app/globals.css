@@ -649,3 +649,16 @@ a.dgleadtitle:hover{color:var(--accent)}
 .side{top:calc(54px + env(safe-area-inset-top,0px))}
 .scrim{inset:calc(54px + env(safe-area-inset-top,0px)) 0 0 0}
 .notice{border-left:2px solid var(--warn);padding:2px 0 2px 14px;font-size:13.5px;line-height:1.55;color:var(--fg)}
+
+/* Sponsor line, plans. */
+.sponsor{margin:0 0 14px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13px;line-height:1.5;color:var(--fg-dim)}
+.sponsor a,.sponsor strong{color:var(--fg);font-weight:600}
+.sponsor-k{display:inline-block;margin-right:10px;font-size:10.5px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--warn)}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));border-top:1px solid var(--fg)}
+.plan{display:flex;flex-direction:column;gap:8px;padding:16px 18px 18px 0;border-bottom:1px solid var(--line);min-width:0}
+.plan-name{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim)}
+.plan-cur{margin-left:8px;color:var(--accent);letter-spacing:0;text-transform:none;font-weight:500}
+.plan-price{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.1}
+.plan-price span{margin-left:6px;font-family:var(--sans);font-size:13px;font-weight:400;color:var(--fg-dim)}
+.plan ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:13.5px;line-height:1.5;flex:1}
+.plan .btn{align-self:flex-start}

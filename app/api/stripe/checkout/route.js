@@ -11,11 +11,13 @@ const stripe = process.env.STRIPE_SECRET_KEY
 /**
  * POST /api/stripe/checkout
  *
- * Creates a Stripe Checkout session for the $10/month Ledge Desk Pro plan.
+ * Creates a Stripe Checkout session for a paid plan. The body names it:
+ * { "plan": "plus" } is $20 a month, { "plan": "pro" } is $100 a month.
+ * The price ids come from STRIPE_PRICE_PLUS and STRIPE_PRICE_PRO.
  * The user must be signed in — we attach their Supabase user id as
  * client_reference_id so the webhook can link the subscription back.
  */
-export async function POST() {
+export async function POST(req) {
   if (!stripe) {
     return NextResponse.json(
       { error: "Payments are not configured yet." },
@@ -31,11 +33,13 @@ export async function POST() {
   }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://agdesk.vercel.app";
-  const priceId = process.env.STRIPE_PRICE_ID;
+  const body = await req.json().catch(() => ({}));
+  const plan = body?.plan === "pro" ? "pro" : "plus";
+  const priceId = plan === "pro" ? process.env.STRIPE_PRICE_PRO : process.env.STRIPE_PRICE_PLUS;
 
   if (!priceId) {
     return NextResponse.json(
-      { error: "STRIPE_PRICE_ID is not set." },
+      { error: "Paid plans are not switched on yet." },
       { status: 503 }
     );
   }
@@ -44,7 +48,7 @@ export async function POST() {
   const { data: profile } = await supabase
     .from("profiles")
     .select("stripe_customer_id")
-    .eq("id", user.id)
+    .eq("user_id", user.id)
     .single();
 
   const sessionParams = {
@@ -53,7 +57,8 @@ export async function POST() {
     success_url: `${origin}/?upgraded=1#SET`,
     cancel_url: `${origin}/#SET`,
     client_reference_id: user.id,
-    metadata: { supabase_user_id: user.id },
+    metadata: { supabase_user_id: user.id, plan },
+    subscription_data: { metadata: { supabase_user_id: user.id, plan } },
   };
 
   // If we already know their Stripe customer, reuse it.

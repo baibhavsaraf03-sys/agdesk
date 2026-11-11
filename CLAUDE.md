@@ -32,6 +32,11 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - Reads carry `short` (three plain sentences, shown by `InShort`) and, for `ag`, `macro`.
 - To look at the site locally: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-dummy npx next build` then `next start` with the same two variables. Without them every page returns a 500. News and widgets are empty offline.
 
+## Money
+- Plans: Free 20 analyst messages a day; Plus $20/month adds 100 a month; Pro $100/month adds 500 a month. Daily free messages are spent first. Logic lives in Postgres (`use_agent_message`, `my_usage` in `supabase/migrations/20261111_plans.sql`), called from `app/api/agent/route.js`. Stripe: `app/api/stripe/*`, env `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`, `STRIPE_PRICE_PRO`. `profiles` is keyed on `user_id`.
+- Sponsorship: `lib/sponsors.js` (slots, prices, live sponsors), served by `/api/sponsors` to US visitors only, shown as one labelled line at the top of the sponsored screen. Rules are on the SPON screen: no editorial say, no sponsored trades or recommendations, no promoting the sponsor's own securities. The site targets US readers and US rules only for now.
+- Owner still has to: run the plans migration in Supabase, create the two Stripe prices and webhook, set the env vars, set sponsor prices and `NEXT_PUBLIC_SPONSOR_CONTACT`.
+
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.
 - Ship patches (commits), never bulk copies of the repo.
