@@ -21,7 +21,12 @@ export async function GET() {
     fx.status = { error: String(err?.message || err).slice(0, 300) };
   }
   return Response.json(
-    { ...fx, events: upcomingEvents(), generated_at: new Date().toISOString() },
+    {
+      ...fx,
+      // Only the four currencies this screen covers; the full list is on CAL.
+      events: upcomingEvents(Date.now(), 40, ["USD", "EUR", "GBP", "JPY"]).map(({ name, at, tier, currencies, span }) => ({ name, at, tier, currencies, span })),
+      generated_at: new Date().toISOString()
+    },
     { headers: { "cache-control": "public, s-maxage=900, stale-while-revalidate=3600" } }
   );
 }

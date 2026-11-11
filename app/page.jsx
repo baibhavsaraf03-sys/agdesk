@@ -19,6 +19,7 @@ import { TV_CONFIGS, TAPE_CONFIG, TV_GROUPS } from "@/lib/tv";
 import { findSymbol } from "@/lib/charts";
 import ChartsScreen from "@/components/Charts";
 import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
+import CalendarScreen from "@/components/Calendar";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
@@ -44,7 +45,7 @@ const NAV_GROUPS = [
   { g: "Start here", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
   { g: "Your desk", items: ["AGN", "WL", "JRN", "SET"] },
   { g: "Daily", items: ["HOME", "NEWS", "GEO"] },
-  { g: "Markets", items: ["CHT", "WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
+  { g: "Markets", items: ["CHT", "CAL", "WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
   { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
   { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
   { g: "Advanced", note: "Read the lessons first", items: ["FLOW", "DOOM", "SRC"] },
@@ -79,6 +80,7 @@ const SCREENS = [
   { c: "MAC",   t: "Macro",      d: "Dollar, crude, rates, freight and fertiliser" },
   { c: "CHT",   t: "Charts",     d: "Full charts with drawing tools and indicators, one, two or four at once. CHT GOLD opens gold" },
   { c: "WL",    t: "Watchlist",  d: "Your own symbols with live quotes, saved to your account. WL GOLD adds gold" },
+  { c: "CAL",   t: "Calendar",   d: "Every scheduled rate decision and major release, with countdowns, in your time. CAL USD filters" },
   { c: "FX",    t: "Currencies", d: "Policy rates, two-year yields, speculative positioning and the releases that move the majors" },
   { c: "AGN",   t: "Analyst",    d: "Ask anything — it reads the live feed and remembers the thread" },
   { c: "ECON",  t: "Economics",  d: "14 models you are examined on, each applicable to today's reads" },
@@ -117,6 +119,7 @@ const ALIAS = {
   FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
   CHART: "CHT", CHARTS: "CHT", GRAPH: "CHT", GP: "CHT", GIP: "CHT",
   WATCHLIST: "WL", LIST: "WL", MON: "WL", MONITOR: "WL",
+  CALENDAR: "CAL", ECO: "CAL", ECAL: "CAL", EVTS: "CAL", EVENTS: "CAL", DATES: "CAL",
   DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
 };
 
@@ -734,8 +737,11 @@ function fxStatus(pair, events, now) {
   for (const e of events) {
     if (!fxTouches(e, pair)) continue;
     const at = Date.parse(e.at), [pre, post] = FX_WINDOWS[e.tier === 1 ? 1 : 2];
-    if (now >= at - pre * 60000 && now <= at + post * 60000) {
-      return { paused: true, until: at + post * 60000, why: e.name };
+    // span: banks that do not fix the minute (the Bank of Japan) can announce
+    // any time in the following stretch, so the window runs to its end.
+    const end = at + ((e.span || 0) + post) * 60000;
+    if (now >= at - pre * 60000 && now <= end) {
+      return { paused: true, until: end, why: e.name };
     }
   }
   const next = events.find((e) => fxTouches(e, pair) && Date.parse(e.at) > now);
@@ -755,7 +761,7 @@ function Spark({ values }) {
   );
 }
 
-function FXScreen({ openChart }) {
+function FXScreen({ openChart, openCalendar }) {
   const [data, setData] = useState(null);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -882,7 +888,7 @@ function FXScreen({ openChart }) {
           ))}
           {!events.length && <div className="grow"><span className="gnm fxdim">No upcoming releases stored.</span><span /><span /></div>}
         </div>
-        <p className="fxnote">Dates from the Fed, ECB, Bank of England, Bank of Japan, BLS, ONS and Eurostat. The Bank of Japan has no fixed announcement time, so it's covered by an early and a late marker.</p>
+        <p className="fxnote">Dates from the Fed, ECB, Bank of England, Bank of Japan, BLS, ONS and Eurostat. The Bank of Japan has no fixed announcement time, so its window runs from 11:30 to about 12:45 Tokyo time. <button type="button" className="linkbtn" onClick={() => openCalendar?.()}>Full calendar (CAL)</button></p>
       </div>
     </>
   );
@@ -901,6 +907,7 @@ export default function Terminal() {
   const [theme, setTheme] = useState("light");
   // A symbol for the Charts screen to load, from CHT <name> or a chart link. `n` makes a repeat request count.
   const [chartReq, setChartReq] = useState(null);
+  const [calReq, setCalReq] = useState(null);
   const [news, setNews] = useState(null);
   const [newsTopic, setNewsTopic] = useState("finance");
   const [newsBusy, setNewsBusy] = useState(false);
@@ -1108,6 +1115,11 @@ export default function Terminal() {
     if (c === "CHT") {
       const symbol = findSymbol(arg);
       if (symbol) setChartReq({ symbol, n: Date.now() });
+      return true;
+    }
+    if (c === "CAL") {
+      const cur = String(arg || "").trim().toUpperCase();
+      if (cur) setCalReq({ cur, n: Date.now() });
       return true;
     }
     if (c === "WL") {
@@ -1985,6 +1997,12 @@ export default function Terminal() {
             </Panel>
           )}
 
+          {screen === "CAL" && (
+            <Panel code="CAL" title="Economic calendar" meta="TYPE CAL USD, CAL GBP, CAL JPY">
+              <CalendarScreen ask={ask} request={calReq} />
+            </Panel>
+          )}
+
           {screen === "WL" && (
             <Panel code="WL" title="Watchlist" meta="TYPE WL GOLD, WL EURUSD, WL NASDAQ:AAPL">
               <WatchlistScreen
@@ -2256,7 +2274,7 @@ export default function Terminal() {
 
           {screen === "FX" && (
             <Panel code="FX" title="Currencies" meta="EUR/USD · GBP/USD · USD/JPY">
-              <FXScreen openChart={openChart} />
+              <FXScreen openChart={openChart} openCalendar={() => go("CAL")} />
             </Panel>
           )}
 
