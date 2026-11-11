@@ -1,14 +1,12 @@
 "use client";
 
 /**
- * The interactive parts of the articles section: signing in, the submission
- * form, withdrawing, and the editor's decision buttons. Everything else in
+ * The interactive parts of the articles section: the submission form, withdrawing, and the editor's decision buttons. Everything else in
  * /articles is server-rendered and works without script.
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { browserClient } from "@/lib/supabase-browser";
-import { RULES, NEXT_COOKIE, checkSubmission } from "@/lib/article-rules";
+import { RULES, checkSubmission } from "@/lib/article-rules";
 
 const DRAFT_KEY = "agdesk.article-draft";
 
@@ -25,33 +23,6 @@ async function send(url, method, body) {
   } catch {
     return { error: "No connection. Nothing was sent; try again." };
   }
-}
-
-/** Google sign-in that comes back to `next` instead of the desk. */
-export function SignInToSubmit({ next }) {
-  const [state, setState] = useState("");
-
-  async function go() {
-    const supabase = browserClient();
-    if (!supabase) return setState("Sign-in is not available on this copy of the site.");
-    setState("Opening Google");
-    // The destination travels in a short-lived cookie, not the redirect
-    // address: Supabase only accepts redirect addresses it has been told
-    // about, and the plain callback is the one already on its list.
-    document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=900; samesite=lax`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
-    });
-    if (error) setState("Sign-in could not start. Try again.");
-  }
-
-  return (
-    <div className="doc-form">
-      <button type="button" className="doc-btn pri" onClick={go}>Sign in with Google</button>
-      {state && <p className="doc-msg" role="status">{state}</p>}
-    </div>
-  );
 }
 
 function Count({ n, rule }) {

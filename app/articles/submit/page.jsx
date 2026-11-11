@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DocShell } from "@/components/Doc";
-import { SignInToSubmit, SubmitForm, WithdrawButton } from "@/components/ArticleForms";
+import { SubmitForm, WithdrawButton } from "@/components/ArticleForms";
+import { SignIn } from "@/components/Account";
 import { SITE_NAME } from "@/lib/pages";
 import { STATUS_LABEL } from "@/lib/article-rules";
 import { viewer, listMine, longDate } from "@/lib/articles";
@@ -39,8 +40,8 @@ export default async function Submit() {
       {!user ? (
         <section className="doc-sec">
           <h2>Sign in to write</h2>
-          <p className="doc-p">An account is needed so the decision can reach you and so the article has an author.</p>
-          <SignInToSubmit next="/articles/submit" />
+          <p className="doc-p">An account is needed so the decision can reach you and so the article has an author. Use Google or your email address; there is no password.</p>
+          <SignIn next="/articles/submit" />
         </section>
       ) : (
         <>

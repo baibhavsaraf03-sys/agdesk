@@ -790,3 +790,24 @@ a.dgleadtitle:hover{color:var(--accent)}
 .doc-entry details[open] summary{margin-bottom:12px}
 .doc-entry .doc-body{font-size:16.5px;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:4px;max-width:none}
 .doc-body h2,.doc-body h3,.doc-body h4,.doc-body h5,.doc-body h6,.doc-entry h3{color:var(--fg)}
+
+/* Sign-in, account and privacy pages. */
+.doc-form input[type=email]{width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:10px 12px;font-family:var(--sans);font-size:16px;line-height:1.55}
+.doc-form input[type=email]:focus-visible{outline:2px solid var(--accent-2);outline-offset:1px;border-color:var(--accent)}
+.doc-signin{max-width:460px}
+.doc-signin > .doc-btn.pri{align-self:flex-start;padding:11px 20px;font-size:15px}
+.doc-or{margin:4px 0 -4px;font-family:var(--sans);font-size:12.5px;color:var(--fg-dim)}
+.doc-inline{display:flex;gap:8px;flex-wrap:wrap}
+.doc-inline input{flex:1 1 220px;min-width:0}
+.doc-inline .doc-btn{flex:none}
+.doc-alert{margin:0 0 18px;padding:10px 12px;border:1px solid var(--down);border-radius:4px;max-width:460px}
+.doc-hint.doc-after,.doc-actions.doc-after{margin-top:22px}
+.doc-facts{margin:0 0 4px}
+.doc-facts dt{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--fg-dim);padding-top:2px}
+.doc-facts dd{font-size:15px;overflow-wrap:anywhere}
+.doc-facts dd a{color:var(--accent);text-underline-offset:2px}
+.doc-rules strong{font-weight:600}
+a.btn{display:inline-block;text-decoration:none}
+.doc-nav .doc-cta{white-space:nowrap}
+.doc-hint a{color:var(--accent);text-underline-offset:2px}
+@media(max-width:420px){ .doc-nav{gap:14px} }

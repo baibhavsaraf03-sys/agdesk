@@ -13,7 +13,7 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - `scripts/feed-read.mjs` — the scheduled read. Schema is `READ_TOOL`; output goes to Supabase `market_reads`, served by `app/api/feed/route.js`, read in the page as `reads[zone]` (`ag` is the agricultural one).
 - `.github/workflows/feed.yml` — crons for the reads. Manual run: Actions → Market reads.
 - Articles (`/articles`, built 11 Nov): `app/articles/page.jsx` (published list), `[slug]/page.jsx` (one article), `submit/page.jsx` (sign-in, form, the writer's own submissions), `review/page.jsx` (editor's queue; returns 404 to everyone else). Reads in `lib/articles.js`, shared limits in `lib/article-rules.js`, all client-side pieces in `components/ArticleForms.jsx`, writes in `app/api/articles/route.js` and `app/api/articles/review/route.js`. Table, row-level security and the editor list are in `supabase/migrations/20261111_articles.sql`. No service-role key is used: the policies decide everything, and the editor is whoever has a row in `article_editors` (set with `select public.set_article_editor('<sign-in email>')` in the SQL editor; the address is deliberately not in the repo). Article bodies render through `lib/markdown.jsx` with class `doc-body`.
-- `app/auth/callback/route.js` returns to the desk unless the `ld_next` cookie names a path under `/articles` (set by the submit page before the Google round trip).
+- Accounts (11 Nov): sign-in is Google or a one-time email link, both run by Supabase Auth; no passwords, no 2-factor (owner's choice). `/signin` (`?next=` and `?error=<code>`), `/account` (details, sign out, delete), `/privacy`. Components in `components/Account.jsx`; deletion in `app/api/account/route.js` (service role, server only). `app/auth/callback/route.js` finishes both kinds of sign-in, returns to the path in the `ld_next` cookie if `lib/auth-paths.js` allows it (else `/#JRN`), and sends failures to `/signin?error=` with a fixed code. Email links need custom SMTP in Supabase (the built-in mailer only reaches the Supabase team); until then the form says email sign-in is not switched on. The privacy page names the analyst provider from `AGENT_PROVIDER`; keep it accurate if anything new is stored.
 - `proxy.js` — Next.js 16 uses this, not `middleware.js` (adding one breaks the build).
 - There is no `/api/fx` route; the FX screen shows an "unavailable" message by design until one exists.
 
@@ -60,6 +60,8 @@ Not yet confirmed on the live site:
 - DOOM live layer: the `NASDAQ:`/`NYSE:` stock tiles in the widget, and the first `doom` read (run the action with zone `doom`).
 - GEO headline matching against live feeds (tested only on sample headlines).
 - USD/TRY in the EMEA verified figures.
+
+Email sign-in, not yet confirmed: custom SMTP set up in Supabase; a link received, opened, and landing back on the right page. Account deletion not yet tried live (needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel).
 
 Articles, not yet confirmed on the live site: the SQL script has been run and reported "Editor set"; a real Google sign-in from `/articles/submit` lands back on that page; a submission appears at `/articles/review` and its published page loads. Tested so far only against a local Postgres (policies) and a mock API (pages).
 

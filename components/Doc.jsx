@@ -16,6 +16,7 @@ export function DocShell({ children, crumbs = [] }) {
           <Link href="/learn">Lessons</Link>
           <Link href="/glossary">Glossary</Link>
           <Link href="/articles">Articles</Link>
+          <Link href="/account">Account</Link>
           <Link href="/" className="doc-cta">Open the desk</Link>
         </nav>
       </header>
@@ -35,7 +36,7 @@ export function DocShell({ children, crumbs = [] }) {
           deposited, and regulators consistently find that most individual traders lose money.
         </p>
         <p>
-          <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link>
+          <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link> · <Link href="/privacy">Privacy</Link>
         </p>
       </footer>
     </div>

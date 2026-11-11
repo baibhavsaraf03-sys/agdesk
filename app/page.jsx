@@ -1153,7 +1153,8 @@ export default function Terminal() {
   async function signIn(provider) {
     if (!supabase) return;
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    if (!supabase) return;
+    // Forget any return path left by an abandoned sign-in elsewhere (lib/auth-paths.js).
+    try { document.cookie = "ld_next=; path=/; max-age=0"; } catch {}
     await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${origin}/auth/callback` }
@@ -1274,7 +1275,7 @@ export default function Terminal() {
           <p className="landing-note">
             Free to read, no account needed.
             {supabase && (
-              <> <button className="landing-link" onClick={() => signIn("google")}>Sign in with Google</button> to use the analyst and save a journal.</>
+              <> <a className="landing-link" href="/signin">Sign in</a> with Google or your email address to use the analyst and save a journal.</>
             )}
           </p>
           <p className="landing-foot">
@@ -1303,6 +1304,7 @@ export default function Terminal() {
                   </p>
                   <div className="btnrow">
                     <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
+                    <a className="btn" href="/signin">Use email instead</a>
                     <button className="btn" onClick={() => go("SET")}>Use my own API key instead</button>
                   </div>
                 </div>
@@ -2359,6 +2361,7 @@ export default function Terminal() {
                   </p>
                   <div className="btnrow">
                     <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
+                    <a className="btn" href="/signin">Use email instead</a>
                   </div>
                 </div>
               )}
@@ -2441,6 +2444,7 @@ export default function Terminal() {
                   <>
                     <p className="prose dim">Signed in as {user.email}.</p>
                     <div className="btnrow">
+                      <a className="btn" href="/account">Manage or delete account</a>
                       <button className="btn" onClick={signOut}>Sign out</button>
                     </div>
                   </>
@@ -2451,6 +2455,7 @@ export default function Terminal() {
                     </p>
                     <div className="btnrow">
                       <button className="btn pri" onClick={() => signIn("google")}>Sign in with Google</button>
+                    <a className="btn" href="/signin">Use email instead</a>
                     </div>
                   </>
                 )}
@@ -2571,6 +2576,7 @@ export default function Terminal() {
                 <div className="grid">
                   <div className="grow"><span className="gnm">Account</span><span className="gpx">Email and name from your sign-in provider</span><span className="gch flat">stored</span></div>
                   <div className="grow"><span className="gnm">Journal entries</span><span className="gpx">Private to your account, enforced in the database</span><span className="gch flat">stored</span></div>
+                  <div className="grow"><span className="gnm">Articles you submit</span><span className="gpx">Name, title and text; public only once approved</span><span className="gch flat">stored</span></div>
                   <div className="grow"><span className="gnm">Message count</span><span className="gpx">A daily tally, for the usage limit</span><span className="gch flat">stored</span></div>
                   <div className="grow"><span className="gnm">Your API key</span><span className="gpx">Kept in your browser; relayed to make your request</span><span className="gch up">never stored</span></div>
                   <div className="grow"><span className="gnm">Analyst conversations</span><span className="gpx">Held in the page only; cleared when you leave</span><span className="gch up">never stored</span></div>
@@ -2578,7 +2584,8 @@ export default function Terminal() {
                 </div>
                 <p className="prose dim">
                   Messages you send the analyst are processed by Anthropic to generate a reply. Deleting your account
-                  removes your profile, journal and usage rows.
+                  (on the <a href="/account">account page</a>) removes your sign-in, journal, usage count and unpublished
+                  articles. The full <a href="/privacy">privacy page</a> lists everything kept and who handles it.
                 </p>
               </div>
 
