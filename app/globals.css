@@ -863,3 +863,22 @@ a.btn{display:inline-block;text-decoration:none}
 .wl-foot{margin:0;font-family:var(--sans);font-size:12px;line-height:1.55;color:var(--fg-dim)}
 .wl-foot .mono{font-family:var(--mono)}
 @media(max-width:560px){ .wl-row{grid-template-columns:auto minmax(0,1fr)} .wl-act{grid-column:2;grid-row:auto;justify-content:flex-start} }
+.fxpairs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fxpair{border:1px solid var(--line);background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fxpair.paused{border-color:var(--down)}
+.fxpn{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:0.02em}
+.fxst{font-family:var(--sans);font-size:14px;font-weight:600}
+.fxsub{font-family:var(--sans);font-size:12.5px;line-height:1.45;color:var(--fg-dim)}
+.fxnote{margin:0;font-family:var(--sans);font-size:13px;line-height:1.55;color:var(--fg-dim);max-width:78ch}
+.fxdim{color:var(--fg-dim);font-weight:400}
+.fxtier{margin-left:8px;padding:1px 5px;border:1px solid currentColor;border-radius:2px;font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;color:var(--warn);vertical-align:1px}
+.fxpos{border:1px solid var(--line);background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.fxpos.extreme{border-color:var(--warn)}
+.fxposh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--sans);font-size:14px}
+.fxposh span{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.fxbar{position:relative;height:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px}
+.fxbar span{position:absolute;top:-4px;width:3px;height:12px;margin-left:-1.5px;background:var(--fg);border-radius:1px}
+.fxspark{display:block;width:100%;height:40px}
+.fxspark polyline{fill:none;stroke:var(--fg-dim);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.fxspark .fxzero{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+@media(max-width:620px){ .fxpairs{grid-template-columns:1fr} }

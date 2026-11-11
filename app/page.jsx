@@ -751,12 +751,12 @@ function Spark({ values }) {
   );
 }
 
-function FXScreen() {
+function FXScreen({ openChart }) {
   const [data, setData] = useState(null);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     let alive = true;
-    const load = () => fetch("/api/fx", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((j) => alive && setData(j)).catch(() => alive && setData({ error: "FX API not configured" }));
+    const load = () => fetch("/api/fx", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((j) => alive && setData(j)).catch(() => alive && setData((cur) => cur || { error: "the data could not be reached" }));
     load();
     const a = setInterval(load, 10 * 60000), b = setInterval(() => setNow(Date.now()), 30000);
     return () => { alive = false; clearInterval(a); clearInterval(b); };
@@ -794,11 +794,21 @@ function FXScreen() {
             );
           })}
         </div>
+        {openChart && (
+          <div className="chlinks" aria-label="Open a chart">
+            <span className="chlinks-k">Chart</span>
+            {FX_PAIRS.map((p) => (
+              <button key={p} type="button" className="chip" onClick={() => openChart(`FOREXCOM:${p.replace("_", "")}`)}>{p.replace("_", "/")}</button>
+            ))}
+          </div>
+        )}
         <p className="fxnote">In the 45 minutes before a major release and the 20 after it — 15 and 10 for smaller ones — a currency can move further in a second than a normal stop-loss allows, and the spread widens at the same moment. Systematic strategies commonly stand aside across these windows rather than guess the number.</p>
       </div>
 
       <div className="sec">
         <h3>Interest rates</h3>
+        {!Object.keys(rates).length && <div className="empty">Interest rates could not be fetched just now. They are tried again within a few minutes.</div>}
+        {Object.keys(rates).length > 0 && (<>
         <div className="grid">
           <div className="ghead"><span>Currency</span><span>Policy rate · 2-year yield</span></div>
           {["USD", "EUR", "GBP", "JPY"].filter((c) => rates[c]).map((c) => (
@@ -823,11 +833,13 @@ function FXScreen() {
             );
           })}
         </div>
-        <p className="fxnote">A positive gap means the first currency pays more interest, which tends to support the pair over months, not minutes. The 2-year yield is what markets expect rates to average over the next two years, so it moves before the central bank does. No free source publishes UK or Japanese 2-year yields.{rates.USD?.asof ? ` Updated ${rates.USD.asof}.` : ""}</p>
+        </>)}
+        <p className="fxnote">A positive gap means the first currency pays more interest, which tends to support the pair over months, not minutes. The 2-year yield is what markets expect rates to average over the next two years, so it moves before the central bank does. Policy rates are from the BIS; the US 2-year is the Treasury&apos;s own curve and the euro 2-year is the ECB&apos;s curve for AAA-rated governments. No free source publishes UK or Japanese 2-year yields.{rates.USD?.asof ? ` Yields as of ${rates.USD.asof}.` : ""}</p>
       </div>
 
       <div className="sec">
         <h3>What big traders are betting</h3>
+        {!Object.keys(positioning).length && <div className="empty">Positioning could not be fetched just now. It is tried again within a few minutes.</div>}
         {["EUR", "GBP", "JPY", "USD"].filter((c) => positioning[c]?.length).map((c) => {
           const rows = positioning[c], last = rows[rows.length - 1], rank = last.pct_rank;
           const tone = rank == null ? "" : rank >= 90 || rank <= 10 ? " extreme" : "";
@@ -850,7 +862,7 @@ function FXScreen() {
             </div>
           );
         })}
-        <p className="fxnote">Hedge funds' futures positions from the CFTC, published each Friday for the Tuesday before. Near an extreme means a crowded bet: worth knowing, because when everyone is on one side the exit can be sudden. It's background, not a trigger.</p>
+        <p className="fxnote">Hedge funds&apos; futures positions from the CFTC (leveraged funds, in contracts), published each Friday for the Tuesday before. The dollar row is the dollar index future. Near an extreme means a crowded bet: worth knowing, because when everyone is on one side the exit can be sudden. It's background, not a trigger.</p>
       </div>
 
       <div className="sec">
@@ -2215,7 +2227,7 @@ export default function Terminal() {
 
           {screen === "FX" && (
             <Panel code="FX" title="Currencies" meta="EUR/USD · GBP/USD · USD/JPY">
-              <FXScreen />
+              <FXScreen openChart={openChart} />
             </Panel>
           )}
 

@@ -17,7 +17,7 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - Charts (CHT, 11 Nov): `components/Charts.jsx` is the whole screen (layout 1/2/4, shared timeframe and indicator switches, symbol list, typed symbols, saved in `agdesk.charts`). Each chart is TradingView's free Advanced Chart widget, embedded the way TradingView's React example does it (container plus a script whose text is the JSON config), not by building the iframe like `TVWidget`. Symbol list, shorthands (`CHT GOLD`, `CHT CABLE`, `CHT NASDAQ:AAPL`) and indicator ids are in `lib/charts.js`, built from `TV_GROUPS` plus a Currencies group. `ChartLinks` in `app/page.jsx` puts a row of "Chart" chips under every quote table; `openChart(symbol)` and `chartReq` carry the request to the screen. The page's `.wrap` gets `.wide` on CHT.
 - Watchlist (WL, 11 Nov): `components/Watchlist.jsx` holds the screen and `useWatchlist(user)`, which the page calls once because three things change the list: the WL screen, the Watch button on CHT, and the command bar (`WL GOLD` adds gold). Signed in, the list is one row in the `watchlist` table through `app/api/watchlist/route.js` (GET, PUT of the whole list; no service role, the policies decide). Signed out, it is `agdesk.watch` in the browser; at sign-in the browser's list is added to the account's and then removed from the browser. Limit (40), symbol check and the quote-table config are in `lib/watchlist.js`. Quotes are the same Market Quotes widget as the other screens (`TVWidget`), so the same feed rules apply. Table and policies: `supabase/migrations/20261111_watchlist.sql`. If the table is missing, signed-in visitors see a "could not be loaded" line and the browser list.
 - `proxy.js` — Next.js 16 uses this, not `middleware.js` (adding one breaks the build).
-- There is no `/api/fx` route; the FX screen shows an "unavailable" message by design until one exists.
+- Currencies (FX, 11 Nov): `app/api/fx/route.js` returns `{ rates, positioning, events, status }` for `FXScreen` in `app/page.jsx`. No database and no key. `lib/fx.mjs` fetches policy rates (BIS), the US 2-year (Treasury), the euro 2-year (ECB yield curve, AAA governments) and hedge-fund positioning (CFTC Traders in Financial Futures, dataset `gpe5-46if`, leveraged funds), each cached half an hour per server instance with the last good answer kept; the route is edge-cached 15 minutes. `status` in the response says per source `ok` or why it failed: open `/api/fx` to check. `lib/calendar.js` is the release calendar, written out by hand from the publishers' calendars because no free feed exists: it ENDS IN DECEMBER 2027 (euro flash inflation in March 2027) and must be extended. The economic calendar screen should be built on it. Styles are the `.fx*` rules at the end of `globals.css`.
 
 ## TradingView widget rules (learned the hard way)
 - The free widget only quotes some feeds. Working: `INDEX:`, `FOREXCOM:` (SPXUSD, NSXUSD, UKXGBP), `BSE:`, `TSX:TSX`, `BMFBOVESPA:`, `SSE:`, `SZSE:`, `EURONEXT:AEX`, `BME:IBC`, `OMXSTO:`, `CMCMARKETS:` metals/cotton, `TVC:USOIL`.
@@ -41,7 +41,7 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - That branch's `supabase/migrations/20261111_plans.sql` also drops a policy ("Service role manages profiles") from the 2024 profiles migration that lets any signed-in user rewrite any profile. Worth running for that alone.
 - The desk (`/`) is one client-rendered page with `#SCREEN` routes, invisible to search. The evergreen content also has real server-rendered addresses: `/learn`, `/learn/[slug]`, `/glossary`, `/glossary/[term]`, built from `lib/content.js` via `lib/pages.js` with the frame in `components/Doc.jsx`, plus `app/sitemap.js` and `app/robots.js`. Set `NEXT_PUBLIC_SITE_URL` if the domain changes.
 - Positioning (owner, 11 Nov): a budget Bloomberg terminal that must serve day traders and corporate traders as well as beginners. Reading pages bring people in; the desk is the product.
-- Agreed order of work: (1) real addresses, done for lessons and glossary; (2) reviewed articles section at `/articles`, built 11 Nov, live once the owner has run `20261111_articles.sql`; (3) measure traffic; (4) revisit pricing and sponsorship. Terminal gaps for traders: charts built 11 Nov (CHT). Watchlist built 11 Nov (WL). Still to build, owner wants all of them, in this order unless told otherwise: working Currencies screen (`/api/fx`), economic calendar, alerts.
+- Agreed order of work: (1) real addresses, done for lessons and glossary; (2) reviewed articles section at `/articles`, built 11 Nov, live once the owner has run `20261111_articles.sql`; (3) measure traffic; (4) revisit pricing and sponsorship. Terminal gaps for traders: charts built 11 Nov (CHT). Watchlist built 11 Nov (WL). Currencies built 11 Nov (FX). Still to build, owner wants both, in this order unless told otherwise: economic calendar, alerts.
 
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.
@@ -67,13 +67,15 @@ Charts, not yet confirmed on the live site: that the Advanced Chart widget rende
 
 Watchlist, not yet confirmed on the live site: `20261111_watchlist.sql` has been run and reported "Watchlist ready"; a list made signed out carries into the account at sign-in and shows on a second device; the quote table draws for the list. Tested so far against a local Postgres (policies) and in a browser with a faked sign-in and a mock API; the widget could not load in the build sandbox.
 
+Currencies, not yet confirmed on the live site: that all four sources in `/api/fx` report `ok` (none could be reached from the build sandbox, so the parsers were tested on sample data only; the CFTC field names and the dollar index code `098662` are the likeliest to need a fix); the chart chips for the three pairs.
+
 Email sign-in, not yet confirmed: custom SMTP set up in Supabase; a link received, opened, and landing back on the right page. Account deletion not yet tried live (needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel).
 
 Articles, not yet confirmed on the live site: the SQL script has been run and reported "Editor set"; a real Google sign-in from `/articles/submit` lands back on that page; a submission appears at `/articles/review` and its published page loads. Tested so far only against a local Postgres (policies) and a mock API (pages).
 
 Open tasks:
 1. Check the items above; remove anything still blank.
-2. Build `/api/fx` so the Currencies screen has data.
+2. Extend `lib/calendar.js` before it runs out (December 2027).
 3. Split `app/page.jsx` into one file per screen.
 4. Key rotation (owner does this by hand; never ask for keys in chat):
    - Anthropic key: used as `ANTHROPIC_API_KEY` in Vercel env and GitHub Actions secrets. Set a spend cap at the same time.
