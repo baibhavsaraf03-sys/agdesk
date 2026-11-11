@@ -12,6 +12,8 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - `lib/news.mjs`, `lib/providers.mjs` — free headlines and the Gemini/Anthropic writers.
 - `scripts/feed-read.mjs` — the scheduled read. Schema is `READ_TOOL`; output goes to Supabase `market_reads`, served by `app/api/feed/route.js`, read in the page as `reads[zone]` (`ag` is the agricultural one).
 - `.github/workflows/feed.yml` — crons for the reads. Manual run: Actions → Market reads.
+- Articles (`/articles`, built 11 Nov): `app/articles/page.jsx` (published list), `[slug]/page.jsx` (one article), `submit/page.jsx` (sign-in, form, the writer's own submissions), `review/page.jsx` (editor's queue; returns 404 to everyone else). Reads in `lib/articles.js`, shared limits in `lib/article-rules.js`, all client-side pieces in `components/ArticleForms.jsx`, writes in `app/api/articles/route.js` and `app/api/articles/review/route.js`. Table, row-level security and the editor list are in `supabase/migrations/20261111_articles.sql`. No service-role key is used: the policies decide everything, and the editor is whoever has a row in `article_editors` (set with `select public.set_article_editor('<sign-in email>')` in the SQL editor; the address is deliberately not in the repo). Article bodies render through `lib/markdown.jsx` with class `doc-body`.
+- `app/auth/callback/route.js` returns to the desk unless the `ld_next` cookie names a path under `/articles` (set by the submit page before the Google round trip).
 - `proxy.js` — Next.js 16 uses this, not `middleware.js` (adding one breaks the build).
 - There is no `/api/fx` route; the FX screen shows an "unavailable" message by design until one exists.
 
@@ -37,7 +39,7 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - That branch's `supabase/migrations/20261111_plans.sql` also drops a policy ("Service role manages profiles") from the 2024 profiles migration that lets any signed-in user rewrite any profile. Worth running for that alone.
 - The desk (`/`) is one client-rendered page with `#SCREEN` routes, invisible to search. The evergreen content also has real server-rendered addresses: `/learn`, `/learn/[slug]`, `/glossary`, `/glossary/[term]`, built from `lib/content.js` via `lib/pages.js` with the frame in `components/Doc.jsx`, plus `app/sitemap.js` and `app/robots.js`. Set `NEXT_PUBLIC_SITE_URL` if the domain changes.
 - Positioning (owner, 11 Nov): a budget Bloomberg terminal that must serve day traders and corporate traders as well as beginners. Reading pages bring people in; the desk is the product.
-- Agreed order of work: (1) real addresses, done for lessons and glossary; (2) reviewed articles section at `/articles` (submission, admin review queue, published page per article; needs a Supabase table); (3) measure traffic; (4) revisit pricing and sponsorship. Terminal gaps for traders, not yet built: watchlist, charts, economic calendar, alerts, a working Currencies screen.
+- Agreed order of work: (1) real addresses, done for lessons and glossary; (2) reviewed articles section at `/articles`, built 11 Nov, live once the owner has run `20261111_articles.sql`; (3) measure traffic; (4) revisit pricing and sponsorship. Terminal gaps for traders, not yet built: watchlist, charts, economic calendar, alerts, a working Currencies screen.
 
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.
@@ -58,6 +60,8 @@ Not yet confirmed on the live site:
 - DOOM live layer: the `NASDAQ:`/`NYSE:` stock tiles in the widget, and the first `doom` read (run the action with zone `doom`).
 - GEO headline matching against live feeds (tested only on sample headlines).
 - USD/TRY in the EMEA verified figures.
+
+Articles, not yet confirmed on the live site: the SQL script has been run and reported "Editor set"; a real Google sign-in from `/articles/submit` lands back on that page; a submission appears at `/articles/review` and its published page loads. Tested so far only against a local Postgres (policies) and a mock API (pages).
 
 Open tasks:
 1. Check the items above; remove anything still blank.

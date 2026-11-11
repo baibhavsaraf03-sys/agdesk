@@ -1,5 +1,5 @@
 /**
- * The frame for the server-rendered reading pages (lessons, glossary).
+ * The frame for the server-rendered reading pages (lessons, glossary, articles).
  *
  * Deliberately plain HTML with ordinary links: these pages exist to be read
  * by people arriving from a search and by the crawler that sent them, so
@@ -15,6 +15,7 @@ export function DocShell({ children, crumbs = [] }) {
         <nav className="doc-nav" aria-label="Sections">
           <Link href="/learn">Lessons</Link>
           <Link href="/glossary">Glossary</Link>
+          <Link href="/articles">Articles</Link>
           <Link href="/" className="doc-cta">Open the desk</Link>
         </nav>
       </header>
@@ -34,7 +35,7 @@ export function DocShell({ children, crumbs = [] }) {
           deposited, and regulators consistently find that most individual traders lose money.
         </p>
         <p>
-          <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/#TERMS">Terms</Link>
+          <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link>
         </p>
       </footer>
     </div>

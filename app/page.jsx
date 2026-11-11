@@ -1265,7 +1265,7 @@ export default function Terminal() {
           })()}
 
           <dl className="landing-list">
-            <div><dt>Learn</dt><dd><a href="/learn">Lessons</a>, a <a href="/glossary">glossary</a>, and a risk section built on regulators&apos; own loss data.</dd></div>
+            <div><dt>Learn</dt><dd><a href="/learn">Lessons</a>, a <a href="/glossary">glossary</a>, reviewed <a href="/articles">articles</a> from readers, and a risk section built on regulators&apos; own loss data.</dd></div>
             <div><dt>Daily</dt><dd>News across finance, politics, international relations and law, and a political-risk screen for the flashpoints that move shipping and trade.</dd></div>
             <div><dt>Markets</dt><dd>Asia, Europe and the Americas by session, with grains and softs in depth.</dd></div>
             <div><dt>Yours</dt><dd>The analyst, and a journal that marks your reasoning rather than your result.</dd></div>
