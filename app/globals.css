@@ -811,3 +811,40 @@ a.btn{display:inline-block;text-decoration:none}
 .doc-nav .doc-cta{white-space:nowrap}
 .doc-hint a{color:var(--accent);text-underline-offset:2px}
 @media(max-width:420px){ .doc-nav{gap:14px} }
+
+/* ==========================================================================
+   Charts (CHT) and the chart links under each quote table.
+   ========================================================================== */
+.wrap.wide{max-width:1480px}
+.chlinks{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:-6px 0 4px}
+.chlinks-k{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-dim);margin-right:4px}
+.ch{display:flex;flex-direction:column;gap:12px}
+.ch-bar{display:flex;flex-wrap:wrap;gap:10px 22px}
+.ch-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.ch-k{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-dim);margin-right:6px}
+.ch-seg{appearance:none;font-family:var(--sans);font-size:12.5px;line-height:1.2;padding:6px 10px;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--fg);cursor:pointer}
+.ch-seg.mono{font-family:var(--mono);font-size:12px}
+.ch-seg:hover{border-color:var(--fg-dim)}
+.ch-seg.on{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.ch-seg:focus-visible,.ch-head:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.ch-pick{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ch-pick select{font-family:var(--sans);font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--fg);min-width:200px;max-width:100%}
+.ch-type{display:flex;gap:6px;flex:1 1 260px;min-width:0}
+.ch-type input[type=text]{font-family:var(--sans);font-size:14px;padding:7px 10px;border-radius:3px;flex:1;min-width:0}
+.ch-msg{margin:0;font-family:var(--sans);font-size:13px;color:var(--down)}
+.ch-quick{display:flex;flex-wrap:wrap;gap:5px}
+.ch-grid{display:grid;gap:10px;grid-template-columns:1fr}
+.ch-grid.n2,.ch-grid.n4{grid-template-columns:1fr}
+@media(min-width:900px){ .ch-grid.n2,.ch-grid.n4{grid-template-columns:1fr 1fr} }
+.ch-cell{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--surface);min-width:0}
+.ch-cell.on{border-color:var(--accent)}
+.ch-head{appearance:none;display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:7px 10px;border:0;border-bottom:1px solid var(--line);background:var(--surface-2);color:var(--fg);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer}
+.ch-head .mono{font-family:var(--mono);font-weight:500;color:var(--fg-dim)}
+.ch-sel{margin-left:auto;font-weight:400;font-size:11.5px;color:var(--fg-dim)}
+.ch-cell.on .ch-sel{color:var(--accent)}
+.ch-frame{height:min(72vh,760px);min-height:420px}
+.ch-grid.n2 .ch-frame{height:min(64vh,640px)}
+.ch-grid.n4 .ch-frame{height:min(44vh,440px);min-height:360px}
+.ch-frame .tradingview-widget-container__widget{height:100%;width:100%}
+@media(max-width:620px){ .ch-frame,.ch-grid.n2 .ch-frame,.ch-grid.n4 .ch-frame{height:440px;min-height:0} .ch-sel{display:none} }
+@media(max-width:420px){ .topbar{gap:6px} .tbtn{padding:5px 7px} .topbar .sysname{font-size:15.5px} }

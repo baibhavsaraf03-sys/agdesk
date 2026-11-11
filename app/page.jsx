@@ -15,7 +15,9 @@ import {
   RISK_MODEL, STRESS_TEST, REVISED_STRATEGY, VENDOR_COMMITS,
   SOURCES as DOOM_SOURCES
 } from "@/lib/doomsday";
-import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
+import { TV_CONFIGS, TAPE_CONFIG, TV_GROUPS } from "@/lib/tv";
+import { findSymbol } from "@/lib/charts";
+import ChartsScreen from "@/components/Charts";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE } from "@/lib/doomsday";
 import { Markdown, safeHref } from "@/lib/markdown";
@@ -38,7 +40,7 @@ const NAV_GROUPS = [
   { g: "Start here", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
   { g: "Your desk", items: ["AGN", "JRN", "SET"] },
   { g: "Daily", items: ["HOME", "NEWS", "GEO"] },
-  { g: "Markets", items: ["WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
+  { g: "Markets", items: ["CHT", "WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
   { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
   { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
   { g: "Advanced", note: "Read the lessons first", items: ["FLOW", "DOOM", "SRC"] },
@@ -71,6 +73,7 @@ const SCREENS = [
   { c: "TRD",   t: "Underrated", d: "Markets the coverage is missing, contradiction-screened" },
   { c: "WCH",   t: "Watch",      d: "What decides the next few sessions" },
   { c: "MAC",   t: "Macro",      d: "Dollar, crude, rates, freight and fertiliser" },
+  { c: "CHT",   t: "Charts",     d: "Full charts with drawing tools and indicators, one, two or four at once. CHT GOLD opens gold" },
   { c: "FX",    t: "Currencies", d: "Policy rates, two-year yields, speculative positioning and the releases that move the majors" },
   { c: "AGN",   t: "Analyst",    d: "Ask anything — it reads the live feed and remembers the thread" },
   { c: "ECON",  t: "Economics",  d: "14 models you are examined on, each applicable to today's reads" },
@@ -107,6 +110,7 @@ const ALIAS = {
   ESSAY: "SEM", EXAM: "SEM", REVISION: "SEM", STUDY: "SEM",
   LEGALNOTICE: "TERMS", DISCLAIMER: "TERMS", PRIVACY: "TERMS", TOS: "TERMS",
   FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
+  CHART: "CHT", CHARTS: "CHT", GRAPH: "CHT", GP: "CHT", GIP: "CHT",
   DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
 };
 
@@ -330,6 +334,24 @@ function TVWidget({ widget, config, label, theme }) {
   );
 }
 
+
+/**
+ * One-tap links from a quote table to a full chart. The table itself is
+ * TradingView's iframe, which our code cannot attach clicks to, so the
+ * symbols are repeated here as chips.
+ */
+function ChartLinks({ screen, open }) {
+  const symbols = (TV_GROUPS[screen] || []).flatMap((g) => g.symbols);
+  if (!symbols.length) return null;
+  return (
+    <div className="chlinks" aria-label="Open a chart">
+      <span className="chlinks-k">Chart</span>
+      {symbols.map(([sym, name]) => (
+        <button key={sym} type="button" className="chip" onClick={() => open(sym)}>{name}</button>
+      ))}
+    </div>
+  );
+}
 
 /** "3h ago" — undated items say nothing rather than guessing. */
 function ago(when) {
@@ -857,6 +879,8 @@ export default function Terminal() {
   // history, but behind a key now: press / or the button.
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState("light");
+  // A symbol for the Charts screen to load, from CHT <name> or a chart link. `n` makes a repeat request count.
+  const [chartReq, setChartReq] = useState(null);
   const [news, setNews] = useState(null);
   const [newsTopic, setNewsTopic] = useState("finance");
   const [newsBusy, setNewsBusy] = useState(false);
@@ -1039,6 +1063,11 @@ export default function Terminal() {
       history.length === 0 && null;
     } catch {}
     window.scrollTo({ top: 0 });
+    if (c === "CHT") {
+      const symbol = findSymbol(arg);
+      if (symbol) setChartReq({ symbol, n: Date.now() });
+      return true;
+    }
     if (arg) {
       const n = parseInt(arg, 10);
       setTimeout(() => {
@@ -1052,6 +1081,11 @@ export default function Terminal() {
     }
     return true;
   }, []);
+
+  const openChart = useCallback((symbol) => {
+    setChartReq({ symbol, n: Date.now() });
+    go("CHT");
+  }, [go]);
 
   function runCmd() {
     const raw = cmd.trim();
@@ -1516,7 +1550,7 @@ export default function Terminal() {
         {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
 
         <main className="stage">
-          <div className="wrap">
+          <div className={"wrap" + (screen === "CHT" ? " wide" : "")}>
 
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (
@@ -1891,6 +1925,12 @@ export default function Terminal() {
             );
           })()}
 
+          {screen === "CHT" && (
+            <Panel code="CHT" title="Charts" meta="TYPE CHT GOLD, CHT EURUSD, CHT NASDAQ:AAPL">
+              <ChartsScreen theme={theme} request={chartReq} />
+            </Panel>
+          )}
+
           {/* ---------------- WLD ---------------- */}
           {screen === "WLD" && (
             <Panel code="WLD" title="World exchanges" meta={`${openCount} OPEN NOW`}>
@@ -1900,6 +1940,7 @@ export default function Terminal() {
                 from your device clock, so it works whether or not a read has landed. Holidays are not accounted for.
               </p>
               <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.WLD} label="Benchmark levels, live" />
+              <ChartLinks screen="WLD" open={openChart} />
               <div className="glosbar">
                 <input
                   type="text"
@@ -2019,6 +2060,7 @@ export default function Terminal() {
                 config={TV_CONFIGS[screen]}
                 label="Index levels, live from TradingView"
               />
+              <ChartLinks screen={screen} open={openChart} />
               {zoneKeysFor(screen).map((k) => {
                 const s = reads[k];
                 return (
@@ -2072,6 +2114,7 @@ export default function Terminal() {
           {screen === "GRN" && (
             <Panel code="GRN" title="Grains & oilseeds">
               <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.GRN} label="Grain futures, live" />
+              <ChartLinks screen="GRN" open={openChart} />
               {(ag.boards || []).filter((b) => b.kind !== "soft").map((b, i) => (
                 <Grid key={i} title={b.title} unit={b.unit} rows={b.rows} />
               ))}
@@ -2085,6 +2128,7 @@ export default function Terminal() {
           {screen === "SFT" && (
             <Panel code="SFT" title="Softs">
               <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.SFT} label="Softs futures, live" />
+              <ChartLinks screen="SFT" open={openChart} />
               {(ag.boards || []).filter((b) => b.kind === "soft").map((b, i) => (
                 <Grid key={i} title={b.title} unit={b.unit} rows={b.rows} />
               ))}
@@ -2126,6 +2170,7 @@ export default function Terminal() {
           {screen === "MAC" && (
             <Panel code="MAC" title="Macro overlay">
               <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.MAC} label="Rates, dollar and energy, live" />
+              <ChartLinks screen="MAC" open={openChart} />
               {agLive && (ag.rows || []).length > 0 && (
                 <Grid title="Verified figures" unit={ag.stamp || "latest"} rows={ag.rows} />
               )}
@@ -2646,6 +2691,7 @@ export default function Terminal() {
                       <div className="empty">No read yet. The scheduled job writes this before the US open, at midday and after the close.</div>
                     )}
                     <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.DOOM} label="Names in the thesis, live" />
+                    <ChartLinks screen="DOOM" open={openChart} />
                     <h3>AI-trade headlines</h3>
                     <NewsList items={live} limit={8} empty="Nothing on the AI trade in the current finance feeds." />
                   </div>
