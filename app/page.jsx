@@ -21,7 +21,9 @@ import ChartsScreen from "@/components/Charts";
 import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
-import { AI_TRADE_RE } from "@/lib/doomsday";
+import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
+import NewsNote from "@/components/NewsNote";
+import { noteId } from "@/lib/notes";
 import { Markdown, safeHref } from "@/lib/markdown";
 import { cluster, digestPick } from "@/lib/alerts";
 
@@ -601,6 +603,7 @@ function FrameworkCard({ item, num, onAsk }) {
             <span className="tag">Where it shows up</span>
             <Prose text={item.news} />
           </div>
+          <NewsNote set="disc" id={noteId.framework(item)} />
           <div className="lrow">
             <button className="btn pri" onClick={() => onAsk(item.apply)}>Apply to today</button>
             <button
@@ -644,6 +647,7 @@ function FlowCard({ flow, num, onAsk }) {
             </span>
           )}
           <Prose text={flow.body} />
+          <NewsNote set="flow" id={noteId.flow(flow)} label="Latest reporting" />
           <div className="sec">
             <span className="tag">What it is evidence for</span>
             <Prose text={flow.evidence} />
@@ -1015,6 +1019,24 @@ export default function Terminal() {
     const id = setInterval(loadNews, 10 * 60 * 1000);
     return () => clearInterval(id);
   }, [loadNews]);
+
+  // A tab left in the background can be hours behind; catch up as soon as it
+  // is looked at again rather than waiting for the next interval.
+  useEffect(() => {
+    let last = Date.now();
+    const back = () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < 60000) return;
+      last = Date.now();
+      loadFeed();
+      loadNews();
+    };
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("focus", back);
+    return () => {
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("focus", back);
+    };
+  }, [loadFeed, loadNews]);
 
   // Pick up whatever the inline boot script applied, so the button starts in
   // agreement with the page it is sitting on.
@@ -1668,8 +1690,8 @@ export default function Terminal() {
               {/* ── Sessions ── */}
               <Panel code="SESSIONS" title="Where the sessions stand">
                 <p className="prose dim">
-                  Each zone is read at its open, midday and close. Figures come from official statistics; the
-                  interpretation is written against them.
+                  Each zone is reread every hour, every day, whenever its figures or headlines have moved. Figures
+                  come from official statistics; the interpretation is written against them.
                 </p>
                 <div className="sessgrid">
                   {Object.keys(ZONES).map((k) => {
@@ -1843,7 +1865,12 @@ export default function Terminal() {
                 crore. The figures are from one regulator and one market, but every regulator that has published this kind of
                 study has found something similar.
               </p>
-              {RISKS.map((r, i) => <Block key={i} {...r} />)}
+              {RISKS.map((r, i) => (
+                <div key={i}>
+                  <Block {...r} />
+                  <NewsNote set="lessons" id={noteId.risk(r)} />
+                </div>
+              ))}
               <div className="sec">
                 <h3>What actually helps</h3>
                 <Prose text="Three things, in order of how much they matter. First, position sizing — risking a small enough fraction of your money on any one idea that being wrong ten times in a row doesn't end you. Second, writing down why you're doing something before you do it, so you can tell skill from luck afterwards. Third, trading fake money for months until your written reasoning is consistently decent." />
@@ -1905,6 +1932,7 @@ export default function Terminal() {
                             <span className="tag w">Where it bites</span>
                             <Prose text={t.risk} />
                           </div>
+                          <NewsNote set="lessons" id={noteId.lesson(t)} />
                           <div className="lrow">
                             <button className="btn" onClick={() => ask(t.q)}>Ask about this</button>
                           </div>
@@ -1944,6 +1972,7 @@ export default function Terminal() {
                   <div className="gterm" key={t}>
                     <b>{t}</b>
                     <span>{d}</span>
+                    <NewsNote set="glos" id={noteId.term(t)} />
                   </div>
                 ))}
               </Panel>
@@ -2107,7 +2136,7 @@ export default function Terminal() {
                       <span className="tt">{ZONES[k].label}</span>
                       <span className="tc">{s?.stamp || "awaiting first run"}</span>
                     </div>
-                    {!s && <div className="empty">No read yet. The scheduled job fills this at the open, midday and close of this zone.</div>}
+                    {!s && <div className="empty">No read yet. The hourly job fills this the next time it runs.</div>}
                     {s && (
                       <>
                         {s.headline && <h2>{s.headline}</h2>}
@@ -2264,7 +2293,7 @@ export default function Terminal() {
                     </div>
                     {tr.items.map((it, i) => (
                       <div className="lsn" key={it.t}>
-                        <FrameworkCard item={it} num={String(i + 1).padStart(2, "0")} onAsk={ask} />
+                        <FrameworkCard item={{ ...it, discipline: disc.code }} num={String(i + 1).padStart(2, "0")} onAsk={ask} />
                       </div>
                     ))}
                   </div>
@@ -2416,6 +2445,7 @@ export default function Terminal() {
                         <span className="tag w">What to watch</span>
                         <Prose text={L.k} />
                       </div>
+                      <NewsNote set="lessons" id={noteId.method(L)} />
                       <div className="lrow">
                         <button
                           className="btn"
@@ -2699,7 +2729,7 @@ export default function Terminal() {
               </p>
               {/* The live layer. Everything under the tabs is the standing
                   argument and changes only when it is edited; this part is
-                  rewritten by the scheduled read three times each US session
+                  rewritten by the hourly scheduled read whenever there is something new
                   and the headlines refresh every ten minutes. */}
               {(() => {
                 const d = reads.doom;
@@ -2725,7 +2755,7 @@ export default function Terminal() {
                         ))}
                       </>
                     ) : (
-                      <div className="empty">No read yet. The scheduled job writes this before the US open, at midday and after the close.</div>
+                      <div className="empty">No read yet. The hourly job writes this the next time it runs.</div>
                     )}
                     <TVWidget theme={theme} widget="market-quotes" config={TV_CONFIGS.DOOM} label="Names in the thesis, live" />
                     <ChartLinks screen="DOOM" open={openChart} />
@@ -2735,16 +2765,7 @@ export default function Terminal() {
                 );
               })()}
               {(() => {
-                const DOOM_TABS = [
-                  { k: "crash", t: "Crash Data" },
-                  { k: "circular", t: "Circular Fraud" },
-                  { k: "models", t: "Models" },
-                  { k: "positions", t: "Positions" },
-                  { k: "contagion", t: "Contagion" },
-                  { k: "playbook", t: "Playbook" },
-                  { k: "counter", t: "Counter-Thesis" },
-                  { k: "stress", t: "Stress Test" },
-                ];
+                // DOOM_TABS comes from lib/doomsday.js, which the scheduled read shares.
                 return (
                   <>
                     <div className="tabs" style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
@@ -2759,6 +2780,43 @@ export default function Terminal() {
                           onClick={() => setDoomTab(tb.k)}>{tb.t}</button>
                       ))}
                     </div>
+
+                    {/* What today's news does to this tab. Rewritten by the
+                        hourly doom read; the tab below
+                        it is the standing argument and keeps its date. */}
+                    {(() => {
+                      const u = (reads.doom?.tabs || []).find((x) => x.k === doomTab);
+                      const VERDICT_TXT = { supports: "Supports the argument", weakens: "Weakens the argument", mixed: "Cuts both ways", "no change": "Nothing new today" };
+                      return (
+                        <div className={"tabnote" + (u ? " v-" + u.verdict.replace(" ", "-") : "")}>
+                          <div className="tabnote-h">
+                            <span className="tabnote-k">Where this stands now</span>
+                            {u && <span className="tabnote-v">{VERDICT_TXT[u.verdict] || u.verdict}</span>}
+                            <span className="tabnote-t">{u ? reads.doom?.stamp : "awaiting the next AI-trade read"}</span>
+                          </div>
+                          {u?.now
+                            ? u.now.split(/\n\s*\n/).filter((x) => x.trim()).map((para, i) => <Prose key={i} text={para.trim()} className="tabnote-now" />)
+                            : u && <p>{u.note}</p>}
+                          {u?.now && u.note && <p className="tabnote-chg"><b>Latest change.</b> {u.note}</p>}
+                          {(u?.figures || []).length > 0 && (
+                            <div className="tabnote-figs">
+                              {u.figures.map((f, i) => (
+                                <div className="tabnote-fig" key={i}>
+                                  <span className="tabnote-fv">{f.value}</span>
+                                  <span className="tabnote-fl">{f.label}</span>
+                                  {f.note && <span className="tabnote-fn">{f.note}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <p className="tabnote-f">
+                            The view above is rewritten each hour from that hour&apos;s figures and headlines. The tab below is the
+                            standing argument, written {DOOM_WRITTEN}, and its figures and prices are as of then; live prices are in
+                            the quote table above.
+                          </p>
+                        </div>
+                      );
+                    })()}
 
                     {/* ── CRASH DATA ── */}
                     {doomTab === "crash" && (
@@ -3286,8 +3344,9 @@ export default function Terminal() {
               <div className="sec">
                 <h3>About the reads</h3>
                 <p className="prose dim">
-                  Scheduled jobs publish market reads at the open, midday and close of five time zones, plus a daily
-                  agricultural read. The terminal reads those, so an open page refreshes itself every few minutes.
+                  A scheduled job rereads every time zone, the agricultural markets and the AI trade every hour, every
+                  day of the week, and skips any whose figures and headlines have not moved. An open page picks up each
+                  new read within five minutes, and at once when you come back to the tab.
                   Everything except the analyst and the journal works without an account.
                 </p>
                 <p className="prose dim">

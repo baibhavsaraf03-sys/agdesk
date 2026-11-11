@@ -1,70 +1,59 @@
 name: Market reads
 
-# Sixteen scheduled reads a day: five zones at open, midday and close, plus a
-# daily agricultural read. Cron here is UTC — GitHub Actions does not support
-# time zones — so the times below are UTC equivalents of the local sessions.
-# They do not shift with daylight saving; adjust twice a year or accept the
-# hour of drift, which does not matter much for a market read.
+# Every zone, the agricultural read and the AI-trade read, rewritten every
+# hour, every day of the week. Each run works out from the local clock whether
+# a zone is opening, mid-session, closing, shut overnight or shut for the
+# weekend, so the schedule needs only one line and daylight saving looks
+# after itself.
 #
-# Minutes are deliberately off the hour. Every scheduled job on the platform
-# fires at :00, and queue delay there can run to many minutes.
+# Writers, in order: Gemini's free tier (Flash-Lite first, which has the
+# larger daily allowance, then Flash); Groq's free tier if the GROQ_API_KEY
+# secret is set; then the paid Anthropic key, but only for a zone whose read
+# is already six hours old, so it keeps a screen from going stale and never
+# runs hourly. Set the FEED_ALLOW_PAID variable to 0 to switch the paid step
+# off entirely, or FEED_PAID_AFTER_HOURS to change the six. A zone
+# whose figures and headlines have not changed since its last read is skipped
+# rather than rewritten, which is most of them overnight and at weekends. If
+# every model is busy, that hour's read fails and the previous one stays up.
+#
+# The minute is deliberately off the hour: every scheduled job on the
+# platform fires at :00, and queue delay there can run to many minutes.
 
 on:
   schedule:
-    # --- Australia / New Zealand (AEDT = UTC+11) ---
-    - cron: "12 23 * * 0-4"   # 10:12 Sydney, open
-    - cron: "13 1 * * 1-5"   # 12:13 Sydney, midday
-    - cron: "34 5 * * 1-5"   # 16:34 Sydney, close
+    - cron: "23 * * * *"
 
-    # --- East Asia (HKT = UTC+8) ---
-    - cron: "41 1 * * 1-5"   # 09:41 Hong Kong, open
-    - cron: "19 4 * * 1-5"   # 12:19 Hong Kong, midday
-    - cron: "6 9 * * 1-5"   # 17:06 Hong Kong, close
-
-    # --- India (IST = UTC+5:30) ---
-    - cron: "56 3 * * 1-5"   # 09:26 Mumbai, open
-    - cron: "38 6 * * 1-5"   # 12:08 Mumbai, midday
-    - cron: "14 10 * * 1-5"   # 15:44 Mumbai, close
-
-    # --- Europe / Middle East / Africa (BST = UTC+1) ---
-    - cron: "14 8 * * 1-5"   # 09:14 London, open
-    - cron: "21 11 * * 1-5"   # 12:21 London, midday
-    - cron: "42 16 * * 1-5"   # 17:42 London, close
-
-    # --- Americas (EDT = UTC-4) ---
-    - cron: "41 13 * * 1-5"   # 09:41 New York, open
-    - cron: "16 16 * * 1-5"   # 12:16 New York, midday
-    - cron: "21 20 * * 1-5"   # 16:21 New York, close
-
-    # --- The AI trade (Doomsday screen), three times each US session ---
-    - cron: "7 14 * * 1-5"   # 09:07 New York, before the open
-    - cron: "27 17 * * 1-5"   # 12:27 New York, midday
-    - cron: "37 21 * * 1-5"   # 16:37 New York, after the close
-
-    # --- Agricultural commodities ---
-    - cron: "42 5 * * 1-5"   # 06:42 London
-
-  # Lets you run any zone by hand from the Actions tab, which is how you
-  # should test this before trusting the schedule.
+  # Run by hand from the Actions tab: one zone or all of them.
   workflow_dispatch:
     inputs:
       zone:
         description: "Zone to read"
         required: true
-        default: "ams"
+        default: "all"
         type: choice
-        options: [anz, eas, ind, eur, ams, ag, doom]
+        options: [all, anz, eas, ind, eur, ams, ag, doom]
       phase:
-        description: "Phase"
+        description: "Phase (auto works it out from the zone's local time)"
         required: true
-        default: "close"
+        default: "auto"
         type: choice
-        options: [open, midday, close]
+        options: [auto, open, midday, close, overnight, weekend]
+      force:
+        description: "Rewrite even if nothing has changed"
+        required: false
+        default: false
+        type: boolean
+
+# One run at a time, so a slow hour never overlaps the next and doubles the
+# calls against the free quota.
+concurrency:
+  group: market-reads
+  cancel-in-progress: false
 
 jobs:
   read:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v5
 
@@ -75,51 +64,38 @@ jobs:
 
       - run: npm ci --omit=dev
 
-      # Maps the cron expression that fired onto a zone and phase. GitHub
-      # exposes the schedule that triggered the run, which is the only way to
-      # branch a single workflow across many crons.
-      - name: Resolve zone and phase
-        id: resolve
-        run: |
-          case "${{ github.event.schedule }}" in
-            "12 23 * * 0-4") Z=anz; P=open ;;
-            "13 1 * * 1-5")  Z=anz; P=midday ;;
-            "34 5 * * 1-5")  Z=anz; P=close ;;
-            "41 1 * * 1-5")  Z=eas; P=open ;;
-            "19 4 * * 1-5")  Z=eas; P=midday ;;
-            "6 9 * * 1-5")   Z=eas; P=close ;;
-            "56 3 * * 1-5")  Z=ind; P=open ;;
-            "38 6 * * 1-5")  Z=ind; P=midday ;;
-            "14 10 * * 1-5") Z=ind; P=close ;;
-            "14 8 * * 1-5")  Z=eur; P=open ;;
-            "21 11 * * 1-5") Z=eur; P=midday ;;
-            "42 16 * * 1-5") Z=eur; P=close ;;
-            "41 13 * * 1-5") Z=ams; P=open ;;
-            "16 16 * * 1-5") Z=ams; P=midday ;;
-            "21 20 * * 1-5") Z=ams; P=close ;;
-            "42 5 * * 1-5")  Z=ag;  P=close ;;
-            "7 14 * * 1-5")  Z=doom; P=open ;;
-            "27 17 * * 1-5") Z=doom; P=midday ;;
-            "37 21 * * 1-5") Z=doom; P=close ;;
-            *)               Z="${{ inputs.zone }}"; P="${{ inputs.phase }}" ;;
-          esac
-          echo "zone=$Z"  >> "$GITHUB_OUTPUT"
-          echo "phase=$P" >> "$GITHUB_OUTPUT"
-
-      - name: Run the read
+      # Zones run one after another rather than in parallel: the free tier
+      # limits requests per minute, and this keeps well under it. One zone
+      # failing does not stop the others; the job fails at the end so the
+      # Actions tab still shows that something went wrong.
+      - name: Run the reads
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FEED_ALLOW_PAID: ${{ vars.FEED_ALLOW_PAID || '1' }}
+          FEED_PAID_AFTER_HOURS: ${{ vars.FEED_PAID_AFTER_HOURS || '6' }}
+          # Optional. Groq's free tier, tried after Gemini and before the paid key.
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # Optional. Without it the reads lose oil, the dollar index and
-          # fertiliser PPI — the run still succeeds, just thinner.
+          # fertiliser PPI; the run still succeeds, just thinner.
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-          # The free path. With FEED_PROVIDER=gemini the read costs nothing:
-          # headlines come from GDELT and central bank feeds, figures from
-          # official statistics, and the writing from a free-tier model.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FEED_PROVIDER: ${{ vars.FEED_PROVIDER || 'gemini' }}
-          GEMINI_FEED_MODEL: ${{ vars.GEMINI_FEED_MODEL || 'gemini-flash-latest' }}
+          # Tried in order, all free tier. Override with the GEMINI_HOURLY_MODELS variable.
+          GEMINI_FEED_MODEL: ${{ vars.GEMINI_HOURLY_MODELS || 'gemini-flash-lite-latest,gemini-flash-latest' }}
           FEED_MODEL: ${{ vars.FEED_MODEL || 'claude-sonnet-5-5' }}
           FEED_MAX_TOKENS: ${{ vars.FEED_MAX_TOKENS || '20000' }}
-        run: node scripts/feed-read.mjs --zone "${{ steps.resolve.outputs.zone }}" --phase "${{ steps.resolve.outputs.phase }}"
+          ZONE: ${{ inputs.zone || 'all' }}
+          PHASE: ${{ inputs.phase || 'auto' }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: |
+          if [ "$ZONE" = "all" ]; then ZONES="ams eur doom ag eas ind anz"; else ZONES="$ZONE"; fi
+          failed=""
+          for z in $ZONES; do
+            node scripts/feed-read.mjs --zone "$z" --phase "$PHASE" $FORCE || failed="$failed $z"
+          done
+          if [ -n "$failed" ]; then
+            echo "::warning::These zones kept their previous read:$failed"
+            exit 1
+          fi

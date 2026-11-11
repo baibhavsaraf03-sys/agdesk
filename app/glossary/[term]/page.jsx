@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocShell, JsonLd } from "@/components/Doc";
 import { TERMS, LESSONS, SITE_NAME, SITE_URL, plain, termsIn } from "@/lib/pages";
+import NewsNote from "@/components/NewsNote";
+import { noteId } from "@/lib/notes";
 
 export const dynamicParams = false;
 export function generateStaticParams() {
@@ -44,6 +46,8 @@ export default async function Term({ params }) {
         <p className="doc-k">Glossary</p>
         <h1>{t.term}</h1>
         <p className="doc-lede">{t.def}</p>
+        {/* Fetched in the browser, so the page itself stays fixed for search. */}
+        <NewsNote set="glos" id={noteId.term(t.term)} />
 
         {related.length > 0 && (
           <section className="doc-sec">

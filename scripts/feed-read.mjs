@@ -15,10 +15,12 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 import { fetchQuotes } from "../lib/quotes.mjs";
 import { fetchNews, newsBlock } from "../lib/news.mjs";
+import { DOOM_TABS, DOOM_WRITTEN, doomTabDigest } from "../lib/doomsday.js";
 import {
-  geminiJson, FEED_PROVIDER, GEMINI_FEED_MODEL
+  geminiJson, groqJson, FEED_PROVIDER, GEMINI_FEED_MODEL, GROQ_FEED_MODELS
 } from "../lib/providers.mjs";
 
 /* -------------------------------------------------------------------------- */
@@ -85,6 +87,8 @@ const ZONE_SPEC = {
 };
 
 const PHASE_BRIEF = {
+  overnight: "The market is shut between sessions. Focus on what has changed since the last close: news, moves in other zones that are open, and what the next open has to deal with.",
+  weekend: "It is the weekend and the market is shut. Focus on what the week settled and what it left open, any news since Friday's close, and what Monday's open has to deal with. There is no live price action, so do not describe any.",
   open: "The session has just opened. Focus on what gapped and why, and what carried over from the session that closed before it.",
   midday: "Mid-session. Focus on whether the opening move held or reversed, and which sectors are actually carrying the index.",
   close: "The session has closed. Focus on where each index finished, what the day resolved or left unresolved, and what it hands to the next session."
@@ -98,14 +102,47 @@ function arg(name, fallback) {
 }
 
 const zone = arg("zone");
-const phase = arg("phase", "close");
+
+/**
+ * Local trading hours per zone, used when the phase is "auto" (the hourly
+ * schedule). ag follows Chicago grain hours, doom the New York session.
+ */
+const SESSION = {
+  anz: { tz: "Australia/Sydney", open: 10 * 60, close: 16 * 60 },
+  eas: { tz: "Asia/Hong_Kong", open: 9 * 60 + 30, close: 16 * 60 },
+  ind: { tz: "Asia/Kolkata", open: 9 * 60 + 15, close: 15 * 60 + 30 },
+  eur: { tz: "Europe/London", open: 8 * 60, close: 16 * 60 + 30 },
+  ams: { tz: "America/New_York", open: 9 * 60 + 30, close: 16 * 60 },
+  doom: { tz: "America/New_York", open: 9 * 60 + 30, close: 16 * 60 },
+  ag: { tz: "America/Chicago", open: 8 * 60 + 30, close: 13 * 60 + 20 }
+};
+
+/** Which part of the trading day it is in the zone's own time, daylight saving included. */
+export function phaseNow(z, now = new Date()) {
+  const s = SESSION[z];
+  if (!s) return "close";
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", { timeZone: s.tz, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(now).map((x) => [x.type, x.value])
+  );
+  if (p.weekday === "Sat" || p.weekday === "Sun") return "weekend";
+  const t = Number(p.hour) * 60 + Number(p.minute);
+  if (t < s.open) return "overnight";
+  if (t < s.open + 120) return "open";
+  if (t < s.close - 60) return "midday";
+  if (t < s.close + 180) return "close";
+  return "overnight";
+}
+
+const askedPhase = arg("phase", "close");
+const phase = askedPhase === "auto" ? phaseNow(zone) : askedPhase;
 
 if (!ZONE_SPEC[zone]) {
   console.error(`Unknown zone "${zone}". Expected one of: ${Object.keys(ZONE_SPEC).join(", ")}`);
   process.exit(1);
 }
 if (!PHASE_BRIEF[phase]) {
-  console.error(`Unknown phase "${phase}". Expected open, midday or close.`);
+  console.error(`Unknown phase "${phase}". Expected auto, ${Object.keys(PHASE_BRIEF).join(", ")}.`);
   process.exit(1);
 }
 
@@ -208,6 +245,43 @@ const READ_TOOL = {
 if (zone === "ag") READ_TOOL.input_schema.required = ["headline", "short", "macro"];
 else delete READ_TOOL.input_schema.properties.macro;
 
+// The Doomsday screen's tabs hold a standing argument whose figures are fixed
+// at the date it was written. Each doom read adds one dated note per tab
+// saying what today's material does to that tab's claims, so the screen stays
+// current without the argument itself being rewritten every hour: each note
+// carries a fresh "where this stands now" view and up to four current figures.
+const TAB_VERDICTS = ["supports", "weakens", "mixed", "no change"];
+if (zone === "doom") {
+  READ_TOOL.input_schema.properties.tabs = {
+    type: "array",
+    description: "One entry per Doomsday tab, in the order given: what today's material does to that tab's claims.",
+    items: {
+      type: "object",
+      properties: {
+        k: { type: "string", enum: DOOM_TABS.map((t) => t.k), description: "The tab key." },
+        verdict: { type: "string", enum: TAB_VERDICTS, description: "Whether today's material supports the tab's claims, weakens them, does both, or does not bear on them." },
+        note: { type: "string", description: "One or two plain sentences: the single biggest thing that changed for this tab and which claim it bears on." },
+        now: { type: "string", description: "Where this tab's argument stands now, written fresh: four to seven plain sentences a reader can take as the current view, with the standing argument as background. Say which of the tab's fixed figures are out of date and what the material shows instead. Every figure must come from the verified figures or the headlines." },
+        figures: {
+          type: "array",
+          description: "Zero to four current figures that bear on this tab, each taken from the verified figures or the headlines. Leave empty rather than invent one.",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string", description: "What the figure is, a few words." },
+              value: { type: "string", description: "The figure as published, with its unit." },
+              note: { type: "string", description: "Its date and where it came from." }
+            },
+            required: ["label", "value", "note"]
+          }
+        }
+      },
+      required: ["k", "verdict", "note", "now"]
+    }
+  };
+  READ_TOOL.input_schema.required = ["headline", "short", "tabs"];
+}
+
 /**
  * The quote grid is no longer the model's job. Rates, currencies and oil come
  * from the public-domain sources in lib/quotes.mjs and are handed to the model
@@ -233,8 +307,10 @@ Work from the material above. The figures are exact; the headlines tell you what
 Return the finished read in the required structure, and nothing else — no preamble and no commentary about your sources.
 
 Requirements:
-- ${phase === "close" ? "3-4" : "2-3"} sections, ${phase === "close" ? "4-6" : "3-5"} watch items, 3-6 sources.
+- ${["close", "weekend"].includes(phase) ? "3-4" : "2-3"} sections, ${["close", "weekend"].includes(phase) ? "4-6" : "3-5"} watch items, 3-6 sources.
 ${zone === "ag" ? `- Also fill the macro array with one to three blocks: the dollar, crude oil, interest rates, and freight and fertiliser where the material supports them. Build each on the verified figures above, with their dates, and say what it is doing to crop prices now — the dollar caps export demand, crude sets the floor under ethanol and biodiesel, rates price the cost of carrying inventory, fertiliser feeds next year's acreage. If the material says nothing about freight, say so rather than filling the gap. This is separate from the sections and must not repeat them.
+` : ""}${zone === "doom" ? `- Also fill the tabs array, one entry for each of these eight tabs, in this order. Each tab is a standing argument written ${DOOM_WRITTEN}; its figures are as of then. For each, say what today's material does to its claims: "supports", "weakens", "mixed", or "no change" when nothing today bears on it. Then write "now": the current view of that tab, fresh, as if briefing someone who will read it instead of the dated text below it. Do not restate the tab; update it. Name the specific claim and the specific headline or figure, and where a fixed figure in the tab is now out of date, say so plainly — the reader is otherwise looking at a stale number. Never supply a current price, total or percentage that is not in the material above. For Positions and Playbook, describe what the news does to the reasoning; do not issue entries, stops, targets or any instruction to trade.
+${doomTabDigest()}
 ` : ""}- Fill "short" with exactly three plain sentences a newcomer could follow: what happened, why it matters, what to watch next. It must agree with the sections and add no figure they do not contain.
 - Do not restate the verified figures as a list. Use them: explain what they imply, where they agree or disagree with the equity move, and what would change the reading.
 - Every other figure must come from something you actually retrieved in this session. Never carry a number forward unverified. Omit anything you cannot verify rather than guessing.
@@ -361,7 +437,42 @@ function plainText(content) {
  * no tools, no search — and on the free tier, no cost.
  */
 async function readViaGemini(prompt) {
-  const model = GEMINI_FEED_MODEL;
+  // A comma-separated list: each model is tried in turn, all free tier, so a
+  // busy or exhausted model hands over to the next instead of to a paid one.
+  const models = GEMINI_FEED_MODEL.split(",").map((m) => m.trim()).filter(Boolean);
+  let last;
+  for (const model of models) {
+    try {
+      return await readViaGeminiModel(prompt, model);
+    } catch (err) {
+      last = err;
+      console.warn(`  ${model} failed (${String(err.message).slice(0, 120)})`);
+    }
+  }
+  throw last || new Error("No Gemini model configured");
+}
+
+const SYSTEM =
+  "You are the resident analyst on a markets terminal used by finance, economics and politics students. " +
+  "You are given verified figures and headlines. Your job is interpretation, not recall.";
+
+async function readViaGroq(prompt) {
+  let last;
+  for (const { model, tpm } of GROQ_FEED_MODELS) {
+    try {
+      const out = await groqJson({ model, tpm, system: SYSTEM, prompt, schema: READ_TOOL.input_schema, maxTokens: zone === "doom" ? 7000 : 3500 });
+      if (!out || typeof out !== "object" || !out.headline) throw new Error("no headline in the object");
+      console.log(`  written by groq ${model}`);
+      return out;
+    } catch (err) {
+      last = err;
+      console.warn(`  groq ${model} ${err.skip ? "skipped" : "failed"} (${String(err.message).slice(0, 120)})`);
+    }
+  }
+  throw last || new Error("No Groq model configured");
+}
+
+async function readViaGeminiModel(prompt, model) {
   const out = await geminiJson({
     model,
     system:
@@ -433,6 +544,25 @@ async function main() {
 
   const PROMPT = buildPrompt(verifiedBlock(quoteRows, failed), newsBlock(news, newsFailed));
 
+  /**
+   * The hourly schedule would otherwise rewrite a read from identical
+   * material, which spends the free quota and says nothing new. If the
+   * figures and headlines are the same as the last published read, and that
+   * read is under six hours old and from the same phase, leave it alone.
+   */
+  const material = createHash("sha256")
+    .update(JSON.stringify({ q: quoteRows.map((r) => [r.nm, r.px, r.ch]), n: news.map((a) => a.title || "") }))
+    .digest("hex")
+    .slice(0, 16);
+  const { data: prev } = await supabase.from("market_reads").select("payload, updated_at").eq("zone", zone).maybeSingle();
+  const age = prev?.updated_at ? Date.now() - Date.parse(prev.updated_at) : Infinity;
+  if (!process.argv.includes("--force")) {
+    if (prev?.payload?.material === material && prev.payload.phase === phase && age < 6 * 3600000) {
+      console.log(`[${zone}/${phase}] nothing new since the read of ${prev.payload.stamp}; left as it is`);
+      return;
+    }
+  }
+
   console.log(`[${zone}/${phase}] writing the read via ${FEED_PROVIDER}…`);
 
   /**
@@ -443,18 +573,50 @@ async function main() {
    * to Anthropic — the material is already gathered, so this costs tokens
    * only, with no search, and only on the days Gemini is unavailable.
    */
+  /**
+   * Free first, paid only as a backstop, in this order:
+   *   1. Gemini, each model in GEMINI_FEED_MODEL in turn (free tier);
+   *   2. Groq, each model in GROQ_FEED_MODELS in turn (free tier), when
+   *      GROQ_API_KEY is set and the request fits its per-minute limit;
+   *   3. Anthropic (billed), only when FEED_ALLOW_PAID=1 and this zone's
+   *      current read is older than FEED_PAID_AFTER_HOURS (default 6). So the
+   *      paid key keeps a screen from going stale; it never runs every hour.
+   * If all of them fail, the previous read stays up and the run reports it.
+   */
   let payload;
+  const tried = [];
   if (FEED_PROVIDER === "gemini") {
     try {
       payload = await readViaGemini(PROMPT);
+      payload.writer = "gemini";
     } catch (err) {
-      if (!process.env.ANTHROPIC_API_KEY) throw err;
-      console.warn(`  gemini unavailable (${err.message.slice(0, 120)})`);
-      console.warn("  falling back to anthropic on the same material");
+      tried.push(`gemini: ${String(err.message).slice(0, 120)}`);
+    }
+    if (!payload && process.env.GROQ_API_KEY) {
+      try {
+        payload = await readViaGroq(PROMPT);
+        payload.writer = "groq";
+      } catch (err) {
+        tried.push(`groq: ${String(err.message).slice(0, 120)}`);
+      }
+    }
+    if (!payload) {
+      const paidAfter = Number(process.env.FEED_PAID_AFTER_HOURS || 6) * 3600000;
+      const paidOk = process.env.ANTHROPIC_API_KEY && process.env.FEED_ALLOW_PAID === "1" && age >= paidAfter;
+      tried.forEach((t) => console.warn(`  ${t}`));
+      if (!paidOk) {
+        const why = process.env.FEED_ALLOW_PAID !== "1" || !process.env.ANTHROPIC_API_KEY
+          ? "the paid fallback is off"
+          : `the current read is only ${Math.round(age / 60000)} minutes old`;
+        throw new Error(`every free model failed and ${why}, so the previous read stays up`);
+      }
+      console.warn("  falling back to anthropic (billed) on the same material");
       payload = await readViaAnthropic(PROMPT);
+      payload.writer = "anthropic";
     }
   } else {
     payload = await readViaAnthropic(PROMPT);
+    payload.writer = "anthropic";
   }
 
   // A read with no headline is not a read. Everything else is allowed to be
@@ -471,6 +633,24 @@ async function main() {
     payload.macro = (Array.isArray(payload.macro) ? payload.macro : []).filter((m) => m && m.body);
     if (!payload.macro.length) console.warn("  warning: published with no macro overlay");
   }
+  if (zone === "doom") {
+    const seen = new Set();
+    payload.tabs = (Array.isArray(payload.tabs) ? payload.tabs : []).filter((t) => {
+      const ok = t && DOOM_TABS.some((x) => x.k === t.k) && !seen.has(t.k) && typeof t.note === "string" && t.note.trim();
+      if (ok) seen.add(t.k);
+      return ok;
+    }).map((t) => ({
+      k: t.k,
+      verdict: TAB_VERDICTS.includes(t.verdict) ? t.verdict : "mixed",
+      note: t.note.trim(),
+      now: typeof t.now === "string" ? t.now.trim() : "",
+      figures: (Array.isArray(t.figures) ? t.figures : [])
+        .filter((f) => f && typeof f.label === "string" && typeof f.value === "string" && f.label.trim() && f.value.trim())
+        .slice(0, 4)
+        .map((f) => ({ label: f.label.trim(), value: f.value.trim(), note: typeof f.note === "string" ? f.note.trim() : "" }))
+    }));
+    if (payload.tabs.length < DOOM_TABS.length) console.warn(`  warning: notes for ${payload.tabs.length} of ${DOOM_TABS.length} tabs`);
+  }
   payload.sources = Array.isArray(payload.sources) ? payload.sources : [];
   if (!payload.sections.length) {
     console.warn("  warning: published with no sections — raise FEED_MAX_TOKENS if this recurs");
@@ -478,6 +658,7 @@ async function main() {
   payload.stamp = payload.stamp || stamp;
   payload.phase = phase;
   payload.at = Date.now();
+  payload.material = material;
 
   // The grid is the verified set, not anything the model produced.
   payload.rows = quoteRows;
@@ -491,7 +672,7 @@ async function main() {
   if (error) throw new Error(`Database write failed: ${error.message}`);
 
   console.log(`[${zone}/${phase}] published — ${payload.headline}`);
-  console.log(`  rows: ${payload.rows.length}, sections: ${(payload.sections || []).length}, macro: ${(payload.macro || []).length}, sources: ${(payload.sources || []).length}`);
+  console.log(`  rows: ${payload.rows.length}, sections: ${(payload.sections || []).length}, macro: ${(payload.macro || []).length}, tabs: ${(payload.tabs || []).length}, sources: ${(payload.sources || []).length}`);
 }
 
 main().catch((err) => {

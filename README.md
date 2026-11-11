@@ -15,7 +15,7 @@ Everything except the analyst and the journal works with no account at all.
 | `TUT` | Sixteen tutorials in four tracks: basics, futures, options, doing it safely |
 | `GLOS` | 47 terms in plain English, also usable inline across the whole site |
 | `WLD` | All 29 exchanges with live local clocks and open/closed status |
-| `ASIA` `EMEA` `AMER` | Session reads, refreshed at the open, midday and close of five zones |
+| `ASIA` `EMEA` `AMER` | Session reads, rewritten every hour, every day, whenever figures or headlines move |
 | `DESK` `GRN` `SFT` `TRD` `WCH` `MAC` | Agricultural commodities |
 | `FLOW` | The world's largest capital reallocations, with what each is and is not evidence for |
 | `ECON` `LAW` `IR` `POL` | 38 frameworks students are examined on, each applicable to today's reads |
@@ -34,7 +34,7 @@ Type a code in the command bar, or tap the strip. `HELP` lists everything. `↑`
 
 The two halves of this have completely different economics, and that is the whole strategy.
 
-**Fixed cost, unlimited audience.** The market reads cost the same whether one person reads them or a hundred thousand do: sixteen scheduled jobs a day, a few tens of dollars a month. The tutorials, glossary, frameworks, flows, risk primer and world clock cost nothing to serve at all. That is most of the site, and it should be fully open with no account.
+**Fixed cost, unlimited audience.** The market reads cost the same whether one person reads them or a hundred thousand do: one hourly scheduled job, written on free tiers (Gemini, then Groq), with the paid key used only to stop a read going more than six hours stale. The tutorials, glossary, frameworks, flows, risk primer and world clock cost nothing to serve at all. That is most of the site, and it should be fully open with no account.
 
 **Variable cost per user.** Only the analyst scales with traffic. So that is the only thing behind an account, and it has three separate brakes:
 

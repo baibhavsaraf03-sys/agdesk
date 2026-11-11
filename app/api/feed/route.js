@@ -13,6 +13,8 @@ export async function GET() {
     const { data, error } = await supabase
       .from("market_reads")
       .select("zone, phase, stamp, payload, updated_at")
+      // The news notes share this table but have their own route (/api/notes).
+      .not("zone", "like", "notes_%")
       .order("zone");
 
     if (error) throw error;

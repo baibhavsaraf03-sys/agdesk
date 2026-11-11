@@ -882,3 +882,29 @@ a.btn{display:inline-block;text-decoration:none}
 .fxspark polyline{fill:none;stroke:var(--fg-dim);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .fxspark .fxzero{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
 @media(max-width:620px){ .fxpairs{grid-template-columns:1fr} }
+.newsnote{border-left:2px solid var(--accent);background:var(--surface-2);padding:7px 10px;display:flex;flex-direction:column;gap:3px}
+.newsnote-k{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:0.02em;color:var(--accent)}
+.newsnote-t{font-weight:400;color:var(--fg-dim)}
+.newsnote p{margin:0;font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--fg)}
+.newsnote .newsnote-src{font-size:11.5px;color:var(--fg-dim)}
+.newsnote-src a{color:var(--fg-dim);text-decoration:underline;text-underline-offset:2px}
+.gterm .newsnote{margin-top:4px}
+.gterm .newsnote span{font-size:inherit;line-height:inherit}
+.tabnote{border:1px solid var(--line);border-left:3px solid var(--fg-dim);background:var(--surface);padding:10px 12px;margin:0 0 1.25rem;display:flex;flex-direction:column;gap:6px}
+.tabnote.v-supports{border-left-color:var(--down)} .tabnote.v-weakens{border-left-color:var(--up)} .tabnote.v-mixed{border-left-color:var(--warn)}
+.tabnote-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.tabnote-k{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--fg-dim)}
+.tabnote-v{font-family:var(--sans);font-size:13px;font-weight:600}
+.tabnote.v-supports .tabnote-v{color:var(--down)} .tabnote.v-weakens .tabnote-v{color:var(--up)} .tabnote.v-mixed .tabnote-v{color:var(--warn)}
+.tabnote-t{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--fg-dim)}
+.tabnote p{margin:0;font-family:var(--sans);font-size:13.5px;line-height:1.55;color:var(--fg)}
+.tabnote .tabnote-f{font-size:12px;color:var(--fg-dim)}
+.doc-lede + .newsnote,.doc-aside + .newsnote{margin:0 0 24px}
+.tabnote p.tabnote-now{font-family:var(--sans);font-size:14px;line-height:1.6;color:var(--fg)}
+.tabnote-chg{font-size:13px !important;color:var(--fg-dim) !important}
+.tabnote-chg b{color:var(--fg);font-weight:600}
+.tabnote-figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.tabnote-fig{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);background:var(--surface-2);padding:8px 10px;min-width:0}
+.tabnote-fv{font-family:var(--mono);font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tabnote-fl{font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--fg)}
+.tabnote-fn{font-family:var(--sans);font-size:11.5px;color:var(--fg-dim);line-height:1.4}

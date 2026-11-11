@@ -1,0 +1,52 @@
+name: News notes
+
+# Rewrites the dated "in today's news" notes under the fixed teaching text:
+# frameworks (ECON, LAW, IR, POL), capital flows (FLOW), the glossary, and the
+# lessons, risk and method pages. Four model calls a run, three runs a day,
+# every day. Same free path as the market reads: headlines from publisher
+# feeds, writing from the Gemini free tier, Anthropic only if Gemini is down.
+#
+# Times are UTC, off the hour on purpose (see feed.yml).
+
+on:
+  schedule:
+    - cron: "23 6 * * *"    # before the London open
+    - cron: "38 12 * * *"   # London midday, before New York opens
+    - cron: "52 21 * * *"   # after the New York close
+  workflow_dispatch:
+    inputs:
+      set:
+        description: "Which notes to rewrite"
+        required: true
+        default: "all"
+        type: choice
+        options: [all, disc, flow, glos, lessons]
+
+concurrency:
+  group: news-notes
+  cancel-in-progress: false
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      - name: Write the notes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FEED_PROVIDER: ${{ vars.FEED_PROVIDER || 'gemini' }}
+          GEMINI_FEED_MODEL: ${{ vars.GEMINI_FEED_MODEL || 'gemini-flash-latest' }}
+          FEED_MODEL: ${{ vars.FEED_MODEL || 'claude-sonnet-5-5' }}
+        run: node scripts/notes-read.mjs --set "${{ inputs.set || 'all' }}"

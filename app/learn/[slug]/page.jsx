@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocShell, Inline, JsonLd } from "@/components/Doc";
 import { LESSONS, SITE_NAME, SITE_URL, plain, termsIn } from "@/lib/pages";
+import NewsNote from "@/components/NewsNote";
+import { noteId } from "@/lib/notes";
 
 export const dynamicParams = false;
 export function generateStaticParams() {
@@ -64,6 +66,8 @@ export default async function Lesson({ params }) {
             <p><Inline text={l.risk} /></p>
           </section>
         )}
+        {/* Fetched in the browser, so the page itself stays fixed for search. */}
+        <NewsNote set="lessons" id={noteId.lesson(l)} />
 
         {terms.length > 0 && (
           <p className="doc-terms">
