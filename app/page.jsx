@@ -18,7 +18,6 @@ import {
 import { TV_CONFIGS, TAPE_CONFIG } from "@/lib/tv";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE } from "@/lib/doomsday";
-import { SPONSOR_SLOTS } from "@/lib/sponsors";
 import { Markdown, safeHref } from "@/lib/markdown";
 import { cluster, digestPick } from "@/lib/alerts";
 
@@ -43,7 +42,7 @@ const NAV_GROUPS = [
   { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
   { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
   { g: "Advanced", note: "Read the lessons first", items: ["FLOW", "DOOM", "SRC"] },
-  { g: "About", items: ["PLAN", "SPON", "TERMS", "HELP"] }
+  { g: "About", items: ["TERMS", "HELP"] }
 ];
 
 /** The four news streams. Labels only — fetching happens in /api/news. */
@@ -85,8 +84,6 @@ const SCREENS = [
   { c: "JRN",   t: "Journal",    d: "Your own daily read, saved to your account" },
   { c: "SRC",   t: "Sources",    d: "Where the current reads came from" },
   { c: "SET",   t: "Settings",   d: "Sign in, your own API key, usage" },
-  { c: "PLAN",  t: "Plans",      d: "Free, Plus and Pro: what the analyst costs and what each plan includes" },
-  { c: "SPON",  t: "Sponsorship", d: "How a company can support a section, and the rules that keep the writing independent" },
   { c: "TERMS", t: "Terms",      d: "Terms of use, the disclaimer, and what happens to your data" },
   { c: "HELP",  t: "Help",       d: "This screen" }
 ];
@@ -108,7 +105,6 @@ const ALIAS = {
   INTERNATIONAL: "IR", GEOPOLITICS: "GEO", WAR: "GEO", CONFLICT: "GEO", POLRISK: "GEO",
   POLITICS: "POL", POLSCI: "POL", COMPARATIVE: "POL",
   ESSAY: "SEM", EXAM: "SEM", REVISION: "SEM", STUDY: "SEM",
-  PRICING: "PLAN", PRICE: "PLAN", UPGRADE: "PLAN", SUBSCRIBE: "PLAN", BILLING: "PLAN", SPONSOR: "SPON", ADVERTISE: "SPON", ADS: "SPON",
   LEGALNOTICE: "TERMS", DISCLAIMER: "TERMS", PRIVACY: "TERMS", TOS: "TERMS",
   FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
   DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
@@ -878,10 +874,6 @@ export default function Terminal() {
   const [user, setUser] = useState(null);
   const [apiKey, setApiKey] = useState("");
   const [quota, setQuota] = useState(null);
-  // { plan, daily_left, extra_left, extra_total, renews, status } for the signed-in account.
-  const [usage, setUsage] = useState(null);
-  const [sponsors, setSponsors] = useState([]);
-  const [billingBusy, setBillingBusy] = useState("");
 
   const [msgs, setMsgs] = useState([]);
   const [agnOpen, setAgnOpen] = useState(false);
@@ -1035,50 +1027,6 @@ export default function Terminal() {
     else setEntries([]);
   }, [user, loadJournal]);
 
-  /* ---- plan and usage ---- */
-  const loadUsage = useCallback(async () => {
-    if (!supabase || !user) { setUsage(null); return; }
-    // Fails quietly on a database that has not had the plans migration run:
-    // the account is then simply shown as Free.
-    const { data, error } = await supabase.rpc("my_usage", { p_free_daily: 20 });
-    if (!error && data) {
-      setUsage(data);
-      setQuota(data.daily_left);
-    }
-  }, [supabase, user]);
-
-  useEffect(() => { loadUsage(); }, [loadUsage]);
-
-  /** Send the reader to Stripe: checkout for a plan, or the billing portal. */
-  async function billing(kind) {
-    if (billingBusy) return;
-    setBillingBusy(kind);
-    try {
-      const r = await fetch(kind === "portal" ? "/api/stripe/portal" : "/api/stripe/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(kind === "portal" ? {} : { plan: kind })
-      });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && j.url) { window.location.href = j.url; return; }
-      setToast(j.error || "Could not open billing. Try again shortly.");
-    } catch {
-      setToast("Network error. Try again.");
-    }
-    setBillingBusy("");
-    setTimeout(() => setToast(""), 4000);
-  }
-
-  /* ---- sponsors ---- */
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/sponsors", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (alive && Array.isArray(j?.sponsors)) setSponsors(j.sponsors); })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, []);
-
   /* ---- navigation ---- */
   const go = useCallback((code, arg) => {
     let c = String(code || "").toUpperCase();
@@ -1147,7 +1095,6 @@ export default function Terminal() {
       } else {
         setMsgs([...next, { role: "assistant", content: j.text }]);
         if (typeof j.remaining === "number") setQuota(j.remaining);
-        if (typeof j.extra === "number") setUsage((u) => ({ ...(u || {}), plan: j.plan || u?.plan || "free", daily_left: j.remaining, extra_left: j.extra }));
       }
     } catch {
       setMsgs([...next, { role: "error", content: "Network error. Try again." }]);
@@ -1303,10 +1250,6 @@ export default function Terminal() {
       </div>
     );
   }
-
-  const paid = usage?.plan === "plus" || usage?.plan === "pro";
-  const quotaText = quota == null ? "" : paid ? `${quota} left today, ${usage.extra_left ?? 0} this month` : `${quota} left today`;
-  const sponsor = sponsors.find((x) => x.screen === screen);
 
   /**
    * The analyst's thread and composer. Rendered on its own screen and in the
@@ -1524,7 +1467,7 @@ export default function Terminal() {
           <aside className="agnside" aria-label="Analyst">
             <div className="agnhead">
               <span className="agntitle">Analyst</span>
-              <span className="agnmeta">{apiKey ? "your key" : quota != null ? quotaText : ""}</span>
+              <span className="agnmeta">{apiKey ? "your key" : quota != null ? `${quota} left today` : ""}</span>
               <button className="tbtn" onClick={() => { setAgnOpen(false); go("AGN"); }}>Full screen</button>
               <button className="tbtn" aria-label="Close analyst" onClick={() => setAgnOpen(false)}>Close</button>
             </div>
@@ -1537,17 +1480,6 @@ export default function Terminal() {
 
         <main className="stage">
           <div className="wrap">
-            {sponsor && (
-              <p className="sponsor">
-                <span className="sponsor-k">Sponsor</span>
-                This section is supported by{" "}
-                {sponsor.url
-                  ? <a href={sponsor.url} target="_blank" rel="sponsored noopener noreferrer">{sponsor.name}</a>
-                  : <strong>{sponsor.name}</strong>}
-                {sponsor.line ? `. ${sponsor.line.replace(/\.+$/, "")}.` : "."}{" "}
-                <button className="textlink" onClick={() => go("SPON")}>They have no say over what is written here.</button>
-              </p>
-            )}
 
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (
@@ -2185,7 +2117,7 @@ export default function Terminal() {
             <Panel
               code="AGN"
               title="Analyst"
-              meta={apiKey ? "YOUR KEY · UNLIMITED" : quota != null ? quotaText.toUpperCase() : "SHARED"}
+              meta={apiKey ? "YOUR KEY · UNLIMITED" : quota != null ? `${quota} LEFT TODAY` : "SHARED"}
             >
               {analystBody(false)}
             </Panel>
@@ -2490,19 +2422,6 @@ export default function Terminal() {
               </div>
 
               <div className="sec">
-                <h3>Plan</h3>
-                <div className="grid">
-                  <div className="grow"><span className="gnm">Current plan</span><span className="gpx" /><span className="gch flat">{(usage?.plan || "free").toUpperCase()}</span></div>
-                  <div className="grow"><span className="gnm">Free messages left today</span><span className="gpx" /><span className="gch flat">{quota != null ? quota : "—"}</span></div>
-                  {paid && <div className="grow"><span className="gnm">Monthly allowance left</span><span className="gpx" /><span className="gch flat">{usage.extra_left} of {usage.extra_total}</span></div>}
-                </div>
-                <div className="btnrow">
-                  <button className="btn" onClick={() => go("PLAN")}>{paid ? "Change plan" : "See paid plans"}</button>
-                  {paid && <button className="btn" disabled={!!billingBusy} onClick={() => billing("portal")}>Manage billing</button>}
-                </div>
-              </div>
-
-              <div className="sec">
                 <h3>Your own API key</h3>
                 <p className="prose dim">
                   Paste an Anthropic API key and the analyst runs on your account instead of the shared one: no daily
@@ -2558,104 +2477,9 @@ export default function Terminal() {
           )}
 
 
-          {/* ---------------- plans ---------------- */}
-          {screen === "PLAN" && (
-            <Panel code="PLAN" title="Plans" meta="prices in US dollars">
-              <p className="prose dim">
-                Everything on the site is free to read. The plans only change how many questions you can put to the
-                analyst, including &ldquo;Summarise this screen&rdquo;. Today&apos;s free messages are always used
-                first; a paid allowance is only touched after that and resets on the 1st of each month.
-              </p>
-              <div className="plans">
-                {[
-                  { k: "free", name: "Free", price: "$0", per: "", lines: ["20 analyst messages a day", "Journal that saves", "Every screen and lesson"] },
-                  { k: "plus", name: "Plus", price: "$20", per: "a month", lines: ["Everything in Free", "100 extra messages each month", "Cancel any time"] },
-                  { k: "pro", name: "Pro", price: "$100", per: "a month", lines: ["Everything in Free", "500 extra messages each month", "Cancel any time"] }
-                ].map((pl) => {
-                  const current = (usage?.plan || "free") === pl.k;
-                  return (
-                    <div className={"plan" + (current ? " on" : "")} key={pl.k}>
-                      <div className="plan-name">{pl.name}{current && <span className="plan-cur">your plan</span>}</div>
-                      <div className="plan-price">{pl.price}<span>{pl.per}</span></div>
-                      <ul>{pl.lines.map((l) => <li key={l}>{l}</li>)}</ul>
-                      {pl.k !== "free" && !current && (
-                        user
-                          ? <button className="btn pri" disabled={!!billingBusy} onClick={() => billing(paid ? "portal" : pl.k)}>
-                              {billingBusy === pl.k ? "Opening checkout…" : paid ? "Switch in billing" : `Choose ${pl.name}`}
-                            </button>
-                          : <button className="btn" onClick={() => signIn("google")}>Sign in to choose</button>
-                      )}
-                      {pl.k !== "free" && current && (
-                        <button className="btn" disabled={!!billingBusy} onClick={() => billing("portal")}>Manage billing</button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {toast && <p className="quota">{toast}</p>}
-              <p className="prose dim">
-                Payment is handled by Stripe; this site never sees your card. A plan buys messages to an AI model. It
-                does not buy advice: the analyst explains and marks reasoning, and will not tell you what to buy or sell
-                on any plan. With your own API key in Settings the analyst is unlimited and no plan is needed.
-              </p>
-            </Panel>
-          )}
-
-          {/* ---------------- sponsorship ---------------- */}
-          {screen === "SPON" && (
-            <Panel code="SPON" title="Sponsorship" meta="United States only">
-              <p className="prose">
-                A company can support a section of Ledge Desk for a month at a set price. Its name appears in one
-                labelled line at the top of that section, with a link and a short description. That is the whole of
-                what is sold.
-              </p>
-              <div className="sec">
-                <h3>What a sponsor does not get</h3>
-                <dl className="geomarkers">
-                  <div><dt>No say</dt><dd>Sponsors do not see, approve or influence anything written here, before or after it is published. The analyst is not told who the sponsors are.</dd></div>
-                  <div><dt>No trades</dt><dd>No sponsored trade ideas, price targets, ratings or recommendations, in the sponsor line or anywhere else.</dd></div>
-                  <div><dt>No own stock</dt><dd>A company may not use a sponsorship to promote its own shares, tokens or any other investment it issues or is paid to promote.</dd></div>
-                  <div><dt>Always labelled</dt><dd>Every sponsored section says so at the top, in words, on every visit. There is no unlabelled paid content on this site.</dd></div>
-                </dl>
-              </div>
-              <div className="sec">
-                <h3>Sections and prices</h3>
-                <div className="grid">
-                  {SPONSOR_SLOTS.map((sl) => {
-                    const taken = sponsors.some((x) => x.screen === sl.screen);
-                    return (
-                      <div className="grow" key={sl.screen}>
-                        <span className="gnm">{sl.label}<span className="dim"> · {sl.what}</span></span>
-                        <span className="gpx">{sl.price != null ? `$${sl.price.toLocaleString("en-US")} / month` : "On request"}</span>
-                        <span className={"gch " + (taken ? "flat" : "up")}>{taken ? "TAKEN" : "OPEN"}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="prose dim">
-                  {process.env.NEXT_PUBLIC_SPONSOR_CONTACT
-                    ? <>To enquire, write to {process.env.NEXT_PUBLIC_SPONSOR_CONTACT}.</>
-                    : "Sponsorship enquiries are not open yet."}
-                </p>
-              </div>
-              <p className="prose dim">
-                Sponsorships are sold to, and shown to, readers in the United States only. Paid placements beside market
-                commentary are regulated differently elsewhere, so visitors outside the US do not see them.
-              </p>
-            </Panel>
-          )}
-
           {/* ---------------- TERMS ---------------- */}
           {screen === "TERMS" && (
             <Panel code="TERMS" title="Terms, disclaimer and data" meta="read before you rely on anything">
-              <div className="sec">
-                <h3>Where this is offered</h3>
-                <p className="prose">
-                  Ledge Desk is written for readers in the United States and its paid features are priced in US dollars.
-                  It can be read from anywhere, but sponsored placements are shown to US visitors only, and nothing here
-                  has been prepared to meet the rules on financial promotions or investment advice of any other country.
-                </p>
-              </div>
               <div className="sec">
                 <h3>This is education, not advice</h3>
                 <p className="prose">

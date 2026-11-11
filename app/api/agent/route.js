@@ -121,8 +121,6 @@ export async function POST(req) {
   // Own key: unlimited, no account needed, we never store it.
   // Shared key: sign-in required, capped per account per UTC day.
   let remaining = null;
-  let extra = null;
-  let plan = null;
   if (!usingOwnKey) {
     if (!user) {
       return json(
@@ -154,42 +152,28 @@ export async function POST(req) {
       }
     }
 
-    // One atomic call spends a message: today's free ones first, then the
-    // month's paid allowance (Plus 100, Pro 500). See
-    // supabase/migrations/20261111_plans.sql.
-    if (!isAdmin) {
-      const { data: spend, error: spendError } = await admin.rpc("use_agent_message", {
-        p_user: user.id,
-        p_free_daily: FREE_DAILY
-      });
+    // Plan-aware cap. Free accounts get FREE_DAILY; a payment webhook writing
+    // profiles.plan is all that is needed to introduce paid tiers later.
+    const { data: cap } = await admin.rpc("daily_cap", {
+      p_user: user.id,
+      p_free_default: FREE_DAILY
+    });
+    const limit = isAdmin ? Number.MAX_SAFE_INTEGER : (typeof cap === "number" ? cap : FREE_DAILY);
 
-      if (spendError) {
-        // The plans migration has not been run on this database yet. Fall
-        // back to the plain daily cap so the analyst keeps working.
-        const { data: used, error: bumpError } = await admin.rpc("bump_agent_usage", { p_user: user.id });
-        if (bumpError) return json({ error: "Could not check your usage. Try again shortly." }, 500);
-        if (used > FREE_DAILY) {
-          return json({ error: "limit_reached", message: `You have used today's ${FREE_DAILY} messages. The limit resets at midnight UTC.` }, 429);
-        }
-        remaining = Math.max(0, FREE_DAILY - used);
-      } else if (!spend?.allowed) {
-        const paid = spend?.plan === "plus" || spend?.plan === "pro";
-        return json(
-          {
-            error: "limit_reached",
-            plan: spend?.plan || "free",
-            message: paid
-              ? "You have used today's free messages and this month's allowance. The daily ones reset at midnight UTC and the allowance on the 1st."
-              : `You have used today's ${FREE_DAILY} free messages. They reset at midnight UTC. A paid plan adds a monthly allowance on top; see Settings.`
-          },
-          429
-        );
-      } else {
-        remaining = spend.daily_left;
-        extra = spend.extra_left;
-        plan = spend.plan;
-      }
+    const { data: used, error: bumpError } = await admin.rpc("bump_agent_usage", { p_user: user.id });
+    if (bumpError) {
+      return json({ error: "Could not check your usage. Try again shortly." }, 500);
     }
+    if (used > limit) {
+      return json(
+        {
+          error: "limit_reached",
+          message: `You have used today's ${limit} messages. The limit resets at midnight UTC. Add your own Anthropic key in Settings for unlimited use.`
+        },
+        429
+      );
+    }
+    remaining = Math.max(0, limit - used);
   }
 
   // ---- Context ------------------------------------------------------------
@@ -229,7 +213,7 @@ export async function POST(req) {
     }
 
     if (!text) return json({ error: "upstream", message: "The analyst returned nothing. Try again." }, 502);
-    return json({ text, remaining, extra, plan, usingOwnKey, provider });
+    return json({ text, remaining, usingOwnKey, provider });
   } catch (err) {
     const status = err?.status;
     if (status === 401) {
