@@ -35,7 +35,9 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 ## Money (parked, not live)
 - Paid plans (Free 20/day, Plus $20 +100/month, Pro $100 +500/month) and labelled section sponsorship (US visitors only) are built on the `monetization` branch, commit bcf51fe, and reverted from `main` at the owner's request until viability is settled. Do not merge without being asked.
 - That branch's `supabase/migrations/20261111_plans.sql` also drops a policy ("Service role manages profiles") from the 2024 profiles migration that lets any signed-in user rewrite any profile. Worth running for that alone.
-- The whole UI is one client-rendered page with `#SCREEN` routes, so search engines see a single URL. Any SEO or published-articles work starts with real server-rendered routes (e.g. `/learn/[slug]`, `/glossary/[term]`, `/articles/[slug]`).
+- The desk (`/`) is one client-rendered page with `#SCREEN` routes, invisible to search. The evergreen content also has real server-rendered addresses: `/learn`, `/learn/[slug]`, `/glossary`, `/glossary/[term]`, built from `lib/content.js` via `lib/pages.js` with the frame in `components/Doc.jsx`, plus `app/sitemap.js` and `app/robots.js`. Set `NEXT_PUBLIC_SITE_URL` if the domain changes.
+- Positioning (owner, 11 Nov): a budget Bloomberg terminal that must serve day traders and corporate traders as well as beginners. Reading pages bring people in; the desk is the product.
+- Agreed order of work: (1) real addresses, done for lessons and glossary; (2) reviewed articles section at `/articles` (submission, admin review queue, published page per article; needs a Supabase table); (3) measure traffic; (4) revisit pricing and sponsorship. Terminal gaps for traders, not yet built: watchlist, charts, economic calendar, alerts, a working Currencies screen.
 
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.
