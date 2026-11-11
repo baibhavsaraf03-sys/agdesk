@@ -848,3 +848,18 @@ a.btn{display:inline-block;text-decoration:none}
 .ch-frame .tradingview-widget-container__widget{height:100%;width:100%}
 @media(max-width:620px){ .ch-frame,.ch-grid.n2 .ch-frame,.ch-grid.n4 .ch-frame{height:440px;min-height:0} .ch-sel{display:none} }
 @media(max-width:420px){ .topbar{gap:6px} .tbtn{padding:5px 7px} .topbar .sysname{font-size:15.5px} }
+.wl{display:flex;flex-direction:column;gap:12px}
+.wl .tvwrap{margin:0}
+.wl-msg{margin:0;font-family:var(--sans);font-size:13px;color:var(--fg-dim)}
+.wl-rows{border:1px solid var(--line);background:var(--surface)}
+.wl-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 12px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.wl-row:last-child{border-bottom:0}
+.wl-n{font-family:var(--mono);font-size:11.5px;color:var(--fg-dim);grid-row:1 / span 2}
+.wl-name{font-family:var(--sans);font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.wl-sym{grid-column:2;font-family:var(--mono);font-size:11.5px;color:var(--fg-dim);overflow-wrap:anywhere}
+.wl-act{grid-column:3;grid-row:1 / span 2;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px}
+.wl-empty{display:flex;flex-direction:column;align-items:center;gap:12px}
+.wl-empty p{margin:0}
+.wl-foot{margin:0;font-family:var(--sans);font-size:12px;line-height:1.55;color:var(--fg-dim)}
+.wl-foot .mono{font-family:var(--mono)}
+@media(max-width:560px){ .wl-row{grid-template-columns:auto minmax(0,1fr)} .wl-act{grid-column:2;grid-row:auto;justify-content:flex-start} }

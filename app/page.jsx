@@ -18,6 +18,8 @@ import {
 import { TV_CONFIGS, TAPE_CONFIG, TV_GROUPS } from "@/lib/tv";
 import { findSymbol } from "@/lib/charts";
 import ChartsScreen from "@/components/Charts";
+import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
+import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE } from "@/lib/doomsday";
 import { Markdown, safeHref } from "@/lib/markdown";
@@ -38,7 +40,7 @@ import { cluster, digestPick } from "@/lib/alerts";
  */
 const NAV_GROUPS = [
   { g: "Start here", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
-  { g: "Your desk", items: ["AGN", "JRN", "SET"] },
+  { g: "Your desk", items: ["AGN", "WL", "JRN", "SET"] },
   { g: "Daily", items: ["HOME", "NEWS", "GEO"] },
   { g: "Markets", items: ["CHT", "WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
   { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
@@ -74,6 +76,7 @@ const SCREENS = [
   { c: "WCH",   t: "Watch",      d: "What decides the next few sessions" },
   { c: "MAC",   t: "Macro",      d: "Dollar, crude, rates, freight and fertiliser" },
   { c: "CHT",   t: "Charts",     d: "Full charts with drawing tools and indicators, one, two or four at once. CHT GOLD opens gold" },
+  { c: "WL",    t: "Watchlist",  d: "Your own symbols with live quotes, saved to your account. WL GOLD adds gold" },
   { c: "FX",    t: "Currencies", d: "Policy rates, two-year yields, speculative positioning and the releases that move the majors" },
   { c: "AGN",   t: "Analyst",    d: "Ask anything — it reads the live feed and remembers the thread" },
   { c: "ECON",  t: "Economics",  d: "14 models you are examined on, each applicable to today's reads" },
@@ -111,6 +114,7 @@ const ALIAS = {
   LEGALNOTICE: "TERMS", DISCLAIMER: "TERMS", PRIVACY: "TERMS", TOS: "TERMS",
   FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
   CHART: "CHT", CHARTS: "CHT", GRAPH: "CHT", GP: "CHT", GIP: "CHT",
+  WATCHLIST: "WL", LIST: "WL", MON: "WL", MONITOR: "WL",
   DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
 };
 
@@ -896,6 +900,10 @@ export default function Terminal() {
 
   const [reads, setReads] = useState({});
   const [user, setUser] = useState(null);
+  // One watchlist for the whole page: the WL screen, the Watch button on CHT and `WL <name>` all change it.
+  const watch = useWatchlist(user);
+  const watchConfig = useMemo(() => watchQuotesConfig(watch.list), [watch.list]);
+  const addWatch = watch.add;
   const [apiKey, setApiKey] = useState("");
   const [quota, setQuota] = useState(null);
 
@@ -1068,6 +1076,11 @@ export default function Terminal() {
       if (symbol) setChartReq({ symbol, n: Date.now() });
       return true;
     }
+    if (c === "WL") {
+      const symbol = findSymbol(arg);
+      if (symbol) addWatch(symbol);
+      return true;
+    }
     if (arg) {
       const n = parseInt(arg, 10);
       setTimeout(() => {
@@ -1080,7 +1093,7 @@ export default function Terminal() {
       }, 60);
     }
     return true;
-  }, []);
+  }, [addWatch]);
 
   const openChart = useCallback((symbol) => {
     setChartReq({ symbol, n: Date.now() });
@@ -1927,7 +1940,19 @@ export default function Terminal() {
 
           {screen === "CHT" && (
             <Panel code="CHT" title="Charts" meta="TYPE CHT GOLD, CHT EURUSD, CHT NASDAQ:AAPL">
-              <ChartsScreen theme={theme} request={chartReq} />
+              <ChartsScreen theme={theme} request={chartReq} watched={watch.list} onWatch={watch.add} onUnwatch={watch.remove} />
+            </Panel>
+          )}
+
+          {screen === "WL" && (
+            <Panel code="WL" title="Watchlist" meta="TYPE WL GOLD, WL EURUSD, WL NASDAQ:AAPL">
+              <WatchlistScreen
+                watch={watch}
+                signedIn={Boolean(user)}
+                canSignIn={Boolean(supabase)}
+                openChart={openChart}
+                quotes={<TVWidget theme={theme} widget="market-quotes" config={watchConfig} label="Your watchlist, live" />}
+              />
             </Panel>
           )}
 

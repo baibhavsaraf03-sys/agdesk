@@ -88,11 +88,14 @@ function useCompact(layout) {
 }
 
 /**
+ * `watched`, `onWatch` and `onUnwatch` are the page's watchlist (components/Watchlist.jsx);
+ * the Watch button puts the selected chart's symbol on it or takes it off.
+ *
  * `request` is `{ symbol, n }` from the page: a command such as `CHT GOLD`, or a
  * chart link under a quote table. A new `n` loads that symbol into the chart
  * currently selected.
  */
-export default function ChartsScreen({ theme, request }) {
+export default function ChartsScreen({ theme, request, watched = [], onWatch, onUnwatch }) {
   const [s, setS] = useState(DEFAULT);
   const [loaded, setLoaded] = useState(false);
   const [typed, setTyped] = useState("");
@@ -207,6 +210,17 @@ export default function ChartsScreen({ theme, request }) {
           <input type="text" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Or type: gold, EURUSD, NASDAQ:AAPL" aria-label="Type a symbol" autoCapitalize="characters" spellCheck={false} />
           <button type="submit" className="ch-seg">Open</button>
         </form>
+        {onWatch && (
+          <button
+            type="button"
+            className={"ch-seg" + (watched.includes(activeSymbol) ? " on" : "")}
+            aria-pressed={watched.includes(activeSymbol)}
+            title={watched.includes(activeSymbol) ? "Take this symbol off your watchlist" : "Add this symbol to your watchlist (WL)"}
+            onClick={() => (watched.includes(activeSymbol) ? onUnwatch?.(activeSymbol) : onWatch(activeSymbol))}
+          >
+            {watched.includes(activeSymbol) ? "Watching" : "Watch"}
+          </button>
+        )}
       </div>
       {msg && <p className="ch-msg" role="status">{msg}</p>}
 

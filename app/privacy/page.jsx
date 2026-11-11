@@ -27,7 +27,7 @@ export default function Privacy() {
         <h2>Without an account</h2>
         <p className="doc-p">
           Nothing about you is stored by this site. Your browser keeps a few settings on your own device: light or dark
-          theme, the last screen you opened, lessons you have finished, an unsent article draft, and your own analyst
+          theme, the last screen you opened, lessons you have finished, your chart layout, a watchlist, an unsent article draft, and your own analyst
           key if you add one. Clearing your browser&apos;s site data removes all of it.
         </p>
       </section>
@@ -37,6 +37,7 @@ export default function Privacy() {
         <ul className="doc-rules">
           <li><strong>Your sign-in:</strong> email address, the name your Google account supplies (if you use Google), how you sign in, and when the account was created and last used.</li>
           <li><strong>Your journal:</strong> the entries you save. Only your account can read them; the database enforces that.</li>
+          <li><strong>Your watchlist:</strong> the list of market symbols you choose to follow. Only your account can read it.</li>
           <li><strong>A daily count of analyst messages</strong>, for the free usage limit. Not the messages themselves.</li>
           <li><strong>Articles you submit:</strong> the name you give, the title and text, the editor&apos;s decision and any note. Published articles are public under that name.</li>
           <li><strong>Sign-in cookies</strong> that keep you signed in. These are needed for the account to work, so there is no banner asking about them.</li>
@@ -70,7 +71,7 @@ export default function Privacy() {
         <h2>Deleting it</h2>
         <p className="doc-p">
           Delete your account yourself, at any time, on <Link href="/account">your account page</Link>. That removes your
-          sign-in, journal, usage count and unpublished articles straight away. You choose whether your published articles
+          sign-in, journal, watchlist, usage count and unpublished articles straight away. You choose whether your published articles
           come down too. Copies held in backups and logs by the services above expire on their own schedules.
         </p>
         <p className="doc-p">

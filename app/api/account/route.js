@@ -11,7 +11,7 @@ function json(body, status = 200) {
  *
  * Removing a sign-in needs the service role, which never leaves the server.
  * Unpublished articles are deleted here; published ones too if asked. The
- * journal, usage and profile rows go with the account through their
+ * journal, watchlist, usage and profile rows go with the account through their
  * `on delete cascade` foreign keys, and any published article that stays
  * loses its link to the account (`on delete set null`) but keeps its byline.
  *
