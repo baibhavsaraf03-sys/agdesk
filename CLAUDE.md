@@ -68,7 +68,7 @@ Charts, not yet confirmed on the live site: that the Advanced Chart widget rende
 
 Watchlist, not yet confirmed on the live site: `20261111_watchlist.sql` has been run and reported "Watchlist ready"; a list made signed out carries into the account at sign-in and shows on a second device; the quote table draws for the list. Tested so far against a local Postgres (policies) and in a browser with a faked sign-in and a mock API; the widget could not load in the build sandbox.
 
-Hourly reads, not yet confirmed (11 Nov): that the first hourly run of Actions → Market reads succeeds for all seven zones; which writer each used (`writer` in each row's payload); that Gemini's free daily allowance lasts the day (up to 168 reads, fewer after skips; if the Actions log shows Gemini quota errors by evening, add the Groq key or lower the cadence); that the first doom read fills `now` and `figures` on every tab. Owner to add a `GROQ_API_KEY` repository secret (a new key from the Groq console, not pasted in chat; Groq's limits are probably per account, so it may share the Pi tradebot's daily allowance). If the owner set a `GEMINI_FEED_MODEL` repository variable earlier, it no longer affects the reads; `GEMINI_HOURLY_MODELS` does.
+Hourly reads (11 Nov): first manual run (19:26) published all seven zones, all written by Gemini, phases correct, doom filled 8 tabs. Owner has added the `GROQ_API_KEY` secret, set an Anthropic spend limit and checked the variables (11 Nov). Not yet confirmed: that Gemini's free daily allowance lasts the day (up to 168 reads, fewer after skips; if the Actions log shows Gemini quota errors by evening, add the Groq key or lower the cadence); that the first doom read fills `now` and `figures` on every tab. that a Groq fallback has ever run (it only runs when Gemini fails; look for `written by groq` in the Actions log; its key may share the Pi tradebot's daily allowance). `GEMINI_FEED_MODEL` no longer affects the reads; `GEMINI_HOURLY_MODELS` does. Note: the analyst also uses the Anthropic key, so hitting the spend limit stops it too.
 
 Currencies, not yet confirmed on the live site: that all four sources in `/api/fx` report `ok` (none could be reached from the build sandbox, so the parsers were tested on sample data only; the CFTC field names and the dollar index code `098662` are the likeliest to need a fix); the chart chips for the three pairs.
 
@@ -82,7 +82,7 @@ Open tasks:
 3. Split `app/page.jsx` into one file per screen.
 4. Key rotation (owner does this by hand; never ask for keys in chat):
    - Anthropic key: used as `ANTHROPIC_API_KEY` in Vercel env and GitHub Actions secrets. Set a spend cap at the same time.
-   - Groq key: used only by the tradebot on the Pi, not by this repo.
+   - Groq keys: one for the tradebot on the Pi, and a separate one as the `GROQ_API_KEY` GitHub Actions secret for the reads.
    - Google OAuth client secret: used by the Supabase Auth Google provider, not by this repo's env.
 
 <!-- BEGIN:nextjs-agent-rules -->
