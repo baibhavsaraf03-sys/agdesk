@@ -649,3 +649,18 @@ a.dgleadtitle:hover{color:var(--accent)}
 .side{top:calc(54px + env(safe-area-inset-top,0px))}
 .scrim{inset:calc(54px + env(safe-area-inset-top,0px)) 0 0 0}
 .notice{border-left:2px solid var(--warn);padding:2px 0 2px 14px;font-size:13.5px;line-height:1.55;color:var(--fg)}
+
+/* Landing: the newest read, shown rather than described. */
+.landing-now{border-top:1px solid var(--fg);padding-top:14px;display:flex;flex-direction:column;gap:8px}
+.landing-now-k{display:flex;justify-content:space-between;gap:12px;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent)}
+.landing-now-k span{color:var(--fg-dim);font-weight:500;letter-spacing:0.02em}
+.landing-now h2{margin:0;font-family:var(--serif);font-size:22px;font-weight:600;line-height:1.25;text-wrap:balance;color:var(--fg)}
+.landing-now p,.landing-now li{font-family:var(--sans);font-size:14px;line-height:1.55;color:var(--fg)}
+.landing-now p{margin:0;color:var(--fg-dim)}
+.landing-now ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.landing-figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));border-top:1px solid var(--line);margin-top:4px}
+.landing-figs > div{display:flex;flex-direction:column;gap:1px;padding:10px 12px 2px 0;min-width:0}
+.lf-n{font-family:var(--sans);font-size:11.5px;color:var(--fg-dim)}
+.lf-v{font-family:var(--mono);font-size:17px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.lf-c{font-family:var(--mono);font-size:12px;color:var(--fg-dim)}
+.lf-c.up{color:var(--up)} .lf-c.down{color:var(--down)}

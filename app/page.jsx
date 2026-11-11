@@ -1229,6 +1229,41 @@ export default function Terminal() {
             </button>
           </div>
 
+          {/* The product, not a description of it: whatever read is newest,
+              with its short version and a few of its verified figures. */}
+          {(() => {
+            const live = Object.values(reads || {}).filter((r) => r && r.headline);
+            // No live read, no block: a dated sample on the front page would
+            // undersell the thing it is meant to show.
+            const pick = live.sort((a, b) => String(b._updatedAt || "").localeCompare(String(a._updatedAt || "")))[0];
+            if (!pick) return null;
+            const rows = (pick.rows || []).filter((r) => r && r.nm && r.px).slice(0, 4);
+            const short = (Array.isArray(pick.short) ? pick.short : []).slice(0, 3);
+            return (
+              <div className="landing-now">
+                <div className="landing-now-k">
+                  On the desk now
+                  {pick.stamp && <span>{pick.stamp}</span>}
+                </div>
+                <h2>{pick.headline}</h2>
+                {short.length
+                  ? <ul>{short.map((x, i) => <li key={i}>{x}</li>)}</ul>
+                  : pick.lede && <p>{pick.lede}</p>}
+                {rows.length > 0 && (
+                  <div className="landing-figs">
+                    {rows.map((r, i) => (
+                      <div key={i}>
+                        <span className="lf-n">{r.nm}</span>
+                        <span className="lf-v">{r.px}</span>
+                        {r.ch && <span className={"lf-c " + (r.dir || "flat")}>{r.ch}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <dl className="landing-list">
             <div><dt>Learn</dt><dd>Lessons, a glossary, and a risk section built on regulators&apos; own loss data.</dd></div>
             <div><dt>Daily</dt><dd>News across finance, politics, international relations and law, and a political-risk screen for the flashpoints that move shipping and trade.</dd></div>

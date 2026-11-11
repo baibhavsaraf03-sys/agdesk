@@ -32,6 +32,11 @@ Read this instead of exploring. Grep for the names below; do not read `app/page.
 - Reads carry `short` (three plain sentences, shown by `InShort`) and, for `ag`, `macro`.
 - To look at the site locally: `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-dummy npx next build` then `next start` with the same two variables. Without them every page returns a 500. News and widgets are empty offline.
 
+## Money (parked, not live)
+- Paid plans (Free 20/day, Plus $20 +100/month, Pro $100 +500/month) and labelled section sponsorship (US visitors only) are built on the `monetization` branch, commit bcf51fe, and reverted from `main` at the owner's request until viability is settled. Do not merge without being asked.
+- That branch's `supabase/migrations/20261111_plans.sql` also drops a policy ("Service role manages profiles") from the 2024 profiles migration that lets any signed-in user rewrite any profile. Worth running for that alone.
+- The whole UI is one client-rendered page with `#SCREEN` routes, so search engines see a single URL. Any SEO or published-articles work starts with real server-rendered routes (e.g. `/learn/[slug]`, `/glossary/[term]`, `/articles/[slug]`).
+
 ## Working rules
 - Verify with `npx next build` before pushing. Push to `main`; Vercel deploys automatically.
 - Ship patches (commits), never bulk copies of the repo.
