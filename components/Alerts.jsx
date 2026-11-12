@@ -293,7 +293,7 @@ function NewAlert({ onCreate, prefill, watch }) {
           </div>
           <div className="field">
             <label htmlFor="alr-level">Level</label>
-            <input id="alr-level" type="text" inputMode="decimal" value={pr.level} onChange={(e) => setPr({ ...pr, level: e.target.value })} placeholder="e.g. 2700" />
+            <input id="alr-level" type="text" inputMode="decimal" value={pr.level} onChange={(e) => setPr({ ...pr, level: e.target.value })} placeholder="A level near the price above" />
           </div>
           {already && <p className="alr-hint warn">It is already {pr.op} that level, so this will go off at the next check.</p>}
           <label className="alr-check">

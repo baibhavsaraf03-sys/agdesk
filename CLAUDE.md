@@ -77,7 +77,7 @@ Currencies, not yet confirmed on the live site: that all four sources in `/api/f
 
 Calendar, not yet confirmed on the live site: a downloaded `.ics` imports into Google Calendar and Apple Calendar at the right time; "Ask the analyst" from a release. Secondary-source dates to check against the publishers when convenient: ECB 2027, RBA 2027, UK CPI 2027, euro flash Feb and Mar 2027.
 
-Alerts, not yet confirmed (12 Nov): owner has run `20261112_alerts.sql` ("Alerts ready"), made keys at `/tools/push-keys` and stored them (GitHub secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`; Vercel env `VAPID_PUBLIC_KEY`, then redeploy); a real notification arrives on a desktop browser and on an iPhone added to the home screen; Yahoo and Stooq answer from GitHub's runners and Vercel (the probe run says how many symbols priced); headline alerts match live feeds.
+Alerts, not yet confirmed (12 Nov): owner has run `20261112_alerts.sql` ("Alerts ready"), made keys at `/tools/push-keys` and stored them (GitHub secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`; Vercel env `VAPID_PUBLIC_KEY`, then redeploy); a real notification arrives on a desktop browser and on an iPhone added to the home screen; Yahoo from Vercel (`/api/price`); headline alerts against live feeds. Confirmed 12 Nov: a probe run on GitHub's runners priced all 36 supported symbols from Yahoo and gathered 193 headlines.
 
 Email sign-in, not yet confirmed: custom SMTP set up in Supabase; a link received, opened, and landing back on the right page. Account deletion not yet tried live (needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel).
 
