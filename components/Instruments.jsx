@@ -16,6 +16,8 @@ import { upcomingEvents } from "@/lib/calendar";
 import { fmtChange, fmtPrice } from "@/lib/pulse.mjs";
 
 const MARKET_ZONES = ["ams", "eur", "eas", "ind", "anz"];
+// Already on a dial, so left out of the positions list.
+const ON_DIALS = new Set(["spx", "ftse", "gold"]);
 
 /** Polls /api/pulse every two minutes while the page is visible. */
 export function usePulse() {
@@ -283,7 +285,7 @@ export function Instruments({ pulse, failed, reads, onAsk, onShare, onChart, onC
           <div className="inst-pos">
             <div className="inst-k">Positions of note</div>
             <div className="inst-rule" />
-            {(pulse?.instruments || []).filter((i) => i.price).map((i) => {
+            {(pulse?.instruments || []).filter((i) => i.price && !ON_DIALS.has(i.k)).map((i) => {
               const w = i.change == null ? 0 : Math.min(100, (Math.abs(i.change) / 2) * 100);
               const dir = i.change > 0 ? "up" : i.change < 0 ? "down" : "flat";
               return (
