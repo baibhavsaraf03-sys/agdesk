@@ -23,6 +23,7 @@ import CalendarScreen from "@/components/Calendar";
 import AlertsScreen from "@/components/Alerts";
 import MemeScreen from "@/components/Meme";
 import { SideNav, useNavMode } from "@/components/Nav";
+import { Instruments, MoodDial, usePulse, deskBrief } from "@/components/Instruments";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
@@ -300,7 +301,7 @@ function TVWidget({ widget, config, label, theme }) {
   // The widget paints its own background, so it has to be told which theme
   // the page is in or it sits as a dark slab on a light page.
   const dark = theme === "dark";
-  config = { ...config, colorTheme: dark ? "dark" : "light", backgroundColor: dark ? "#191917" : "#ffffff" };
+  config = { ...config, colorTheme: dark ? "dark" : "light", backgroundColor: dark ? "#0d0c0b" : "#ffffff" };
 
   // The embed script's only job is to build this iframe, reading its config
   // from its own text content. Injecting a script tag from React turned out to
@@ -903,7 +904,9 @@ export default function Terminal() {
   // The command bar was permanently in the way. It is still here, still with
   // history, but behind a key now: press / or the button.
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("dark");
+  // Home instruments and the menu dial (delayed prices and the VIX mood word).
+  const { pulse, failed: pulseFailed } = usePulse();
   // A symbol for the Charts screen to load, from CHT <name> or a chart link. `n` makes a repeat request count.
   const [chartReq, setChartReq] = useState(null);
   const [calReq, setCalReq] = useState(null);
@@ -1066,11 +1069,14 @@ export default function Terminal() {
     }
   }, [theme]);
 
-  // Open the sidebar by default on a wide screen only. On a phone it would
-  // cover the thing you came to read.
+  // The menu is a full-screen sheet (Noir, 12 Nov): closed until asked for,
+  // and Escape puts it away.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 900) setNavOpen(true);
-  }, []);
+    if (!navOpen) return;
+    const k = (e) => { if (e.key === "Escape") setNavOpen(false); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [navOpen]);
 
   // "/" opens the command bar from anywhere, unless you are typing.
   useEffect(() => {
@@ -1301,6 +1307,28 @@ export default function Terminal() {
     });
   }
 
+  // Today's card: the 9:16 image from /card, handed to the phone's share
+  // sheet (Instagram, Messages...) where that is possible, downloaded where not.
+  async function shareCard() {
+    try {
+      const res = await fetch("/card");
+      if (!res.ok) throw new Error("card");
+      const blob = await res.blob();
+      const file = new File([blob], "ledge-desk-today.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Ledge Desk", text: location.origin });
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "ledge-desk-today.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (err) {
+      if (err?.name !== "AbortError") window.open("/card", "_blank", "noopener");
+    }
+  }
+
   const zoneKeysFor = (sc) => Object.keys(ZONES).filter((k) => ZONES[k].screen === sc);
 
   function enterDesk(dest) {
@@ -1314,9 +1342,29 @@ export default function Terminal() {
   if (showLanding) {
     return (
       <div className="landing">
-        <div className="landing-inner">
-          <div className="landing-mark">LEDGE&middot;DESK</div>
+        {/* The door (Noir, 12 Nov): a clock, one line, the way in. */}
+        <section className="door dotfield">
+          <div className="door-top"><span>EST. MMXXVI</span><span>LONDON · NEW YORK · TOKYO</span></div>
+          <div className="door-mid">
+            <div className="door-mark">LEDGE DESK</div>
+            <div className="door-stem" />
+            <div className="door-clock" aria-label="Time now">{clock}</div>
+            <p className="door-line">
+              {pulse?.mood ? `The market is ${pulse.mood.word.toLowerCase()}. ` : ""}The desk is open.
+            </p>
+            <div className="door-acts">
+              <button className="btn pri door-btn" onClick={() => enterDesk("HOME")}>Enter the desk</button>
+              {supabase && <a className="btn door-btn" href="/signin">Sign in</a>}
+            </div>
+            <button className="door-new" onClick={() => enterDesk("START")}>New to investing? Start with the lessons</button>
+          </div>
+          <div className="door-foot">
+            <span><span className="dot live" /> {EXCHANGES.length} EXCHANGES · REWRITTEN HOURLY</span>
+            <span>EDUCATIONAL MATERIAL · NOT INVESTMENT ADVICE</span>
+          </div>
+        </section>
 
+        <div className="landing-inner">
           <h1 className="landing-title">A markets desk that shows its reasoning.</h1>
           <p className="landing-sub">
             Session reads for {EXCHANGES.length} world exchanges and the agricultural markets, each with the
@@ -1530,7 +1578,7 @@ export default function Terminal() {
           onClick={flipTheme}
           title={theme === "dark" ? "Switch to light" : "Switch to dark"}
         >
-          {theme === "dark" ? "Light" : "Dark"}
+          {theme === "dark" ? "Light" : "Noir"}
         </button>
         <button
           className="tbtn tbtn-cmd"
@@ -1585,11 +1633,20 @@ export default function Terminal() {
             mode={navMode}
             setMode={setNavMode}
             findExtra={findChartHit}
-            onPicked={() => { if (window.innerWidth < 900) setNavOpen(false); }}
+            onPicked={() => setNavOpen(false)}
+            open={navOpen}
+            onClose={() => setNavOpen(false)}
+            aside={
+              <>
+                <MoodDial pulse={pulse} size={260} />
+                <p className="nav-brief">{deskBrief(reads)?.text || "The desk is open."}</p>
+                <span className="nav-asidemeta">{deskBrief(reads)?.stamp || ""}</span>
+              </>
+            }
             extras={
               <div className="nav-phone">
                 <button className="tbtn" aria-pressed={peOn} onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}>Plain English</button>
-                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Light mode" : "Dark mode"}</button>
+                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Light theme" : "Noir theme"}</button>
               </div>
             }
           />
@@ -1611,13 +1668,22 @@ export default function Terminal() {
         {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
 
         <main className="stage">
-          <div className={"wrap" + (screen === "CHT" ? " wide" : "")}>
+          <div className={"wrap" + (screen === "CHT" || screen === "HOME" ? " wide" : "")}>
 
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (
             <>
+              <Instruments
+                pulse={pulse}
+                failed={pulseFailed}
+                reads={reads}
+                onAsk={() => ask("Explain today's markets in plain terms: what moved, why, and what to watch next.", "What is moving markets today?")}
+                onShare={shareCard}
+                onChart={openChart}
+                onCal={() => go("CAL")}
+              />
+
               <div className="homelead">
-                <h1>{new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(new Date())}</h1>
                 <p>
                   New to this? Read{" "}
                   <button className="textlink" onClick={() => go("START")}>Start</button> and{" "}

@@ -1,0 +1,27 @@
+name: Site check
+
+# Manual: asks the live site for the endpoints that depend on outside
+# sources (prices, the share card, currencies) and prints what came back.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pulse (home instruments)
+        run: |
+          curl -sS --max-time 40 https://agdesk.vercel.app/api/pulse | python3 -c '
+          import json,sys
+          j=json.load(sys.stdin)
+          print("mood:", j.get("mood"))
+          for i in j.get("instruments",[]): print(i["k"], i.get("price"), i.get("change"), i.get("error",""))
+          s=j.get("session") or {}
+          print("session points:", len(s.get("points",[])))'
+      - name: Share card and link preview
+        run: |
+          for u in "card" "card?format=og"; do
+            curl -sS --max-time 60 -o out.png -w "$u: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "https://agdesk.vercel.app/$u"
+          done
+      - name: Currencies
+        run: curl -sS --max-time 40 https://agdesk.vercel.app/api/fx | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))'
