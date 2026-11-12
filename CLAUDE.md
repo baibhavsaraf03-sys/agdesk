@@ -81,7 +81,7 @@ Calendar, not yet confirmed on the live site: a downloaded `.ics` imports into G
 
 Alerts, not yet confirmed (12 Nov): owner has run `20261112_alerts.sql` ("Alerts ready"), made keys at `/tools/push-keys` and stored them (GitHub secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`; Vercel env `VAPID_PUBLIC_KEY`, then redeploy); a real notification arrives on a desktop browser and on an iPhone added to the home screen; Yahoo from Vercel (`/api/price`); headline alerts against live feeds. Confirmed 12 Nov: a probe run on GitHub's runners priced all 36 supported symbols from Yahoo and gathered 193 headlines.
 
-Meme stocks: a probe on GitHub's runners (12 Nov, 08:4x) returned 25 tickers, all priced. Not yet confirmed: the first published read and summary on the live site; whether ApeWisdom's ticker list needs more `NOT_TICKERS` entries over time.
+Meme stocks: first real run 12 Nov, about 09:00, published 25 rows (7 rallies) with a summary written by Gemini; the word filter removed the misread tickers. Not yet confirmed: how it looks on the live site; whether ApeWisdom's ticker list needs more `NOT_TICKERS` entries over time.
 
 Email sign-in, not yet confirmed: custom SMTP set up in Supabase; a link received, opened, and landing back on the right page. Account deletion not yet tried live (needs `SUPABASE_SERVICE_ROLE_KEY` in Vercel).
 
