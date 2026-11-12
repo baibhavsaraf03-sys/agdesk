@@ -16,10 +16,11 @@ import {
   SOURCES as DOOM_SOURCES
 } from "@/lib/doomsday";
 import { TV_CONFIGS, TAPE_CONFIG, TV_GROUPS } from "@/lib/tv";
-import { findSymbol } from "@/lib/charts";
+import { findSymbol, chartName } from "@/lib/charts";
 import ChartsScreen from "@/components/Charts";
 import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
 import CalendarScreen from "@/components/Calendar";
+import { SideNav, BottomBar, useNavMode } from "@/components/Nav";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
@@ -41,16 +42,7 @@ import { cluster, digestPick } from "@/lib/alerts";
  * under a label that says what they are. An experienced reader loses one
  * scroll; a new one is not handed a short thesis on their first visit.
  */
-const NAV_GROUPS = [
-  { g: "Start here", items: ["START", "TUT", "RISK", "GLOS", "MTD"] },
-  { g: "Your desk", items: ["AGN", "WL", "JRN", "SET"] },
-  { g: "Daily", items: ["HOME", "NEWS", "GEO"] },
-  { g: "Markets", items: ["CHT", "CAL", "WLD", "ASIA", "EMEA", "AMER", "MAC", "FX"] },
-  { g: "Commodities", items: ["DESK", "GRN", "SFT", "TRD", "WCH"] },
-  { g: "Disciplines", items: ["ECON", "LAW", "IR", "POL", "SEM"] },
-  { g: "Advanced", note: "Read the lessons first", items: ["FLOW", "DOOM", "SRC"] },
-  { g: "About", items: ["TERMS", "HELP"] }
-];
+// Navigation grouping lives in lib/nav.js (five areas, Beginner set).
 
 /** The four news streams. Labels only — fetching happens in /api/news. */
 const NEWS_TABS = [
@@ -901,6 +893,8 @@ export default function Terminal() {
   // The sidebar starts open on a wide screen and closed on a phone, then
   // remembers whatever you do to it for the rest of the session.
   const [navOpen, setNavOpen] = useState(false);
+  const [navMode, setNavMode] = useNavMode();
+  const [focusArea, setFocusArea] = useState(null);
   // The command bar was permanently in the way. It is still here, still with
   // history, but behind a key now: press / or the button.
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -1145,6 +1139,12 @@ export default function Terminal() {
     setChartReq({ symbol, n: Date.now() });
     go("CHT");
   }, [go]);
+
+  // The jump box offers a chart when the words name a market ("gold", "cable", "NVDA").
+  const findChartHit = useCallback((q) => {
+    const symbol = findSymbol(q);
+    return symbol ? { label: `Chart: ${chartName(symbol)}`, desc: `Open ${symbol} on the Charts screen`, run: () => openChart(symbol) } : null;
+  }, [openChart]);
 
   function runCmd() {
     const raw = cmd.trim();
@@ -1496,7 +1496,7 @@ export default function Terminal() {
         <span className="tspacer" />
 
         <button
-          className="tbtn"
+          className="tbtn tbtn-pe"
           aria-pressed={peOn}
           onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}
           title="Make jargon tappable everywhere"
@@ -1512,7 +1512,7 @@ export default function Terminal() {
           Analyst
         </button>
         <button
-          className="tbtn"
+          className="tbtn tbtn-theme"
           onClick={flipTheme}
           title={theme === "dark" ? "Switch to light" : "Switch to dark"}
         >
@@ -1564,33 +1564,22 @@ export default function Terminal() {
 
       <div className={"shell" + (navOpen ? " navopen" : "") + (agnOpen && screen !== "AGN" ? " agnopen" : "")}>
         <nav className="side" aria-label="Sections">
-          {NAV_GROUPS.map(({ g, items, note }) => (
-            <div className="navgroup" key={g}>
-              <div className="navhead">{g}{note && <span className="navnote">{note}</span>}</div>
-              {items.map((code) => {
-                const sc = SCREENS.find((x) => x.c === code);
-                if (!sc) return null;
-                return (
-                  <button
-                    key={code}
-                    className="navitem"
-                    aria-current={screen === code}
-                    title={sc.d}
-                    onClick={() => {
-                      go(code);
-                      if (window.innerWidth < 900) setNavOpen(false);
-                    }}
-                  >
-                    <span className="navcode">{code}</span>
-                    <span className="navname">{sc.t}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-          <div className="navfoot">
-            Educational material, not investment advice.
-          </div>
+          <SideNav
+            screens={SCREENS}
+            screen={screen}
+            go={go}
+            mode={navMode}
+            setMode={setNavMode}
+            focusArea={focusArea}
+            findExtra={findChartHit}
+            onPicked={() => { if (window.innerWidth < 900) setNavOpen(false); }}
+            extras={
+              <div className="nav-phone">
+                <button className="tbtn" aria-pressed={peOn} onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}>Plain English</button>
+                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Light mode" : "Dark mode"}</button>
+              </div>
+            }
+          />
         </nav>
 
         {agnOpen && screen !== "AGN" && (
@@ -1607,6 +1596,16 @@ export default function Terminal() {
 
         {/* Tapping the page closes the drawer on a phone. */}
         {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
+
+        <BottomBar
+          screen={screen}
+          menuOpen={navOpen}
+          onArea={(id) => {
+            if (navOpen && focusArea?.id === id) return setNavOpen(false);
+            setFocusArea({ id, n: Date.now() });
+            setNavOpen(true);
+          }}
+        />
 
         <main className="stage">
           <div className={"wrap" + (screen === "CHT" ? " wide" : "")}>
@@ -2863,11 +2862,15 @@ export default function Terminal() {
                         <h4 style={{ marginTop: "1.25rem" }}>Capex-to-Revenue Ratio vs Dot-Com Peak</h4>
                         <p className="prose dim">How much each company spends building AI infrastructure relative to AI revenue. The dot-com peak was 32%. Most AI companies are well above.</p>
                         <div style={{ overflowX: "auto", margin: "1rem 0" }}>
-                          <svg viewBox="0 0 520 180" style={{ width: "100%", maxWidth: "520px", height: "auto" }}>
+                          <div className="dchart-wrap"><svg viewBox="0 0 520 180" className="dchart" style={{ maxWidth: "520px" }}>
                             <line x1="50" y1="140" x2="490" y2="140" stroke="var(--rule)" strokeWidth="1"/>
                             {/* Dot-com reference line */}
-                            <line x1="50" y1={140 - (32/90)*120} x2="490" y2={140 - (32/90)*120} stroke="var(--accent-2)" strokeWidth="1" strokeDasharray="6"/>
-                            <text x="485" y={140 - (32/90)*120 - 4} fill="var(--accent-2)" fontFamily="var(--sans)" fontSize="8" textAnchor="end">Dot-com peak: 32%</text>
+                            <line x1="50" y1={140 - (32/90)*120} x2="462" y2={140 - (32/90)*120} stroke="var(--accent-2)" strokeWidth="1" strokeDasharray="6"/>
+                            {/* Label sits past the last bar so it never collides with a bar's figure. */}
+                            <text x="466" y={140 - (32/90)*120 - 3} fill="var(--accent-2)" fontFamily="var(--sans)" fontSize="9">
+                              <tspan x="466">Dot-com</tspan>
+                              <tspan x="466" dy="11">peak 32%</tspan>
+                            </text>
                             {CAPEX_RATIOS.map((r, i) => {
                               const x = 60 + i * 70;
                               const h = (r.ratio / 90) * 120;
@@ -2876,17 +2879,17 @@ export default function Terminal() {
                                 <g key={r.name}>
                                   <rect x={x} y={140 - h} width="48" height={h} rx="3" fill={clr} opacity="0.8"/>
                                   <text x={x + 24} y={140 - h - 4} fill={clr} fontFamily="var(--sans)" fontSize="9" fontWeight="700" textAnchor="middle">{r.ratio}%</text>
-                                  <text x={x + 24} y="155" fill="var(--fg)" fontFamily="var(--sans)" fontSize="8" textAnchor="middle" opacity="0.6">{r.name}</text>
+                                  <text x={x + 24} y="155" fill="var(--fg)" fontFamily="var(--sans)" fontSize="10" textAnchor="middle" opacity="0.6">{r.name}</text>
                                 </g>
                               );
                             })}
-                          </svg>
+                          </svg></div>
                         </div>
 
                         <h4 style={{ marginTop: "1.25rem" }}>OpenAI Vendor Commitments ($B)</h4>
                         <p className="prose dim">$1.15T in total vendor commitments against $33B run-rate revenue. Leverage ratio: 35x.</p>
                         <div style={{ overflowX: "auto", margin: "1rem 0" }}>
-                          <svg viewBox="0 0 520 180" style={{ width: "100%", maxWidth: "520px", height: "auto" }}>
+                          <div className="dchart-wrap"><svg viewBox="0 0 520 180" className="dchart" style={{ maxWidth: "520px" }}>
                             <line x1="50" y1="150" x2="490" y2="150" stroke="var(--rule)" strokeWidth="1"/>
                             {VENDOR_COMMITS.map((v, i) => {
                               const x = 55 + i * 62;
@@ -2894,12 +2897,12 @@ export default function Terminal() {
                               return (
                                 <g key={v.name}>
                                   <rect x={x} y={150 - h} width="50" height={h} rx="3" fill="var(--dn)" opacity={0.9 - i * 0.06}/>
-                                  <text x={x + 25} y={150 - h - 4} fill="var(--dn)" fontFamily="var(--sans)" fontSize="8" fontWeight="700" textAnchor="middle">${v.value}B</text>
-                                  <text x={x + 25} y="163" fill="var(--fg)" fontFamily="var(--sans)" fontSize="7" textAnchor="middle" opacity="0.6">{v.name}</text>
+                                  <text x={x + 25} y={150 - h - 4} fill="var(--dn)" fontFamily="var(--sans)" fontSize="10" fontWeight="700" textAnchor="middle">${v.value}B</text>
+                                  <text x={x + 25} y="163" fill="var(--fg)" fontFamily="var(--sans)" fontSize="9" textAnchor="middle" opacity="0.6">{v.name}</text>
                                 </g>
                               );
                             })}
-                          </svg>
+                          </svg></div>
                         </div>
                       </div>
                     )}
@@ -2943,7 +2946,7 @@ export default function Terminal() {
                         <h4 style={{ marginTop: "1.25rem" }}>Hyperscaler Capex vs AI Revenue ($B)</h4>
                         <p className="prose dim">Aggregate Big-5 (MSFT, GOOG, AMZN, META, ORCL). The gap between the bars is money spent that hasn&apos;t come back yet.</p>
                         <div style={{ overflowX: "auto", margin: "1rem 0" }}>
-                          <svg viewBox="0 0 600 280" style={{ width: "100%", maxWidth: "600px", height: "auto" }}>
+                          <div className="dchart-wrap"><svg viewBox="0 0 600 280" className="dchart" style={{ maxWidth: "600px" }}>
                             {/* Grid */}
                             <line x1="60" y1="30" x2="60" y2="230" stroke="var(--rule)" strokeWidth="1"/>
                             <line x1="60" y1="230" x2="570" y2="230" stroke="var(--rule)" strokeWidth="1"/>
@@ -2952,7 +2955,7 @@ export default function Terminal() {
                               return (
                                 <g key={v}>
                                   <line x1="60" y1={y} x2="570" y2={y} stroke="var(--rule)" strokeWidth="0.5" strokeDasharray="4"/>
-                                  <text x="55" y={y + 3} fill="var(--fg)" fontFamily="var(--sans)" fontSize="8" textAnchor="end" opacity="0.5">${v}B</text>
+                                  <text x="55" y={y + 3} fill="var(--fg)" fontFamily="var(--sans)" fontSize="10" textAnchor="end" opacity="0.5">${v}B</text>
                                 </g>
                               );
                             })}
@@ -2965,21 +2968,21 @@ export default function Terminal() {
                                 <g key={i}>
                                   <rect x={x} y={230 - capH} width="28" height={capH} rx="2" fill="var(--dn)" opacity="0.8"/>
                                   <rect x={x + 30} y={230 - revH} width="28" height={revH} rx="2" fill="var(--up)" opacity="0.8"/>
-                                  <text x={x + 14} y={230 - capH - 3} fill="var(--dn)" fontFamily="var(--sans)" fontSize="7" fontWeight="700" textAnchor="middle">${d.capex}B</text>
-                                  <text x={x + 44} y={230 - revH - 3} fill="var(--up)" fontFamily="var(--sans)" fontSize="7" fontWeight="700" textAnchor="middle">${d.aiRev}B</text>
-                                  <text x={x + 29} y="245" fill="var(--fg)" fontFamily="var(--sans)" fontSize="8" textAnchor="middle" opacity="0.6">{d.year}</text>
+                                  <text x={x + 14} y={230 - capH - 3} fill="var(--dn)" fontFamily="var(--sans)" fontSize="9" fontWeight="700" textAnchor="middle">${d.capex}B</text>
+                                  <text x={x + 44} y={230 - revH - 3} fill="var(--up)" fontFamily="var(--sans)" fontSize="9" fontWeight="700" textAnchor="middle">${d.aiRev}B</text>
+                                  <text x={x + 29} y="245" fill="var(--fg)" fontFamily="var(--sans)" fontSize="10" textAnchor="middle" opacity="0.6">{d.year}</text>
                                 </g>
                               );
                             })}
                             {/* 2025 gap annotation */}
                             <line x1={75 + 3*72 + 58} y1={230 - (370/1000)*200} x2={75 + 3*72 + 58} y2={230 - (190/1000)*200} stroke="var(--accent-2)" strokeWidth="1.5" strokeDasharray="3"/>
-                            <text x={75 + 3*72 + 65} y={230 - (280/1000)*200} fill="var(--accent-2)" fontFamily="var(--sans)" fontSize="8" fontWeight="700">$180B gap</text>
+                            <text x={75 + 3*72 + 29} y={230 - (370/1000)*200 - 16} fill="var(--accent-2)" fontFamily="var(--sans)" fontSize="10" fontWeight="700" textAnchor="middle">$180B gap</text>
                             {/* Legend */}
                             <rect x="65" y="258" width="10" height="10" rx="1" fill="var(--dn)" opacity="0.8"/>
                             <text x="80" y="267" fill="var(--fg)" fontFamily="var(--sans)" fontSize="9" opacity="0.6">Capex</text>
                             <rect x="125" y="258" width="10" height="10" rx="1" fill="var(--up)" opacity="0.8"/>
                             <text x="140" y="267" fill="var(--fg)" fontFamily="var(--sans)" fontSize="9" opacity="0.6">AI Revenue</text>
-                          </svg>
+                          </svg></div>
                         </div>
 
                         {/* FCF snapshot */}
