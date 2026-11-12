@@ -20,8 +20,14 @@ jobs:
           print("session points:", len(s.get("points",[])))'
       - name: Share card and link preview
         run: |
-          for u in "card" "card?format=og"; do
-            curl -sS --max-time 60 -o out.png -w "$u: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "https://agdesk.vercel.app/$u"
-          done
+          mkdir -p cards
+          curl -sS --max-time 60 -o cards/story.png -w "card: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "https://agdesk.vercel.app/card"
+          curl -sS --max-time 60 -o cards/og.png -w "card?format=og: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "https://agdesk.vercel.app/card?format=og"
+      - name: Keep the cards for a look
+        uses: actions/upload-artifact@v4
+        with:
+          name: cards
+          path: cards/
+          retention-days: 3
       - name: Currencies
         run: curl -sS --max-time 40 https://agdesk.vercel.app/api/fx | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))'

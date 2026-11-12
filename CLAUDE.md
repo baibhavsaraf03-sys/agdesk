@@ -76,7 +76,7 @@ Watchlist, not yet confirmed on the live site: `20261111_watchlist.sql` has been
 
 Hourly reads (11 Nov): first manual run (19:26) published all seven zones, all written by Gemini, phases correct, doom filled 8 tabs. Owner has added the `GROQ_API_KEY` secret, set an Anthropic spend limit and checked the variables (11 Nov). Not yet confirmed: that Gemini's free daily allowance lasts the day (up to 168 reads, fewer after skips; if the Actions log shows Gemini quota errors, Groq should take over; if both run out, lower the cadence); that the doom read fills `now` and `figures` on every tab; that a Groq fallback has ever run (it only runs when Gemini fails; look for `written by groq` in the Actions log; its key may share the Pi tradebot's daily allowance). `GEMINI_FEED_MODEL` no longer affects the reads; `GEMINI_HOURLY_MODELS` does. Note: the analyst also uses the Anthropic key, so hitting the spend limit stops it too.
 
-Currencies, not yet confirmed on the live site: that all four sources in `/api/fx` report `ok` (none could be reached from the build sandbox, so the parsers were tested on sample data only; the CFTC field names and the dollar index code `098662` are the likeliest to need a fix); the chart chips for the three pairs.
+Currencies: confirmed 12 Nov by the Site check action, all four sources in `/api/fx` report `ok`. Not yet confirmed: the chart chips for the three pairs.
 
 Calendar, not yet confirmed on the live site: a downloaded `.ics` imports into Google Calendar and Apple Calendar at the right time; "Ask the analyst" from a release. Secondary-source dates to check against the publishers when convenient: ECB 2027, RBA 2027, UK CPI 2027, euro flash Feb and Mar 2027.
 
@@ -88,7 +88,7 @@ Email sign-in, not yet confirmed: custom SMTP set up in Supabase; a link receive
 
 Articles, not yet confirmed on the live site: the SQL script has been run and reported "Editor set"; a real Google sign-in from `/articles/submit` lands back on that page; a submission appears at `/articles/review` and its published page loads. Tested so far only against a local Postgres (policies) and a mock API (pages).
 
-Noir, not yet confirmed on the live site (12 Nov): Yahoo answers `/api/pulse` from Vercel (run the Site check action); `/card` renders with the Google fonts (it falls back to a plain sans if the font fetch fails); the share sheet on an iPhone offers Instagram. If Yahoo is blocked from Vercel the dials show "no price" and the rest of the desk is unaffected.
+Noir: confirmed 12 Nov by the Site check action, Yahoo answers `/api/pulse` from Vercel (all eight prices, VIX mood) and `/card` and `/card?format=og` return PNGs. Not yet confirmed: the share sheet on an iPhone offers Instagram. If Yahoo ever blocks Vercel the dials show "no price" and the rest of the desk is unaffected.
 
 Open tasks:
 1. Check the items above; remove anything still blank.
