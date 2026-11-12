@@ -953,7 +953,7 @@ a.btn{display:inline-block;text-decoration:none}
 .nav-area{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:baseline;width:100%;padding:10px 15px 6px;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim)}
 .nav-area:hover,.nav-area.here{color:var(--fg)}
 .nav-area:focus-visible{outline:2px solid var(--accent-2);outline-offset:-2px}
-.nav-count{font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none}
+.nav-pm{font-family:var(--mono);font-size:15px;font-weight:400;line-height:1;width:14px;text-align:center}
 .side .navitem{justify-content:space-between}
 .side .navitem .navcode{min-width:0;text-align:right}
 .nav-hit{flex-direction:column;align-items:flex-start !important;gap:2px !important}
@@ -965,20 +965,12 @@ a.btn{display:inline-block;text-decoration:none}
 .nav-phone{display:none;gap:6px;flex-wrap:wrap;padding:10px 0 0;border-top:1px solid var(--line);margin-top:8px}
 .side .navfoot{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
 .side .navfoot span{width:100%}
-.bbar{display:none}
 @media(max-width:760px){
-  .bbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--surface);border-top:1px solid var(--line);padding:0 0 env(safe-area-inset-bottom,0px)}
-  .bbar-b{all:unset;box-sizing:border-box;flex:1;min-width:0;text-align:center;padding:14px 1px 13px;font-family:var(--sans);font-size:11.5px;letter-spacing:-0.01em;font-weight:600;color:var(--fg-dim);cursor:pointer;border-top:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bbar-b[aria-current="true"]{color:var(--accent);border-top-color:var(--accent)}
-  .bbar-b:focus-visible{outline:2px solid var(--accent-2);outline-offset:-3px}
-  .stage{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-  .side{bottom:calc(50px + env(safe-area-inset-bottom,0px));width:min(320px,88vw)}
-  .scrim{bottom:calc(50px + env(safe-area-inset-bottom,0px))}
+  .side{width:min(320px,88vw)}
   .side .navcode{display:none}
   .side .navitem{padding:11px 16px;font-size:15px}
   .nav-phone{display:flex}
   .tbtn-pe,.tbtn-theme{display:none}
-  .agnside{bottom:calc(50px + env(safe-area-inset-bottom,0px))}
 }
 /* Fingers, not cursors: anything tappable is at least 40px tall on a touch screen. */
 @media(pointer:coarse){

@@ -20,7 +20,7 @@ import { findSymbol, chartName } from "@/lib/charts";
 import ChartsScreen from "@/components/Charts";
 import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
 import CalendarScreen from "@/components/Calendar";
-import { SideNav, BottomBar, useNavMode } from "@/components/Nav";
+import { SideNav, useNavMode } from "@/components/Nav";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
@@ -894,7 +894,6 @@ export default function Terminal() {
   // remembers whatever you do to it for the rest of the session.
   const [navOpen, setNavOpen] = useState(false);
   const [navMode, setNavMode] = useNavMode();
-  const [focusArea, setFocusArea] = useState(null);
   // The command bar was permanently in the way. It is still here, still with
   // history, but behind a key now: press / or the button.
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -1570,7 +1569,6 @@ export default function Terminal() {
             go={go}
             mode={navMode}
             setMode={setNavMode}
-            focusArea={focusArea}
             findExtra={findChartHit}
             onPicked={() => { if (window.innerWidth < 900) setNavOpen(false); }}
             extras={
@@ -1596,16 +1594,6 @@ export default function Terminal() {
 
         {/* Tapping the page closes the drawer on a phone. */}
         {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
-
-        <BottomBar
-          screen={screen}
-          menuOpen={navOpen}
-          onArea={(id) => {
-            if (navOpen && focusArea?.id === id) return setNavOpen(false);
-            setFocusArea({ id, n: Date.now() });
-            setNavOpen(true);
-          }}
-        />
 
         <main className="stage">
           <div className={"wrap" + (screen === "CHT" ? " wide" : "")}>

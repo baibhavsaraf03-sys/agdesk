@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Site navigation: the side menu (five areas, a jump box, the Beginner/Pro
- * switch) and, on phones, a bottom bar with the five areas.
+ * Site navigation: the side menu (five areas, a jump box and the
+ * Beginner/Pro switch).
  *
  * The page owns which screen is open and whether the menu is open; this
  * file owns how screens are found. Grouping and the Beginner set are in
@@ -62,23 +62,17 @@ function search(screens, q) {
  * screen (the page uses it to offer a chart of a typed symbol). It goes first
  * unless a screen matches the words strongly.
  */
-export function SideNav({ screens, screen, go, mode, setMode, focusArea, onPicked, extras, findExtra }) {
+export function SideNav({ screens, screen, go, mode, setMode, onPicked, extras, findExtra }) {
   const byCode = useMemo(() => Object.fromEntries(screens.map((s) => [s.c, s])), [screens]);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(() => new Set([areaOf(screen) || "today"]));
   const input = useRef(null);
 
-  // The area of the screen being read is always open; a bottom-bar tap opens its area alone.
+  // The area of the screen being read is always open.
   useEffect(() => {
     const a = areaOf(screen);
     if (a) setOpen((o) => (o.has(a) ? o : new Set([...o, a])));
   }, [screen]);
-  useEffect(() => {
-    if (focusArea?.id) {
-      setOpen(new Set([focusArea.id]));
-      setQ("");
-    }
-  }, [focusArea]);
 
   const hits = useMemo(() => {
     const found = search(screens, q);
@@ -155,7 +149,7 @@ export function SideNav({ screens, screen, go, mode, setMode, focusArea, onPicke
             <div className="navgroup" key={a.id}>
               <button type="button" className={"nav-area" + (here ? " here" : "")} aria-expanded={isOpen} onClick={() => toggle(a.id)}>
                 <span>{a.t}</span>
-                <span className="nav-count">{isOpen ? "Hide" : shown.length}</span>
+                <span className="nav-pm" aria-hidden="true">{isOpen ? "\u2212" : "+"}</span>
               </button>
               {isOpen && (
                 <>
@@ -186,19 +180,5 @@ export function SideNav({ screens, screen, go, mode, setMode, focusArea, onPicke
         <span>Educational material, not investment advice.</span>
       </div>
     </>
-  );
-}
-
-/** Phones only (hidden by CSS above 760px): the five areas along the bottom. */
-export function BottomBar({ screen, menuOpen, onArea }) {
-  const current = areaOf(screen);
-  return (
-    <nav className="bbar" aria-label="Areas">
-      {NAV_AREAS.map((a) => (
-        <button key={a.id} type="button" className="bbar-b" aria-current={!menuOpen && current === a.id} onClick={() => onArea(a.id)}>
-          {a.t}
-        </button>
-      ))}
-    </nav>
   );
 }
