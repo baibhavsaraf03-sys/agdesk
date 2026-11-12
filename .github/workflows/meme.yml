@@ -1,0 +1,54 @@
+name: Meme read
+
+# The meme-stock tracker (MEME screen): every hour, the most-discussed
+# tickers on r/wallstreetbets (via ApeWisdom, free, no key) with their price
+# move and volume (Yahoo Finance, free, delayed), published as zone "meme".
+# About three times a day it also writes a short summary on the free AI
+# writers only; it never uses the paid Anthropic key.
+#
+# Minute 41, away from the market reads at :23 so the two never share a
+# minute of the free AI allowance.
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "Only print the table (no database, no AI)"
+        required: false
+        default: false
+        type: boolean
+      summary:
+        description: "Write a new AI summary now"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: meme-read
+  cancel-in-progress: false
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      - name: Meme read
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_FEED_MODEL: ${{ vars.GEMINI_HOURLY_MODELS || 'gemini-flash-lite-latest,gemini-flash-latest' }}
+          FLAGS: ${{ inputs.probe && '--probe' || '' }} ${{ inputs.summary && '--summary' || '' }}
+        run: node scripts/meme-read.mjs $FLAGS
