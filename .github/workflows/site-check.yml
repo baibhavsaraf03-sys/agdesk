@@ -1,33 +1,70 @@
 name: Site check
 
 # Manual: asks the live site for the endpoints that depend on outside
-# sources (prices, the share card, currencies) and prints what came back.
+# sources (prices, the share card, currencies), checks which database tables
+# exist and whether the push keys are stored, and prints what came back.
+# No secret value is ever printed.
 on:
   workflow_dispatch:
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://agdesk.vercel.app' }}
     steps:
+      - name: Which address is checked
+        run: echo "Checking $SITE"
+
+      - name: Database tables (exist? rows?)
+        env:
+          SB: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          for t in profiles market_reads articles article_editors watchlist alerts alert_events push_subscriptions; do
+            code=$(curl -sS -o /dev/null -D head.txt -w "%{http_code}" --max-time 20 "$SB/rest/v1/$t?select=*&limit=0" -H "apikey: $KEY" -H "authorization: Bearer $KEY" -H "Prefer: count=exact")
+            rows=$(grep -i '^content-range' head.txt | tr -d '\r' | sed 's#.*/##')
+            if [ "$code" = "200" ] || [ "$code" = "206" ]; then echo "$t: ready, $rows rows"; else echo "$t: MISSING (HTTP $code)"; fi
+          done
+
+      - name: Push keys present (values never printed)
+        env:
+          PUB: ${{ secrets.VAPID_PUBLIC_KEY }}
+          PRIV: ${{ secrets.VAPID_PRIVATE_KEY }}
+        run: |
+          if [ -n "$PUB" ]; then echo "GitHub secret VAPID_PUBLIC_KEY is set"; else echo "GitHub secret VAPID_PUBLIC_KEY is missing"; fi
+          if [ -n "$PRIV" ]; then echo "GitHub secret VAPID_PRIVATE_KEY is set"; else echo "GitHub secret VAPID_PRIVATE_KEY is missing"; fi
+          code=$(curl -sS -o push.json -w "%{http_code}" --max-time 20 "$SITE/api/push")
+          if grep -q '"publicKey":"B' push.json; then echo "Vercel VAPID_PUBLIC_KEY is set (HTTP $code)"; else echo "Vercel VAPID_PUBLIC_KEY looks missing (HTTP $code)"; fi
+
+      - name: Pages
+        run: |
+          for u in "" "signin" "learn" "articles"; do
+            curl -sS -o /dev/null --max-time 30 -w "/$u: HTTP %{http_code}\n" "$SITE/$u"
+          done
+
       - name: Pulse (home instruments)
         run: |
-          curl -sS --max-time 40 https://agdesk.vercel.app/api/pulse | python3 -c '
+          curl -sS --max-time 40 "$SITE/api/pulse" | python3 -c '
           import json,sys
           j=json.load(sys.stdin)
           print("mood:", j.get("mood"))
           for i in j.get("instruments",[]): print(i["k"], i.get("price"), i.get("change"), i.get("error",""))
           s=j.get("session") or {}
           print("session points:", len(s.get("points",[])))'
+
       - name: Share card and link preview
         run: |
           mkdir -p cards
-          curl -sS --max-time 60 -o cards/story.png -w "card: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "https://agdesk.vercel.app/card"
-          curl -sS --max-time 60 -o cards/og.png -w "card?format=og: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "https://agdesk.vercel.app/card?format=og"
+          curl -sS --max-time 60 -o cards/story.png -w "card: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "$SITE/card"
+          curl -sS --max-time 60 -o cards/og.png -w "card?format=og: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n" "$SITE/card?format=og"
+
       - name: Keep the cards for a look
         uses: actions/upload-artifact@v4
         with:
           name: cards
           path: cards/
           retention-days: 3
+
       - name: Currencies
-        run: curl -sS --max-time 40 https://agdesk.vercel.app/api/fx | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))'
+        run: curl -sS --max-time 40 "$SITE/api/fx" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))'
