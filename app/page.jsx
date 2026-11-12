@@ -20,6 +20,7 @@ import { findSymbol, chartName } from "@/lib/charts";
 import ChartsScreen from "@/components/Charts";
 import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
 import CalendarScreen from "@/components/Calendar";
+import AlertsScreen from "@/components/Alerts";
 import { SideNav, useNavMode } from "@/components/Nav";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
@@ -72,6 +73,7 @@ const SCREENS = [
   { c: "MAC",   t: "Macro",      d: "Dollar, crude, rates, freight and fertiliser" },
   { c: "CHT",   t: "Charts",     d: "Full charts with drawing tools and indicators, one, two or four at once. CHT GOLD opens gold" },
   { c: "WL",    t: "Watchlist",  d: "Your own symbols with live quotes, saved to your account. WL GOLD adds gold" },
+  { c: "ALR",   t: "Alerts",     d: "Notifications for release times, price levels, headline words and Doomsday verdict changes" },
   { c: "CAL",   t: "Calendar",   d: "Every scheduled rate decision and major release, with countdowns, in your time. CAL USD filters" },
   { c: "FX",    t: "Currencies", d: "Policy rates, two-year yields, speculative positioning and the releases that move the majors" },
   { c: "AGN",   t: "Analyst",    d: "Ask anything — it reads the live feed and remembers the thread" },
@@ -111,6 +113,7 @@ const ALIAS = {
   FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
   CHART: "CHT", CHARTS: "CHT", GRAPH: "CHT", GP: "CHT", GIP: "CHT",
   WATCHLIST: "WL", LIST: "WL", MON: "WL", MONITOR: "WL",
+  ALERT: "ALR", ALERTS: "ALR", NOTIFY: "ALR", ALRT: "ALR",
   CALENDAR: "CAL", ECO: "CAL", ECAL: "CAL", EVTS: "CAL", EVENTS: "CAL", DATES: "CAL",
   DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
 };
@@ -901,6 +904,7 @@ export default function Terminal() {
   // A symbol for the Charts screen to load, from CHT <name> or a chart link. `n` makes a repeat request count.
   const [chartReq, setChartReq] = useState(null);
   const [calReq, setCalReq] = useState(null);
+  const [alertReq, setAlertReq] = useState(null);
   const [news, setNews] = useState(null);
   const [newsTopic, setNewsTopic] = useState("finance");
   const [newsBusy, setNewsBusy] = useState(false);
@@ -1137,6 +1141,12 @@ export default function Terminal() {
   const openChart = useCallback((symbol) => {
     setChartReq({ symbol, n: Date.now() });
     go("CHT");
+  }, [go]);
+
+  // Other screens hand the Alerts form a starting point ("Remind me", "Alert").
+  const openAlert = useCallback((kind, params = {}) => {
+    setAlertReq({ kind, params, n: Date.now() });
+    go("ALR");
   }, [go]);
 
   // The jump box offers a chart when the words name a market ("gold", "cable", "NVDA").
@@ -1986,7 +1996,13 @@ export default function Terminal() {
 
           {screen === "CAL" && (
             <Panel code="CAL" title="Economic calendar" meta="TYPE CAL USD, CAL GBP, CAL JPY">
-              <CalendarScreen ask={ask} request={calReq} />
+              <CalendarScreen ask={ask} request={calReq} onRemind={(e) => openAlert("release", { scope: "series", series: [e.key], lead: 15 })} />
+            </Panel>
+          )}
+
+          {screen === "ALR" && (
+            <Panel code="ALR" title="Alerts" meta="NOTIFICATIONS, CHECKED EVERY 5 MINUTES">
+              <AlertsScreen signedIn={Boolean(user)} canSignIn={Boolean(supabase)} request={alertReq} watch={watch.list} />
             </Panel>
           )}
 
@@ -1997,6 +2013,7 @@ export default function Terminal() {
                 signedIn={Boolean(user)}
                 canSignIn={Boolean(supabase)}
                 openChart={openChart}
+                onAlert={(symbol) => openAlert("price", { symbol })}
                 quotes={<TVWidget theme={theme} widget="market-quotes" config={watchConfig} label="Your watchlist, live" />}
               />
             </Panel>
@@ -2819,6 +2836,9 @@ export default function Terminal() {
                             standing argument, written {DOOM_WRITTEN}, and its figures and prices are as of then; live prices are in
                             the quote table above.
                           </p>
+                          <div className="btnrow">
+                            <button type="button" className="chip" onClick={() => openAlert("doom")}>Alert me when a verdict changes</button>
+                          </div>
                         </div>
                       );
                     })()}

@@ -6,7 +6,11 @@ export const metadata = {
   title: "Ledge Desk",
   description:
     "Markets, news and the reasoning behind both: 29 world exchanges by session, commodities in depth, sixteen tutorials from zero, and an analyst you can question.",
-  manifest: "/manifest.webmanifest"
+  manifest: "/manifest.webmanifest",
+  // iPhones use this icon on the home screen, which is also what lets them
+  // receive the site's alert notifications.
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Ledge Desk", statusBarStyle: "default" }
 };
 
 export const viewport = {

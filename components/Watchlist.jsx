@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CHART_GROUPS, chartName, findSymbol } from "@/lib/charts";
 import { WATCH_MAX, WATCH_STORE, WATCH_STARTER, cleanSymbols } from "@/lib/watchlist";
+import { priceSymbol } from "@/lib/prices.mjs";
 
 function readLocal() {
   try {
@@ -150,7 +151,7 @@ export function useWatchlist(user) {
  * `quotes` is the live quote table for the list, built by the page (which owns
  * the widget component and the theme). `openChart(symbol)` goes to CHT.
  */
-export default function WatchlistScreen({ watch, signedIn, canSignIn, quotes, openChart }) {
+export default function WatchlistScreen({ watch, signedIn, canSignIn, quotes, openChart, onAlert }) {
   const { list, where, ready, problem, flash, setFlash, add, remove, move, fill } = watch;
   const [typed, setTyped] = useState("");
 
@@ -215,6 +216,7 @@ export default function WatchlistScreen({ watch, signedIn, canSignIn, quotes, op
                 <span className="wl-sym mono">{sym}</span>
                 <span className="wl-act">
                   <button type="button" className="chip" onClick={() => openChart(sym)}>Chart</button>
+                  {onAlert && priceSymbol(sym) && <button type="button" className="chip" onClick={() => onAlert(sym)}>Alert</button>}
                   <button type="button" className="chip" onClick={() => move(sym, -1)} disabled={i === 0} aria-label={`Move ${chartName(sym)} up`}>Up</button>
                   <button type="button" className="chip" onClick={() => move(sym, 1)} disabled={i === list.length - 1} aria-label={`Move ${chartName(sym)} down`}>Down</button>
                   <button type="button" className="chip" onClick={() => remove(sym)} aria-label={`Remove ${chartName(sym)}`}>Remove</button>

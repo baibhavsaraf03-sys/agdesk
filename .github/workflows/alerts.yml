@@ -1,0 +1,55 @@
+name: Alerts
+
+# Checks every active alert every five minutes and sends the ones that are
+# due as notifications (scripts/alerts-check.mjs). Headline alerts are checked
+# every fifteen minutes within that.
+#
+# Free: GitHub does not charge for Actions minutes on a public repository,
+# and the prices and headlines come from free sources. GitHub can start a
+# scheduled run several minutes late when it is busy, which is why release
+# reminders are sent up to ten minutes after their stated time rather than
+# dropped.
+#
+# Secrets used: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (the
+# same as the market reads), and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY (made
+# at /tools/push-keys). Without the two VAPID keys alerts are still recorded
+# on the Alerts screen, just not pushed to devices.
+
+on:
+  schedule:
+    - cron: "2-59/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "Only check that the free price and headline sources answer (no alerts sent)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: alerts
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      - name: Check alerts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://agdesk.vercel.app' }}
+          PROBE: ${{ inputs.probe && '--probe' || '' }}
+        run: node scripts/alerts-check.mjs $PROBE

@@ -130,7 +130,7 @@ function download(events, name) {
  * `request` is `{ cur, n }` from the command bar (`CAL USD`): show only that
  * currency. `ask(text, shown)` opens the analyst.
  */
-export default function CalendarScreen({ ask, request }) {
+export default function CalendarScreen({ ask, request, onRemind }) {
   const [opts, setOpts] = useState(() => ({ curs: [], major: false, range: "month", tz: "local" }));
   const [loaded, setLoaded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -222,6 +222,7 @@ export default function CalendarScreen({ ask, request }) {
                   Ask the analyst
                 </button>
               )}
+              {onRemind && st.k === "next" && <button type="button" className="btn" onClick={() => onRemind(e)}>Remind me</button>}
               <button type="button" className="btn" onClick={() => download([e], `${e.id}.ics`)}>Add to my calendar</button>
               <a className="btn" href={e.source} target="_blank" rel="noopener noreferrer">Official schedule</a>
             </div>
