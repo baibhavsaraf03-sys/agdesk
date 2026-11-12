@@ -21,6 +21,7 @@ import ChartsScreen from "@/components/Charts";
 import WatchlistScreen, { useWatchlist } from "@/components/Watchlist";
 import CalendarScreen from "@/components/Calendar";
 import AlertsScreen from "@/components/Alerts";
+import MemeScreen from "@/components/Meme";
 import { SideNav, useNavMode } from "@/components/Nav";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
@@ -73,6 +74,7 @@ const SCREENS = [
   { c: "MAC",   t: "Macro",      d: "Dollar, crude, rates, freight and fertiliser" },
   { c: "CHT",   t: "Charts",     d: "Full charts with drawing tools and indicators, one, two or four at once. CHT GOLD opens gold" },
   { c: "WL",    t: "Watchlist",  d: "Your own symbols with live quotes, saved to your account. WL GOLD adds gold" },
+  { c: "MEME",  t: "Meme stocks", d: "What r/wallstreetbets is talking about, hourly, and whether the price is moving with it" },
   { c: "ALR",   t: "Alerts",     d: "Notifications for release times, price levels, headline words and Doomsday verdict changes" },
   { c: "CAL",   t: "Calendar",   d: "Every scheduled rate decision and major release, with countdowns, in your time. CAL USD filters" },
   { c: "FX",    t: "Currencies", d: "Policy rates, two-year yields, speculative positioning and the releases that move the majors" },
@@ -113,6 +115,7 @@ const ALIAS = {
   FLOWS: "FLOW", CAPITAL: "FLOW", TRADES2: "FLOW", BIG: "FLOW", STRUCTURAL: "FLOW",
   CHART: "CHT", CHARTS: "CHT", GRAPH: "CHT", GP: "CHT", GIP: "CHT",
   WATCHLIST: "WL", LIST: "WL", MON: "WL", MONITOR: "WL",
+  WSB: "MEME", MEMES: "MEME", REDDIT: "MEME", APES: "MEME",
   ALERT: "ALR", ALERTS: "ALR", NOTIFY: "ALR", ALRT: "ALR",
   CALENDAR: "CAL", ECO: "CAL", ECAL: "CAL", EVTS: "CAL", EVENTS: "CAL", DATES: "CAL",
   DOOMSDAY: "DOOM", WARROOM: "DOOM", BUBBLE: "DOOM", SHORT: "DOOM", SHORTS: "DOOM"
@@ -919,6 +922,8 @@ export default function Terminal() {
   const [, tickWorld] = useState(0);
 
   const [reads, setReads] = useState({});
+  // The meme and AI-trade reads share the table but are not market zones.
+  const zoneCount = Object.keys(reads).filter((k) => k !== "meme" && k !== "doom").length;
   const [user, setUser] = useState(null);
   // One watchlist for the whole page: the WL screen, the Watch button on CHT and `WL <name>` all change it.
   const watch = useWatchlist(user);
@@ -1496,8 +1501,8 @@ export default function Terminal() {
         <span className="sysname">LEDGE&middot;DESK</span>
 
         <span className="tstat">
-          <span className={"dot " + (agLive || Object.keys(reads).length ? "live" : "warn")} />
-          {Object.keys(reads).length ? `${Object.keys(reads).length} zones` : "snapshot"}
+          <span className={"dot " + (agLive || zoneCount ? "live" : "warn")} />
+          {zoneCount ? `${zoneCount} zones` : "snapshot"}
         </span>
 
         <span className="tclock">{clock}</span>
@@ -1997,6 +2002,20 @@ export default function Terminal() {
           {screen === "CAL" && (
             <Panel code="CAL" title="Economic calendar" meta="TYPE CAL USD, CAL GBP, CAL JPY">
               <CalendarScreen ask={ask} request={calReq} onRemind={(e) => openAlert("release", { scope: "series", series: [e.key], lead: 15 })} />
+            </Panel>
+          )}
+
+          {screen === "MEME" && (
+            <Panel code="MEME" title="Meme stocks" meta="R/WALLSTREETBETS, HOURLY">
+              <MemeScreen
+                read={reads.meme}
+                openChart={openChart}
+                openAlert={openAlert}
+                onWatch={watch.add}
+                watched={watch.list}
+                ask={ask}
+                openRisk={() => go("RISK")}
+              />
             </Panel>
           )}
 
@@ -2644,7 +2663,7 @@ export default function Terminal() {
                   <div className="grow"><span className="gnm">Account</span><span className="gpx" /><span className={"gch " + (user ? "up" : "flat")}>{user ? "SIGNED IN" : "SIGNED OUT"}</span></div>
                   <div className="grow"><span className="gnm">Own API key</span><span className="gpx" /><span className={"gch " + (apiKey ? "up" : "flat")}>{apiKey ? "SET" : "NOT SET"}</span></div>
                   <div className="grow"><span className="gnm">Messages left today</span><span className="gpx" /><span className="gch flat">{apiKey ? "unlimited" : quota != null ? quota : "—"}</span></div>
-                  <div className="grow"><span className="gnm">Zones published</span><span className="gpx" /><span className="gch flat">{Object.keys(reads).length}</span></div>
+                  <div className="grow"><span className="gnm">Zones published</span><span className="gpx" /><span className="gch flat">{zoneCount}</span></div>
                 </div>
               </div>
             </Panel>

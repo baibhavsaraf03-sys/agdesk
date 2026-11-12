@@ -1025,3 +1025,42 @@ a.btn{display:inline-block;text-decoration:none}
 .alr-evt{font-family:var(--sans);font-size:14px;font-weight:600}
 .alr-evb{font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--fg-dim)}
 @media(max-width:560px){ .alr-row{grid-template-columns:1fr} .alr-act{grid-column:1;grid-row:auto;justify-content:flex-start;margin-top:6px} }
+.meme{display:flex;flex-direction:column;gap:14px}
+.meme-sum{border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.meme-k{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-dim)}
+.meme-sum p{margin:0;font-family:var(--sans);font-size:14.5px;line-height:1.6}
+.meme-sum ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-family:var(--sans);font-size:14px;line-height:1.5}
+.meme-sum .mono,.meme .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.meme-sum .meme-note{font-size:12px;color:var(--fg-dim)}
+.meme-table{border:1px solid var(--line);background:var(--surface)}
+.meme-row{display:grid;grid-template-columns:34px minmax(110px,1.4fr) 1fr 0.8fr 0.7fr 0.8fr minmax(150px,1.6fr);gap:4px 12px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--line)}
+.meme-row:last-child{border-bottom:0}
+.meme-head{background:var(--surface-2);font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--fg-dim)}
+.meme-rank{color:var(--fg-dim);font-size:12px}
+.meme-tk{display:flex;flex-direction:column;min-width:0}
+.meme-tk b{font-size:14px}
+.meme-name{font-family:var(--sans);font-size:12px;color:var(--fg-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meme-num{display:flex;flex-direction:column;font-size:13.5px}
+.meme-num.up{color:var(--up)}
+.meme-num.dn{color:var(--down)}
+.meme-sub{font-family:var(--sans);font-size:11.5px;color:var(--fg-dim)}
+.meme-flag{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.meme-badge{font-family:var(--sans);font-size:12px;font-weight:700;padding:2px 8px;border:1px solid currentColor;border-radius:3px;color:var(--fg-dim)}
+.f-rally .meme-badge{color:var(--up)}
+.f-buzzing .meme-badge{color:var(--warn)}
+.f-selling-off .meme-badge{color:var(--down)}
+.meme-act{display:flex;flex-wrap:wrap;gap:4px}
+@media(max-width:760px){
+  .meme-head{display:none}
+  .meme-row{grid-template-columns:28px minmax(0,1fr) auto;grid-template-areas:"r t p" "r m c" "r v v" "r f f"}
+  .meme-rank{grid-area:r}
+  .meme-tk{grid-area:t}
+  .meme-row > .meme-num:nth-child(3){grid-area:m}
+  .meme-row > .meme-num:nth-child(4){grid-area:p;text-align:right}
+  .meme-row > .meme-num:nth-child(5){grid-area:c;text-align:right}
+  .meme-row > .meme-num:nth-child(6){grid-area:v;flex-direction:row;gap:6px}
+  .meme-flag{grid-area:f;margin-top:4px}
+}
+/* The Doomsday charts were written against --dn and --rule, names this sheet
+   never defined, so those bars and rules drew in black. Aliases, not renames. */
+:root{--dn:var(--down);--rule:var(--line)}
