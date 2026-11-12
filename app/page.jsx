@@ -23,7 +23,8 @@ import CalendarScreen from "@/components/Calendar";
 import AlertsScreen from "@/components/Alerts";
 import MemeScreen from "@/components/Meme";
 import { SideNav, useNavMode } from "@/components/Nav";
-import { Instruments, MoodDial, usePulse, deskBrief } from "@/components/Instruments";
+import { Instruments, MoodDial, usePulse, deskBrief, DotTime } from "@/components/Instruments";
+import { TermsGate, TermsBar, useTerms } from "@/components/TermsGate";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
@@ -951,6 +952,8 @@ export default function Terminal() {
   const [semQ, setSemQ] = useState("");
   const [toast, setToast] = useState("");
   const [showLanding, setShowLanding] = useState(true);
+  // First visit: the terms must be accepted before any desk screen shows (owner, 12 Nov).
+  const { termsOk, acceptTerms } = useTerms();
 
   const lessonRefs = useRef({});
   const tutRefs = useRef({});
@@ -1337,6 +1340,13 @@ export default function Terminal() {
     try { localStorage.setItem("agdesk.seen", "1"); } catch {}
   }
 
+  // Back to the front page (the door): the wordmark and the menu footer.
+  function toDoor() {
+    setNavOpen(false);
+    setShowLanding(true);
+    window.scrollTo(0, 0);
+  }
+
 
   /* ====================================================================== */
   if (showLanding) {
@@ -1348,7 +1358,7 @@ export default function Terminal() {
           <div className="door-mid">
             <div className="door-mark">LEDGE DESK</div>
             <div className="door-stem" />
-            <div className="door-clock" aria-label="Time now">{clock}</div>
+            <div className="door-clock" aria-label={`Time now ${clock}`}><DotTime value={clock} /></div>
             <p className="door-line">
               {pulse?.mood ? `The market is ${pulse.mood.word.toLowerCase()}. ` : ""}The desk is open.
             </p>
@@ -1364,82 +1374,13 @@ export default function Terminal() {
           </div>
         </section>
 
-        <div className="landing-inner">
-          <h1 className="landing-title">A markets desk that shows its reasoning.</h1>
-          <p className="landing-sub">
-            Session reads for {EXCHANGES.length} world exchanges and the agricultural markets, each with the
-            working behind it. {TUTORIALS.length} lessons that start from nothing. An analyst you can question
-            about any of it.
-          </p>
-
-          <div className="landing-paths">
-            <button className="landing-path" onClick={() => enterDesk("START")}>
-              <span className="lp-k">New to investing</span>
-              <span className="lp-t">Start with the lessons</span>
-              <span className="lp-d">What a share, a future and an option are, and how money is actually lost, before any market screen.</span>
-            </button>
-            <button className="landing-path" onClick={() => enterDesk("HOME")}>
-              <span className="lp-k">Already follow markets</span>
-              <span className="lp-t">Go to today&apos;s desk</span>
-              <span className="lp-d">Headlines, verified rates and currencies, and the latest read for each trading session.</span>
-            </button>
-          </div>
-
-          {/* The product, not a description of it: whatever read is newest,
-              with its short version and a few of its verified figures. */}
-          {(() => {
-            const live = Object.values(reads || {}).filter((r) => r && r.headline);
-            // No live read, no block: a dated sample on the front page would
-            // undersell the thing it is meant to show.
-            const pick = live.sort((a, b) => String(b._updatedAt || "").localeCompare(String(a._updatedAt || "")))[0];
-            if (!pick) return null;
-            const rows = (pick.rows || []).filter((r) => r && r.nm && r.px).slice(0, 4);
-            const short = (Array.isArray(pick.short) ? pick.short : []).slice(0, 3);
-            return (
-              <div className="landing-now">
-                <div className="landing-now-k">
-                  On the desk now
-                  {pick.stamp && <span>{pick.stamp}</span>}
-                </div>
-                <h2>{pick.headline}</h2>
-                {short.length
-                  ? <ul>{short.map((x, i) => <li key={i}>{x}</li>)}</ul>
-                  : pick.lede && <p>{pick.lede}</p>}
-                {rows.length > 0 && (
-                  <div className="landing-figs">
-                    {rows.map((r, i) => (
-                      <div key={i}>
-                        <span className="lf-n">{r.nm}</span>
-                        <span className="lf-v">{r.px}</span>
-                        {r.ch && <span className={"lf-c " + (r.dir || "flat")}>{r.ch}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          <dl className="landing-list">
-            <div><dt>Learn</dt><dd><a href="/learn">Lessons</a>, a <a href="/glossary">glossary</a>, reviewed <a href="/articles">articles</a> from readers, and a risk section built on regulators&apos; own loss data.</dd></div>
-            <div><dt>Daily</dt><dd>News across finance, politics, international relations and law, and a political-risk screen for the flashpoints that move shipping and trade.</dd></div>
-            <div><dt>Markets</dt><dd>Asia, Europe and the Americas by session, with grains and softs in depth.</dd></div>
-            <div><dt>Yours</dt><dd>The analyst, and a journal that marks your reasoning rather than your result.</dd></div>
-          </dl>
-
-          <p className="landing-note">
-            Free to read, no account needed.
-            {supabase && (
-              <> <a className="landing-link" href="/signin">Sign in</a> with Google or your email address to use the analyst and save a journal.</>
-            )}
-          </p>
-          <p className="landing-foot">
-            Educational material, not investment advice. Futures and options are leveraged: losses can exceed the
-            amount deposited, and regulators consistently find that most individual traders lose money.
-          </p>
-        </div>
       </div>
     );
+  }
+
+  if (termsOk === null) return <div className="gate-wait" />;
+  if (termsOk === false && screen !== "TERMS") {
+    return <TermsGate onAccept={acceptTerms} onReadAll={() => go("TERMS")} onBack={toDoor} />;
   }
 
   /**
@@ -1546,7 +1487,7 @@ export default function Terminal() {
           <span /><span /><span />
         </button>
 
-        <span className="sysname">LEDGE&middot;DESK</span>
+        <button type="button" className="sysname" onClick={toDoor} title="Front page" aria-label="Ledge Desk front page">LEDGE&middot;DESK</button>
 
         <span className="tstat">
           <span className={"dot " + (agLive || zoneCount ? "live" : "warn")} />
@@ -1644,10 +1585,13 @@ export default function Terminal() {
               </>
             }
             extras={
+              <>
+              <button type="button" className="nav-door" onClick={toDoor}>Front page</button>
               <div className="nav-phone">
                 <button className="tbtn" aria-pressed={peOn} onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}>Plain English</button>
                 <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Light theme" : "Noir theme"}</button>
               </div>
+              </>
             }
           />
         </nav>
@@ -2620,6 +2564,7 @@ export default function Terminal() {
 
 
           {/* ---------------- TERMS ---------------- */}
+          {screen === "TERMS" && termsOk === false && <TermsBar onAccept={() => { acceptTerms(); go("HOME"); }} />}
           {screen === "TERMS" && (
             <Panel code="TERMS" title="Terms, disclaimer and data" meta="read before you rely on anything">
               <div className="sec">

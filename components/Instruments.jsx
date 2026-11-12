@@ -102,6 +102,25 @@ export function Dial({ size = 200, t, value, sub, label, aria, danger = 0.85 }) 
   );
 }
 
+/**
+ * A dot-matrix time or countdown. Doto draws ":" as two crosses, so the
+ * colons are drawn here as two round dots the size of one Doto pixel
+ * (owner, 12 Nov). Screen readers get the plain text from the parent.
+ */
+export function DotTime({ value }) {
+  const parts = String(value || "").split(":");
+  return (
+    <span className="dottime" aria-hidden="true">
+      {parts.map((p, i) => (
+        <span key={i} className="dottime-part">
+          {i > 0 && <span className="dt-colon"><i /><i /></span>}
+          {p}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function needleForChange(c) {
   // ±2% fills the dial; most days sit near the middle.
   return c == null || !isFinite(c) ? null : 0.5 + Math.max(-1, Math.min(1, c / 2)) / 2;
@@ -274,7 +293,7 @@ export function Instruments({ pulse, failed, reads, onAsk, onShare, onChart, onC
               <div className="cut-in">
                 <div className="inst-k">Next major release</div>
                 <div className="inst-nextname">{next.name}</div>
-                <div className="inst-count">{countdown(Date.parse(next.at) - now)}</div>
+                <div className="inst-count" aria-label={`Counting down: ${countdown(Date.parse(next.at) - now)}`}><DotTime value={countdown(Date.parse(next.at) - now)} /></div>
                 <div className="inst-nextmeta">
                   {new Date(next.at).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).toUpperCase()}
                   {" · YOUR TIME · "}{next.currencies.join(" ")}
