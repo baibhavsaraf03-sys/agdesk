@@ -1,0 +1,75 @@
+name: Reels
+
+# Films ledgedesk.com at phone size (scripts/reels/capture.mjs) and, for the
+# daily Reel, edits it into a finished 1080x1920 MP4 (scripts/reels/compose.mjs).
+#   footage: films the site and pushes the stills and data to the
+#            reels-footage branch (for making new Reels by hand).
+#   daily:   films, renders the "mood" Reel and publishes it as a release you
+#            can download on your phone from the repository's Releases page.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "footage or daily"
+        default: "daily"
+        required: true
+  schedule:
+    - cron: "40 6 * * 1-5"   # 06:40 UTC on weekdays, after the 06:05 notes and before London opens
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reels
+  cancel-in-progress: false
+
+jobs:
+  reel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://ledgedesk.com' }}
+      MODE: ${{ github.event.inputs.mode || 'daily' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools (Playwright, fonts, ffmpeg)
+        run: |
+          mkdir -p /tmp/rec && cd /tmp/rec && npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright @fontsource/doto @fontsource/cormorant-garamond @fontsource/geist-sans @fontsource/geist-mono @fontsource/source-serif-4 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
+      - name: Film the site
+        env:
+          PW: /tmp/rec/node_modules/playwright/index.mjs
+        run: node scripts/reels/capture.mjs /tmp/footage "$SITE"
+
+      - name: Keep the footage (footage mode)
+        if: env.MODE == 'footage'
+        run: |
+          cd /tmp/footage
+          git init -q -b reels-footage
+          git config user.name "ledge-desk-reels"
+          git config user.email "reels@users.noreply.github.com"
+          git add -A && git commit -qm "Footage $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" reels-footage
+
+      - name: Render the daily Reel
+        if: env.MODE == 'daily'
+        env:
+          PW: /tmp/rec/node_modules/playwright/index.mjs
+          FONTS: /tmp/rec/node_modules/@fontsource
+        run: node scripts/reels/compose.mjs mood /tmp/footage /tmp/reel
+
+      - name: Publish it
+        if: env.MODE == 'daily'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          day=$(date -u +%Y-%m-%d)
+          gh release delete "reel-$day" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "reel-$day" /tmp/reel/mood.mp4#"Ledge Desk Reel $day.mp4" \
+            --title "Today's Reel, $day" \
+            --notes "Today's mood Reel, filmed from ledgedesk.com this morning. Download it on your phone and post it as a Reel (add music in Instagram). Caption idea: $(cat /tmp/reel/caption.txt 2>/dev/null)" \
+            --latest
