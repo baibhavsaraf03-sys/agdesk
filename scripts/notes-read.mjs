@@ -195,8 +195,16 @@ async function main() {
     const items = set.items();
     try {
       console.log(`[${key}] writing notes for ${items.length} items via ${FEED_PROVIDER}…`);
-      const notes = validNotes(await write(buildPrompt(set, items, headlines)), items, headlines);
+      const raw = await write(buildPrompt(set, items, headlines));
+      const notes = validNotes(raw, items, headlines);
       const n = Object.keys(notes).length;
+      const offered = Array.isArray(raw?.notes) ? raw.notes.length : 0;
+      if (offered > n) console.log(`[${key}] ${offered - n} of ${offered} offered notes dropped (unknown item id or headline number)`);
+      if (!n) {
+        // Nothing usable this time: leave the previous notes up rather than blank the page.
+        console.log(`[${key}] no usable notes; previous notes kept`);
+        continue;
+      }
       const payload = { notes, stamp, at: Date.now(), headlines: headlines.length };
       const { error } = await supabase.from("market_reads").upsert(
         { zone: `notes_${key}`, phase: "notes", stamp, payload, updated_at: new Date().toISOString() },
