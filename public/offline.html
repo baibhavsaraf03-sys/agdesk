@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Offline · Ledge Desk</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#e6e2da}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;text-align:center;
+    font-family:"Geist","Helvetica Neue",Arial,sans-serif;
+    background-image:radial-gradient(#171613 1px,transparent 1.4px);background-size:14px 14px}
+  .mark{font-family:"Cormorant Garamond",Georgia,serif;font-size:22px;letter-spacing:.5em;margin-right:-.5em;color:#c8a96a}
+  .stem{width:1px;height:56px;background:#5a4c30}
+  img{width:120px;height:120px}
+  p{margin:0;max-width:420px;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:26px;line-height:1.25}
+  small{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#8f8a80}
+  button{margin-top:8px;height:50px;padding:0 34px;border-radius:999px;border:1px solid #c8a96a;background:transparent;color:#c8a96a;
+    font:500 12px "Geist","Helvetica Neue",Arial,sans-serif;letter-spacing:.28em;text-transform:uppercase;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="mark">LEDGE DESK</div>
+  <div class="stem"></div>
+  <img src="/icon.svg" alt="">
+  <p>You are offline. The desk needs a connection for live markets.</p>
+  <small>It will reopen as soon as you are back online</small>
+  <button onclick="location.reload()">Try again</button>
+  <script>addEventListener("online", function () { location.reload(); });</script>
+</body>
+</html>

@@ -1373,3 +1373,20 @@ a.btn{display:inline-block;text-decoration:none}
 .dt-colon{width:0.11em}
 .dt-colon i{width:0.11em;height:0.11em}
 .tgate,.landing{overflow-anchor:none}
+
+/* ---------- installing the app ---------- */
+.door-install{color:var(--gold);border-bottom-color:var(--gold-dim)}
+.side .nav-install{margin-left:22px}
+.inst-sheet{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.inst-sheet-in{width:100%;max-width:460px;background:#0b0b0a;border:1px solid var(--gold-dim);padding:28px 24px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
+.inst-sheet-h{margin:0;font-family:var(--serif);font-weight:400;font-size:26px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold)}
+.inst-sheet-rule{width:40px;height:1px;background:var(--gold);margin:16px 0 18px}
+.inst-sheet-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.inst-sheet-list li{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);font-family:var(--sans);font-size:15px;line-height:1.5;color:var(--fg)}
+.inst-sheet-list li span{font-family:var(--dots);font-weight:900;color:var(--gold);min-width:26px}
+.inst-sheet-list b{font-weight:600;color:var(--gold)}
+.inst-sheet-note{margin:14px 0 0;font-family:var(--sans);font-size:12.5px;color:var(--fg-dim)}
+.inst-sheet-btn{margin-top:20px;height:48px}
+@media(display-mode:standalone){ .door{min-height:100svh} }
+.inst-sheet-in{text-align:left}
+.inst-sheet-list li p{margin:0}

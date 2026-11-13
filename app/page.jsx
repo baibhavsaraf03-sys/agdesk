@@ -25,6 +25,7 @@ import MemeScreen from "@/components/Meme";
 import { SideNav, useNavMode } from "@/components/Nav";
 import { Instruments, MoodDial, usePulse, deskBrief, DotTime } from "@/components/Instruments";
 import { TermsGate, TermsBar, useTerms } from "@/components/TermsGate";
+import { InstallButton } from "@/components/Install";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
@@ -1367,6 +1368,7 @@ export default function Terminal() {
               {supabase && <a className="btn door-btn" href="/signin">Sign in</a>}
             </div>
             <button className="door-new" onClick={() => enterDesk("START")}>New to investing? Start with the lessons</button>
+            <InstallButton className="door-new door-install" />
           </div>
           <div className="door-foot">
             <span><span className="dot live" /> {EXCHANGES.length} EXCHANGES · REWRITTEN HOURLY</span>
@@ -1587,6 +1589,7 @@ export default function Terminal() {
             extras={
               <>
               <button type="button" className="nav-door" onClick={toDoor}>Front page</button>
+              <InstallButton className="nav-door nav-install" />
               <div className="nav-phone">
                 <button className="tbtn" aria-pressed={peOn} onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}>Plain English</button>
                 <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Light theme" : "Noir theme"}</button>

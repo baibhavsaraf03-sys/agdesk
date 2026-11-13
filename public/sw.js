@@ -1,13 +1,44 @@
 /*
- * Ledge Desk notification worker.
+ * Ledge Desk app worker.
  *
- * Its only job is alerts: show a notification when the checker sends one,
- * and open the right screen when it is tapped. It caches nothing and does
- * not touch page requests, so the site behaves exactly as it does without it.
+ * Two jobs. Alerts: show a notification when the checker sends one, and open
+ * the right screen when it is tapped. Offline: keep one small page and show
+ * it when opening the desk fails for want of a connection. It caches nothing
+ * else and leaves every other request alone, so the desk is always live.
+ * Bump OFFLINE_CACHE when offline.html or the icon changes.
  */
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+const OFFLINE_CACHE = "ledge-offline-v1";
+const OFFLINE_URLS = ["/offline.html", "/icon.svg"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(OFFLINE_CACHE).then((c) => c.addAll(OFFLINE_URLS)).catch(() => {}).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      for (const k of await caches.keys()) if (k !== OFFLINE_CACHE) await caches.delete(k);
+      await self.clients.claim();
+    })()
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin === self.location.origin && url.pathname === "/icon.svg") {
+    event.respondWith(fetch(req).catch(() => caches.match("/icon.svg")));
+    return;
+  }
+  if (req.mode !== "navigate") return;
+  event.respondWith(
+    fetch(req).catch(async () => (await caches.match("/offline.html")) || Response.error())
+  );
+});
 
 self.addEventListener("push", (event) => {
   let data = {};
