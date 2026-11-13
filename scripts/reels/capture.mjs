@@ -125,6 +125,8 @@ for (const [code, name, wait] of SCREENS) {
   const p = await ctx.newPage();
   await p.goto(`${SITE}/#${code}`, { waitUntil: "load" });
   await p.waitForTimeout(wait);
+  // The chart itself sits below its controls: bring it into view.
+  if (code === "CHT") await scrollTo(p, ".ch-frame", 150);
   await shot(p, name);
   await ctx.close();
 }
