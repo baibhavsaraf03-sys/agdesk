@@ -21,7 +21,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { fetchNews } from "../lib/news.mjs";
 import { NOTE_SETS, NOTE_SET_KEYS } from "../lib/notes.js";
-import { FEED_PROVIDER, GEMINI_FEED_MODEL, geminiJson } from "../lib/providers.mjs";
+import { FEED_PROVIDER, GEMINI_FEED_MODEL, GROQ_FEED_MODELS, geminiJson, groqJson } from "../lib/providers.mjs";
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -109,15 +109,22 @@ ${items.map((it) => `- id ${it.id} · ${it.name}: ${it.about}`).join("\n")}`;
 const SYSTEM =
   "You annotate fixed teaching material with live examples from the day's headlines. You are precise and you would rather leave an item without a note than give it a weak one.";
 
+// Free writers only (13 Nov): Gemini's free models in turn, then Groq's.
+// These notes are a garnish on fixed teaching pages, so when every free
+// writer is busy or out of allowance the previous notes simply stay up; the
+// paid model is never used here. Set NOTES_ALLOW_PAID=1 to change that.
+const ALLOW_PAID = process.env.NOTES_ALLOW_PAID === "1" && !!process.env.ANTHROPIC_API_KEY;
+
 let _anthropic;
 async function viaAnthropic(prompt) {
   _anthropic ||= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  // Current Claude models refuse a forced tool_choice, so the tool is offered
+  // and the instruction asks for it; a reply without the call is an error.
   const res = await _anthropic.messages.create({
     model: MODEL,
     max_tokens: 8000,
-    system: SYSTEM,
+    system: SYSTEM + " Reply only by calling publish_notes.",
     tools: [{ name: "publish_notes", description: "Publish the notes.", input_schema: SCHEMA }],
-    tool_choice: { type: "tool", name: "publish_notes" },
     messages: [{ role: "user", content: prompt }]
   });
   const block = (res.content || []).find((b) => b.type === "tool_use");
@@ -125,16 +132,37 @@ async function viaAnthropic(prompt) {
   return block.input;
 }
 
+/** Thrown when every free writer was busy or out of allowance: not a fault. */
+class WritersBusy extends Error {}
+
 async function write(prompt) {
-  if (FEED_PROVIDER === "gemini") {
-    try {
-      return await geminiJson({ model: GEMINI_FEED_MODEL, system: SYSTEM, prompt, schema: SCHEMA, maxTokens: 16384 });
-    } catch (err) {
-      if (!process.env.ANTHROPIC_API_KEY) throw err;
-      console.warn(`  gemini unavailable (${String(err.message).slice(0, 120)}); falling back to anthropic`);
+  const tried = [];
+  if (FEED_PROVIDER === "gemini" && process.env.GEMINI_API_KEY) {
+    for (const model of GEMINI_FEED_MODEL.split(",").map((m) => m.trim()).filter(Boolean)) {
+      try {
+        const out = await geminiJson({ model, system: SYSTEM, prompt, schema: SCHEMA, maxTokens: 16384 });
+        console.log(`  written by gemini ${model}`);
+        return out;
+      } catch (err) {
+        tried.push(`${model}: ${String(err.message).slice(0, 90)}`);
+        console.warn(`  ${model} unavailable (${String(err.message).slice(0, 120)})`);
+      }
     }
   }
-  return viaAnthropic(prompt);
+  if (process.env.GROQ_API_KEY) {
+    for (const { model, tpm } of GROQ_FEED_MODELS) {
+      try {
+        const out = await groqJson({ model, tpm, system: SYSTEM, prompt, schema: SCHEMA, maxTokens: 6000 });
+        console.log(`  written by groq ${model}`);
+        return out;
+      } catch (err) {
+        tried.push(`groq ${model}: ${String(err.message).slice(0, 90)}`);
+        console.warn(`  groq ${model} ${err.skip ? "skipped" : "unavailable"} (${String(err.message).slice(0, 120)})`);
+      }
+    }
+  }
+  if (ALLOW_PAID) return viaAnthropic(prompt);
+  throw new WritersBusy(`every free writer was busy or out of allowance (${tried.length} tried)`);
 }
 
 /** Keep only notes that name a real item and a real headline. */
@@ -161,6 +189,7 @@ async function main() {
   }) + " London";
 
   let failures = 0;
+  let busy = 0;
   for (const key of sets) {
     const set = NOTE_SETS[key];
     const items = set.items();
@@ -176,11 +205,19 @@ async function main() {
       if (error) throw new Error(`Database write failed: ${error.message}`);
       console.log(`[${key}] published ${n} of ${items.length}`);
     } catch (err) {
-      failures++;
-      console.error(`[${key}] FAILED: ${err.message}`);
+      if (err instanceof WritersBusy) {
+        busy++;
+        console.warn(`[${key}] skipped, previous notes kept: ${err.message}`);
+      } else {
+        failures++;
+        console.error(`[${key}] FAILED: ${err.message}`);
+      }
     }
   }
-  if (failures === sets.length) process.exit(1);
+  // A busy free tier is expected now and then and is not worth a failure
+  // email; a real fault (database, bad output on every set) still is.
+  if (busy) console.log(`::warning::${busy} of ${sets.length} note sets kept their previous notes because the free writers were busy.`);
+  if (failures && failures + busy === sets.length) process.exit(1);
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop())) {

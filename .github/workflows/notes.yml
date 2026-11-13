@@ -3,16 +3,18 @@ name: News notes
 # Rewrites the dated "in today's news" notes under the fixed teaching text:
 # frameworks (ECON, LAW, IR, POL), capital flows (FLOW), the glossary, and the
 # lessons, risk and method pages. Four model calls a run, three runs a day,
-# every day. Same free path as the market reads: headlines from publisher
-# feeds, writing from the Gemini free tier, Anthropic only if Gemini is down.
+# every day. Free writers only: Gemini's free models in turn, then Groq's.
+# If all are busy the previous notes stay up and the run still passes, with a
+# warning (set the NOTES_ALLOW_PAID variable to 1 to let Anthropic step in).
 #
-# Times are UTC, off the hour on purpose (see feed.yml).
+# Times are UTC, at minute 5 so they never share a minute with the market
+# reads (minute 23) or the meme read (41), which use the same free allowance.
 
 on:
   schedule:
-    - cron: "23 6 * * *"    # before the London open
-    - cron: "38 12 * * *"   # London midday, before New York opens
-    - cron: "52 21 * * *"   # after the New York close
+    - cron: "5 6 * * *"     # before the London open
+    - cron: "5 12 * * *"    # London midday, before New York opens
+    - cron: "5 22 * * *"    # after the New York close
   workflow_dispatch:
     inputs:
       set:
@@ -47,6 +49,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FEED_PROVIDER: ${{ vars.FEED_PROVIDER || 'gemini' }}
-          GEMINI_FEED_MODEL: ${{ vars.GEMINI_FEED_MODEL || 'gemini-flash-latest' }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NOTES_ALLOW_PAID: ${{ vars.NOTES_ALLOW_PAID || '0' }}
+          # Tried in order, all free tier; the same list as the market reads.
+          GEMINI_FEED_MODEL: ${{ vars.GEMINI_HOURLY_MODELS || 'gemini-flash-lite-latest,gemini-flash-latest' }}
           FEED_MODEL: ${{ vars.FEED_MODEL || 'claude-sonnet-5-5' }}
         run: node scripts/notes-read.mjs --set "${{ inputs.set || 'all' }}"

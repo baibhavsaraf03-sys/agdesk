@@ -506,13 +506,13 @@ async function readViaAnthropic(prompt) {
   const kinds = [...new Set((first.content || []).map((b) => b.type))].join(", ");
   console.warn(`  first pass stopped on "${first.stop_reason}"; blocks: ${kinds || "none"}`);
 
-  // It narrated instead of publishing. Ask again with the tool forced, reusing
-  // whatever work the first pass already did.
+  // It narrated instead of publishing. Ask again, reusing whatever work the
+  // first pass already did. (Current Claude models refuse a forced
+  // tool_choice, so this asks in words; the text fallback below still applies.)
   const second = await anthropicClient().messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
     tools: TOOLS,
-    tool_choice: { type: "tool", name: "publish_read" },
     messages: [
       { role: "user", content: prompt },
       { role: "assistant", content: first.content },
