@@ -1066,6 +1066,8 @@ export default function Terminal() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     document.documentElement.dataset.theme = next;
+    // The browser's own bar (and an installed app's title bar) follows: black for Noir, white for Blanc.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#000000" : "#ffffff");
     try {
       localStorage.setItem("agdesk-theme", next);
     } catch {
@@ -1521,7 +1523,7 @@ export default function Terminal() {
           onClick={flipTheme}
           title={theme === "dark" ? "Switch to light" : "Switch to dark"}
         >
-          {theme === "dark" ? "Light" : "Noir"}
+          {theme === "dark" ? "Blanc" : "Noir"}
         </button>
         <button
           className="tbtn tbtn-cmd"
@@ -1592,7 +1594,7 @@ export default function Terminal() {
               <InstallButton className="nav-door nav-install" />
               <div className="nav-phone">
                 <button className="tbtn" aria-pressed={peOn} onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}>Plain English</button>
-                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Light theme" : "Noir theme"}</button>
+                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Blanc" : "Noir"}</button>
               </div>
               </>
             }

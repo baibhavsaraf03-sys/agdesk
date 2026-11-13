@@ -36,7 +36,15 @@ export const viewport = {
 const THEME_BOOT = `
 try {
   var t = localStorage.getItem("agdesk-theme");
-  if (t === "light") document.documentElement.dataset.theme = "light";
+  if (t === "light") {
+    document.documentElement.dataset.theme = "light";
+    var paint = function () {
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute("content", "#ffffff");
+    };
+    paint();
+    document.addEventListener("DOMContentLoaded", paint);
+  }
 } catch (e) {}
 `;
 
