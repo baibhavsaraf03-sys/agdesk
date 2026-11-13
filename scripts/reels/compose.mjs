@@ -95,7 +95,7 @@ html,body{width:${W}px;height:${H}px;background:#000;overflow:hidden;color:#E6E2
 .cap .k{font-family:'Geist Mono',monospace;font-size:26px;letter-spacing:.2em;color:#C8A96A;text-transform:uppercase}
 .cap .t{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:84px;line-height:1.02;margin-top:18px;color:#F2EEE6}
 .fig{display:flex;flex-direction:column;align-items:center;gap:8px}
-.dt-colon{display:inline-flex;flex-direction:column;justify-content:space-between;width:.11em;height:.42em;margin:0 .14em;vertical-align:.08em}
+.dt-colon{display:inline-flex;flex-direction:column;justify-content:space-between;width:.11em;height:.42em;margin:0 .14em;transform:translateY(.02em)}
 .dt-colon i{display:block;width:.11em;height:.11em;border-radius:50%;background:currentColor}
 </style></head><body><div id="stage"></div>
 <script>
@@ -139,7 +139,7 @@ const SPECS = {
   mood: {
     seconds: 14,
     script: `
-const clock=$('<div class="layer"><div class="center" style="top:520px;gap:40px"><div class="mark" style="font-size:40px;margin-right:-.5em">Ledge Desk</div><div style="width:2px;height:90px;background:#5A4C30"></div><div class="dots" id="clk" style="font-size:150px;letter-spacing:.04em"></div><div class="mono" style="font-size:28px">'+DATA.date+'</div></div></div>');
+const clock=$('<div class="layer"><div class="center" style="top:520px;gap:40px"><div class="mark" style="font-size:40px;margin-right:-.5em">Ledge Desk</div><div style="width:2px;height:90px;background:#5A4C30"></div><div class="dots" id="clk" style="font-size:150px;letter-spacing:.04em;display:flex;align-items:center"></div><div class="mono" style="font-size:28px">'+DATA.date+'</div></div></div>');
 const dial=$('<div class="layer"><div class="center" style="top:250px"><div class="mono" style="font-size:32px;color:#C8A96A">The market right now is</div></div><div class="center" style="top:400px" id="dialbox"></div><div class="center" style="top:1010px;gap:22px"><div class="dots" id="word" style="font-size:150px;letter-spacing:.03em"></div><div class="mono" id="vix" style="font-size:30px"></div></div></div>');
 const why=$('<div class="layer"><div class="center" style="top:300px;gap:40px"><div class="mono" style="font-size:28px;color:#C8A96A">The hour\\'s brief</div><div class="rule" style="width:80px"></div><div class="serif it" style="font-size:78px;line-height:1.14;max-width:900px">'+DATA.brief+'</div></div><div id="figs" style="position:absolute;left:96px;right:96px;top:1180px;display:flex;justify-content:space-between;border-top:2px solid #E6E2DA;padding-top:40px"></div></div>');
 stage.append(clock,dial,why);${END}
@@ -176,7 +176,9 @@ window.draw=(t)=>{
   L.forEach((el,i)=>{const a=S0+i*D,b=a+D+.35;el.style.opacity=win(t,a,b,.35);
     const card=el.querySelector('.card');const z=1+.05*clamp((t-a)/(D+.35));
     card.style.transform='translateX(-50%) scale('+z+')';
-    const cap=el.querySelector('.cap');cap.style.transform='translateY('+(26*(1-out((t-a)/.6)))+'px)';});
+    // captions change cleanly: the old one is gone before the new one arrives
+    const cap=el.querySelector('.cap');cap.style.opacity=clamp(Math.min((t-a-.3)/.3,(a+D-t)/.25));
+    cap.style.transform='translateY('+(26*(1-out((t-a-.3)/.6)))+'px)';});
   endCard(endEl,t,S0+shots.length*D+.1,21);
 };`
   },
