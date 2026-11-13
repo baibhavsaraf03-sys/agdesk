@@ -30,7 +30,7 @@ export async function POST() {
     return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://agdesk.vercel.app";
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://ledgedesk.com";
   const priceId = process.env.STRIPE_PRICE_ID;
 
   if (!priceId) {

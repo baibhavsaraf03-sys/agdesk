@@ -29,7 +29,7 @@ import { decideRelease, decidePrice, decideHeadline, decideDoom } from "../lib/a
 
 const PROBE = process.argv.includes("--probe");
 const NOW = Date.now();
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://agdesk.vercel.app").replace(/\/+$/, "");
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://ledgedesk.com").replace(/\/+$/, "");
 const NEWS_ZONES = ["ams", "eur", "eas", "ind", "anz", "ag", "doom"];
 // Headlines every 15 minutes: on runs whose minute falls in the first five of a quarter hour.
 const HEADLINE_RUN = process.argv.includes("--all") || new Date(NOW).getUTCMinutes() % 15 < 5;

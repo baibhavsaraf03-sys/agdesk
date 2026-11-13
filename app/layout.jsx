@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   // Makes the canonical and social-card addresses on the reading pages absolute.
-  metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL || "https://agdesk.vercel.app").replace(/\/+$/, "")),
+  metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL || "https://ledgedesk.com").replace(/\/+$/, "")),
   title: "Ledge Desk",
   description:
     "Markets, news and the reasoning behind both: 29 world exchanges by session, commodities in depth, sixteen tutorials from zero, and an analyst you can question.",

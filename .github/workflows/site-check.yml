@@ -11,7 +11,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://agdesk.vercel.app' }}
+      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://ledgedesk.com' }}
     steps:
       - name: Which address is checked
         run: echo "Checking $SITE"

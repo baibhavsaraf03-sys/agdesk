@@ -35,7 +35,7 @@ export async function POST() {
     return NextResponse.json({ error: "No subscription found." }, { status: 404 });
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://agdesk.vercel.app";
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://ledgedesk.com";
 
   try {
     const session = await stripe.billingPortal.sessions.create({
