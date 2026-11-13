@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { smoothly, enterScreen } from "@/lib/motion";
 import { browserClient, supabaseConfigured } from "@/lib/supabase-browser";
 import {
   EXCHANGES, GLOSSARY, METHOD, TUTORIALS, RISKS, FALLBACK_FEED, ZONES
@@ -907,6 +909,13 @@ export default function Terminal() {
   // history, but behind a key now: press / or the button.
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
+  // Each screen eases in when you move to it (lib/motion.js; off with reduced motion).
+  const wrapRef = useRef(null);
+  const firstScreen = useRef(true);
+  useEffect(() => {
+    if (firstScreen.current) { firstScreen.current = false; return; }
+    enterScreen(wrapRef.current);
+  }, [screen]);
   // Home instruments and the menu dial (delayed prices and the VIX mood word).
   const { pulse, failed: pulseFailed } = usePulse();
   // A symbol for the Charts screen to load, from CHT <name> or a chart link. `n` makes a repeat request count.
@@ -1064,8 +1073,11 @@ export default function Terminal() {
 
   const flipTheme = useCallback(() => {
     const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
+    // A slow cross-fade between Noir and Blanc rather than a jump (13 Nov).
+    smoothly(() => {
+      flushSync(() => setTheme(next));
+      document.documentElement.dataset.theme = next;
+    }, "theme");
     // The browser's own bar (and an installed app's title bar) follows: black for Noir, white for Blanc.
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#000000" : "#ffffff");
     try {
@@ -1338,15 +1350,19 @@ export default function Terminal() {
   const zoneKeysFor = (sc) => Object.keys(ZONES).filter((k) => ZONES[k].screen === sc);
 
   function enterDesk(dest) {
-    setShowLanding(false);
-    if (dest) go(dest);
+    smoothly(() => flushSync(() => {
+      setShowLanding(false);
+      if (dest) go(dest);
+    }));
     try { localStorage.setItem("agdesk.seen", "1"); } catch {}
   }
 
   // Back to the front page (the door): the wordmark and the menu footer.
   function toDoor() {
-    setNavOpen(false);
-    setShowLanding(true);
+    smoothly(() => flushSync(() => {
+      setNavOpen(false);
+      setShowLanding(true);
+    }));
     window.scrollTo(0, 0);
   }
 
@@ -1384,7 +1400,7 @@ export default function Terminal() {
 
   if (termsOk === null) return <div className="gate-wait" />;
   if (termsOk === false && screen !== "TERMS") {
-    return <TermsGate onAccept={acceptTerms} onReadAll={() => go("TERMS")} onBack={toDoor} />;
+    return <TermsGate onAccept={() => smoothly(() => flushSync(acceptTerms))} onReadAll={() => go("TERMS")} onBack={toDoor} />;
   }
 
   /**
@@ -1617,7 +1633,7 @@ export default function Terminal() {
         {navOpen && <button className="scrim" aria-hidden onClick={() => setNavOpen(false)} />}
 
         <main className="stage">
-          <div className={"wrap" + (screen === "CHT" || screen === "HOME" ? " wide" : "")}>
+          <div ref={wrapRef} className={"wrap" + (screen === "CHT" || screen === "HOME" ? " wide" : "")}>
 
           {/* ---------------- HOME ---------------- */}
           {screen === "HOME" && (

@@ -1410,3 +1410,23 @@ a.btn{display:inline-block;text-decoration:none}
 @media(display-mode:standalone){ .door{min-height:100svh} }
 .inst-sheet-in{text-align:left}
 .inst-sheet-list li p{margin:0}
+
+/* ---------- motion (13 Nov): slower, smoother changes ---------- */
+@media (prefers-reduced-motion: no-preference){
+  /* Noir <-> Blanc: a slow cross-fade of the whole page */
+  :root[data-vt="theme"]::view-transition-old(root),
+  :root[data-vt="theme"]::view-transition-new(root){animation-duration:.8s;animation-timing-function:cubic-bezier(.4,0,.2,1)}
+  /* door, terms, desk: a gentler fade than the browser's default */
+  :root[data-vt="page"]::view-transition-old(root){animation:.42s cubic-bezier(.4,0,.2,1) both ld-vt-out}
+  :root[data-vt="page"]::view-transition-new(root){animation:.55s cubic-bezier(.2,.7,.2,1) both ld-vt-in}
+  @keyframes ld-vt-out{to{opacity:0}}
+  @keyframes ld-vt-in{from{opacity:0;transform:translateY(10px)}}
+  /* browsers without view transitions: fade the colours instead */
+  html.theme-fading,html.theme-fading *,html.theme-fading *::before,html.theme-fading *::after{
+    transition:background-color .8s ease,color .8s ease,border-color .8s ease,fill .8s ease,stroke .8s ease !important}
+  /* the menu sheet settles in rather than snapping */
+  .side{transform:translateY(-8px);transition:opacity .34s cubic-bezier(.4,0,.2,1),transform .34s cubic-bezier(.4,0,.2,1),visibility 0s linear .34s}
+  .shell.navopen .side{transform:none;transition:opacity .34s cubic-bezier(.2,.7,.2,1),transform .34s cubic-bezier(.2,.7,.2,1)}
+  /* buttons and links ease their colour changes */
+  .btn,.tbtn,.chip,.ch-seg,.navitem,.nav-door,.door-new,.inst-posrow,.sesscard{transition:color .25s ease,background-color .25s ease,border-color .25s ease}
+}
