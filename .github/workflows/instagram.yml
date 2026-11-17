@@ -1,0 +1,104 @@
+name: Instagram post
+
+# Posts one video a day to Instagram as a Reel and then as a Story
+# (scripts/reels/post.mjs). The rotation repeats every six posts: three of
+# the site (mood, tour, themes), then market, word and habit.
+#
+# Started by the Supabase scheduler (job ledge-instagram) at 17:40 UTC, with
+# GitHub's own schedule as a backup. A run that finds today's post already
+# done stops straight away, so two starts never post twice.
+#
+# If posting fails, the owner's devices get a notification and GitHub emails
+# the failure. Until the INSTAGRAM_TOKEN secret exists, runs finish quietly.
+#
+# Secrets: INSTAGRAM_TOKEN (from the Meta app dashboard), plus the ones the
+# other jobs already use.
+
+on:
+  schedule:
+    - cron: "40 17 * * *"
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "post (the normal daily post), dry (make and upload the video, don't post), check (test the Instagram connection only)"
+        default: "post"
+        required: true
+      kind:
+        description: "Leave blank for the next in the rotation, or one of: mood tour themes market word habit"
+        default: ""
+        required: false
+      force:
+        description: "Post even if today's post is already done"
+        type: boolean
+        default: false
+
+concurrency:
+  group: instagram
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://ledgedesk.com' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+      VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_FEED_MODEL: ${{ vars.GEMINI_HOURLY_MODELS || 'gemini-flash-lite-latest,gemini-flash-latest' }}
+      WHAT: ${{ github.event.inputs.what || 'post' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      - name: Check the connection
+        if: env.WHAT == 'check'
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --check
+
+      - name: Tools (Playwright, fonts, ffmpeg)
+        if: env.WHAT != 'check'
+        run: |
+          mkdir -p /tmp/rec && cd /tmp/rec && npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright @fontsource/doto @fontsource/cormorant-garamond @fontsource/geist-sans @fontsource/geist-mono @fontsource/source-serif-4 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
+      - name: Film the site
+        if: env.WHAT != 'check'
+        env:
+          PW: /tmp/rec/node_modules/playwright/index.mjs
+        run: node scripts/reels/capture.mjs /tmp/footage "$SITE"
+
+      - name: Make and post
+        if: env.WHAT != 'check'
+        env:
+          PW: /tmp/rec/node_modules/playwright/index.mjs
+          FONTS: /tmp/rec/node_modules/@fontsource
+          KIND: ${{ github.event.inputs.kind }}
+          FORCE: ${{ github.event.inputs.force == 'true' && '--force' || '' }}
+        run: |
+          extra="$FORCE"
+          [ "$WHAT" = "dry" ] && extra="$extra --dry"
+          [ -n "$KIND" ] && extra="$extra --kind=$KIND"
+          node scripts/reels/post.mjs /tmp/footage /tmp/reel $extra
+
+      - name: Keep the video with the run
+        if: always() && env.WHAT != 'check'
+        uses: actions/upload-artifact@v4
+        with:
+          name: instagram-video
+          path: |
+            /tmp/reel/*.mp4
+            /tmp/reel/caption.txt
+          if-no-files-found: ignore
+          retention-days: 7

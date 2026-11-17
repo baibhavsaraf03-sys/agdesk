@@ -1,13 +1,18 @@
 /**
- * Edits the Reels (13 Nov): 1080x1920, 30 fps, H.264, no sound (music is
- * added in Instagram, where trending audio helps reach).
+ * Edits the Reels (13 Nov; market, word and habit added 17 Nov): 1080x1920,
+ * 30 fps, H.264 with a quiet synthesised pad underneath (SOUND=0 for none;
+ * the API cannot attach Instagram's own music).
  *
  * Every frame is drawn by a small HTML page in Noir (real fonts, the real
  * dial) and photographed by a headless browser, then ffmpeg encodes the run.
  * Footage and figures come from scripts/reels/capture.mjs.
  *
  *   PW=<playwright index.mjs> FONTS=<@fontsource dir> \
- *     node scripts/reels/compose.mjs <mood|tour|themes|all> <footagedir> <outdir>
+ *     node scripts/reels/compose.mjs <mood|tour|themes|market|word|habit|all> <footagedir> <outdir>
+ *
+ * word and habit draw the item in SCRIPT_FILE (JSON: kicker, hook, beats
+ * [{big, small}], close), written by scripts/reels/post.mjs from
+ * lib/social-topics.js. market uses the filmed figures and SCRIPT_FILE's hook.
  *
  * Writes <outdir>/<name>.mp4 and <outdir>/caption.txt (a suggested caption).
  */
@@ -28,6 +33,8 @@ const readJson = (f) => { try { return JSON.parse(fs.readFileSync(path.join(FOOT
 const pulse = readJson("pulse.json") || {};
 const feed = readJson("feed.json") || {};
 const meta = readJson("meta.json") || { at: new Date().toISOString() };
+let SCRIPT = null;
+try { SCRIPT = process.env.SCRIPT_FILE ? JSON.parse(fs.readFileSync(process.env.SCRIPT_FILE, "utf8")) : null; } catch { SCRIPT = null; }
 
 /* ---------- what the site was saying ---------- */
 const inst = Object.fromEntries((pulse.instruments || []).map((i) => [i.k, i]));
@@ -51,8 +58,22 @@ const DATA = {
   brief: brief(),
   figs: [["S&P 500", inst.spx?.change], ["FTSE 100", inst.ftse?.change], ["GOLD", inst.gold?.change]].map(([n, c]) => ({ n, v: chg(c), up: c > 0 })),
   date: london(at, { weekday: "long", day: "numeric", month: "long" }).toUpperCase(),
-  clock0: Math.floor(at.getTime() / 1000)
+  clock0: Math.floor(at.getTime() / 1000),
+  board: (pulse.instruments || []).filter((i) => i.price != null).slice(0, 8).map((i) => ({
+    n: i.short || i.name,
+    p: i.unit === "fx" ? i.price.toFixed(4) : i.price >= 1000 ? Math.round(i.price).toLocaleString("en-GB") : i.price.toFixed(2),
+    v: chg(i.change), up: i.change > 0
+  })),
+  brief2: briefLines(2),
+  script: SCRIPT,
+  endLine: SCRIPT?.close || "The desk is open."
 };
+function briefLines(n) {
+  const r = ["ams", "eur", "eas", "ind", "anz"].map((z) => reads[z]).filter((x) => x && Array.isArray(x.short) && x.short.length)
+    .sort((a, b) => String(b._updatedAt || "").localeCompare(String(a._updatedAt || "")))[0];
+  if (!r) return [];
+  return r.short.slice(0, n).map((x) => (x.length > 150 ? x.slice(0, 147).replace(/\s+\S*$/, "") + "…" : x));
+}
 
 /* ---------- the page that draws a frame ---------- */
 const font = (fam, file, w, st = "normal") => {
@@ -129,7 +150,7 @@ const END = `
 const endEl=$('<div class="layer"><div class="center ec" style="top:640px;gap:44px">'
  +'<div class="mark" style="font-size:52px;margin-right:-.5em">Ledge Desk</div>'
  +'<div style="width:2px;height:120px;background:#5A4C30"></div>'
- +'<div class="serif it" style="font-size:72px;line-height:1.15;max-width:820px">The desk is open.</div>'
+ +'<div class="serif it" style="font-size:72px;line-height:1.15;max-width:860px">'+DATA.endLine+'</div>'
  +'<div class="mono" style="font-size:34px;color:#E6E2DA;letter-spacing:.22em">ledgedesk.com</div>'
  +'</div><div class="center mono" style="top:1560px;font-size:22px">Educational material · Not investment advice</div></div>');
 stage.appendChild(endEl);`;
@@ -203,8 +224,55 @@ window.draw=(t)=>{
   q.style.opacity=win(t,6.4,8.8,.5);
   endCard(endEl,t,8.6,11);
 };`
-  }
+  },
+  // 21 s. The day's figures: a hook, the board, the mood, two lines of the brief.
+  market: {
+    seconds: 21,
+    script: `
+const S=DATA.script||{};
+const hook=$('<div class="layer"><div class="center" style="top:540px;gap:44px"><div class="mono" style="font-size:30px;color:#C8A96A">'+(S.kicker||'Markets today')+'</div><div class="serif" style="font-size:132px;font-weight:500;line-height:1;max-width:940px">'+(S.hook||'Where the money moved.')+'</div><div class="rule" style="width:90px"></div><div class="mono" style="font-size:28px">'+DATA.date+'</div></div></div>');
+const board=$('<div class="layer"><div class="cap" style="top:150px"><div class="k">The board · delayed prices</div><div class="t">Today, so far.</div></div><div id="rows" style="position:absolute;left:84px;right:84px;top:520px;border-top:2px solid #E6E2DA"></div></div>');
+const md=$('<div class="layer"><div class="center" style="top:300px"><div class="mono" style="font-size:32px;color:#C8A96A">The mood</div></div><div class="center" style="top:420px" id="db"></div><div class="center" style="top:1000px;gap:20px"><div class="dots" style="font-size:140px">'+DATA.word+'</div><div class="mono" style="font-size:30px">'+(DATA.vix?'VIX '+DATA.vix:'')+'</div></div></div>');
+const br=$('<div class="layer"><div class="center" style="top:330px;gap:40px"><div class="mono" style="font-size:28px;color:#C8A96A">The brief</div><div class="rule" style="width:80px"></div><div id="bl" style="display:flex;flex-direction:column;gap:56px;max-width:900px"></div></div></div>');
+stage.append(hook,board,md,br);${END}
+board.querySelector('#rows').innerHTML=DATA.board.map(r=>'<div class="row" style="display:flex;align-items:baseline;justify-content:space-between;padding:30px 0;border-bottom:1px solid #2A2723"><div style="font-size:40px;width:330px">'+r.n+'</div><div class="mono" style="font-size:36px;color:#8F8A80;letter-spacing:.04em;flex:1;text-align:right;padding-right:40px">'+r.p+'</div><div class="dots" style="font-size:54px;width:230px;text-align:right;color:'+(r.up?'#2BD67B':'#E6E2DA')+'">'+(r.v||'—')+'</div></div>').join('');
+const lines=DATA.brief2.length?DATA.brief2:['Every market, rewritten every hour.'];
+br.querySelector('#bl').innerHTML=lines.map(l=>'<div class="serif it" style="font-size:62px;line-height:1.16">'+l+'</div>').join('');
+const rows=[...board.querySelectorAll('.row')];
+window.draw=(t)=>{
+  hook.style.opacity=win(t,0,3.3,.5);hook.firstChild.style.transform='scale('+(1+.03*clamp(t/3.3))+')';
+  board.style.opacity=win(t,3.1,10.4,.45);
+  rows.forEach((r,i)=>{const a=3.5+i*.28;r.style.opacity=clamp((t-a)/.4);r.style.transform='translateX('+(40*(1-out((t-a)/.6)))+'px)'});
+  md.style.opacity=win(t,10.2,14.4,.45);
+  const n=DATA.needle*ease((t-10.5)/2);md.querySelector('#db').innerHTML=dialSVG(520,n,n);
+  br.style.opacity=win(t,14.2,18.4,.45);
+  [...br.querySelectorAll('#bl > div')].forEach((d,i)=>{const a=14.6+i*.9;d.style.opacity=clamp((t-a)/.5);d.style.transform='translateY('+(24*(1-out((t-a)/.7)))+'px)'});
+  endCard(endEl,t,18.2,21);
+};`
+  },
+
+  // 21 s. One idea in four beats: a word explained, or a money habit.
+  word: { seconds: 21, script: EXPLAINER() },
+  habit: { seconds: 21, script: EXPLAINER() }
 };
+
+function EXPLAINER() {
+  return `
+const S=DATA.script||{hook:'',beats:[]};
+const hook=$('<div class="layer"><div class="center" style="top:560px;gap:46px"><div class="mono" style="font-size:30px;color:#C8A96A">'+(S.kicker||'')+'</div><div class="serif" style="font-size:'+(S.hook.length>18?118:150)+'px;font-weight:500;line-height:1;max-width:940px">'+S.hook+'</div><div class="rule" style="width:90px"></div></div></div>');
+stage.appendChild(hook);
+const B=S.beats.map((b,i)=>{const el=$('<div class="layer"><div style="position:absolute;left:96px;right:96px;top:560px"><div class="dots" style="font-size:44px;color:#C8A96A">'+String(i+1).padStart(2,'0')+' / '+String(S.beats.length).padStart(2,'0')+'</div><div class="rule" style="width:70px;margin:40px 0 50px"></div><div class="serif bg" style="font-size:'+(b.big.length>22?96:116)+'px;font-weight:500;line-height:1.02;color:#F2EEE6">'+b.big+'</div><div class="sm" style="font-size:46px;line-height:1.35;color:#B8B2A6;margin-top:44px;max-width:860px">'+b.small+'</div></div><div class="center mono" style="top:1640px;font-size:24px">'+S.hook+'</div></div>');stage.appendChild(el);return el});${END}
+const H0=3.2,D=(17.6-H0)/Math.max(1,B.length);
+window.draw=(t)=>{
+  hook.style.opacity=win(t,0,H0+.3,.45);hook.firstChild.style.transform='scale('+(1+.035*clamp(t/H0))+')';
+  B.forEach((el,i)=>{const a=H0+i*D,b=a+D+.2;el.style.opacity=win(t,a,b,.35);
+    const bg=el.querySelector('.bg'),sm=el.querySelector('.sm');
+    bg.style.transform='translateY('+(30*(1-out((t-a-.1)/.7)))+'px)';
+    sm.style.opacity=clamp((t-a-.5)/.5);sm.style.transform='translateY('+(20*(1-out((t-a-.5)/.7)))+'px)'});
+  endCard(endEl,t,17.5,21);
+};`;
+}
+
 
 /* ---------- render ---------- */
 async function render(name) {
@@ -231,12 +299,23 @@ async function render(name) {
   const tmp = path.join(OUT, `${name}.tmp.mp4`);
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(dir, "%05d.jpg"),
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", tmp]);
+  if (process.env.SOUND !== "0") {
+    // A quiet A-minor pad, slowly breathing, faded at both ends. Made here, so no licence.
+    const T = spec.seconds;
+    const pad = "0.085*sin(2*PI*110*t)+0.06*sin(2*PI*110.35*t)+0.05*sin(2*PI*164.81*t)*(0.7+0.3*sin(2*PI*0.21*t))"
+      + "+0.035*sin(2*PI*220*t)*(0.6+0.4*sin(2*PI*0.13*t))+0.03*sin(2*PI*261.63*t)*(0.5+0.5*sin(2*PI*0.17*t+1))";
+    const withSound = path.join(OUT, `${name}.snd.mp4`);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", tmp, "-f", "lavfi", "-i", `aevalsrc=${pad}:s=48000:d=${T}`,
+      "-af", `lowpass=f=1400,afade=t=in:d=1.5,afade=t=out:st=${T - 2}:d=2,volume=0.9`,
+      "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-shortest", "-movflags", "+faststart", withSound]);
+    fs.renameSync(withSound, tmp);
+  }
   fs.renameSync(tmp, path.join(OUT, `${name}.mp4`));
   fs.rmSync(dir, { recursive: true, force: true });
   console.log(`${name}.mp4 (${spec.seconds}s)`);
 }
 
-const names = which === "all" ? Object.keys(SPECS) : [which];
+const names = which === "all" ? ["mood", "tour", "themes"] : [which];
 for (const n of names) await render(n);
 
 const caption = `${mood ? `The market is ${mood.word.toLowerCase()} today (VIX ${mood.level.toFixed(1)}). ` : ""}Ledge Desk is a free markets desk, rewritten every hour: live instruments, the world's sessions, the calendar, alerts and an analyst. ledgedesk.com\n\nEducational, not investment advice.\n\n#stocks #investing #markets #trading #finance #stockmarket #economy`;
