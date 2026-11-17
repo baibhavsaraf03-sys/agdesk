@@ -211,7 +211,7 @@ async function prepare(kind, n) {
   const w = await writeCaption(kind, item, facts);
   if (kind === "market" && w?.hook) item = { ...item, hook: w.hook.replace(/[.!]*$/, ".") };
   const caption = finishCaption(w?.caption ? w.caption : fallback, w?.hashtags);
-  log(`  caption ${w ? "written by " + w.writer : "built from the item (free writers busy)"}`);
+  log(`  caption ${w ? "written by " + w.writer : "built from the item (free writers busy)"}:\n${caption}`);
   return { item, caption };
 }
 
