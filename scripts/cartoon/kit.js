@@ -232,7 +232,9 @@
   function end(b, ep) {
     return `<rect width="${W}" height="${H}" fill="#050505"/><path d="M90,1330 L990,1330" stroke="#c8a96a" stroke-width="3"/>
       ${T(540, 1150, ep.season === 2 ? 110 : 130, ep.season === 2 ? "THEO & MAYA" : "FIX THEO", { f: C.gold, st: "#000", sw: 4 })}
-      ${T(540, 1250, 50, ep.day >= ep.of ? "SEASON 2 SOON" : ep.day + 1 >= ep.of ? "THE FINALE TOMORROW" : `DAY ${ep.day + 1} TOMORROW`, { ff: "Nunito", w: 900, ls: 6 })}
+      ${ep.day + 1 < ep.of
+        ? T(540, 1250, 50, `FOLLOW TO VOTE ON DAY ${ep.day + 1}`, { f: C.green, ff: "Nunito", w: 900, ls: 4 })
+        : T(540, 1250, 50, ep.day >= ep.of ? "SEASON 2 SOON" : "THE FINALE TOMORROW", { ff: "Nunito", w: 900, ls: 6 })}
       ${T(540, 1430, 44, "LEDGE · DESK", { f: "#c8a96a", ff: "Nunito", w: 900, ls: 14 })}
       ${T(540, 1490, 34, "ledgedesk.com", { f: "#8f8a80", ff: "Nunito", w: 800, ls: 2 })}`;
   }

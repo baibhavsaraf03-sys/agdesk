@@ -224,11 +224,11 @@ export async function writeEpisode(state, winner, counts) {
     tail.push({ scene: "end", say: "That's season two. Thanks for fixing Theo with us.", cap: "THANK / *YOU*" });
   } else if (f.next.length === 1) {
     tail.push({ scene: duo ? "couple" : "room", say: `Tomorrow is the finale. The last move: ${f.next[0].label.toLowerCase()}.`, cap: "TOMORROW: / *FINALE*", face: "worried", pose: "idle", mface: "happy", mpose: "idle" });
-    tail.push({ scene: "end", say: "Follow, for the finale.", cap: "FOLLOW / FOR THE *FINALE*" });
+    tail.push({ scene: "end", say: "Follow, so you don't miss the finale.", cap: "FOLLOW / FOR THE *FINALE*" });
   } else {
     const [a, b] = f.next;
     tail.push({ scene: "vote", say: `Day ${f.day + 1} is your call. A, ${a.label.toLowerCase()}. Or B, ${b.label.toLowerCase()}. Comment A, or B.`, q: `DAY ${f.day + 1}: YOU DECIDE`, a: a.label.toUpperCase(), b: b.label.toUpperCase(), cap: "COMMENT / *A* OR *B*" });
-    tail.push({ scene: "end", say: `Follow, for day ${f.day + 1}.`, cap: `FOLLOW / FOR *DAY ${f.day + 1}*` });
+    tail.push({ scene: "end", say: "Follow, to see what happens, and vote again tomorrow.", cap: "FOLLOW / TO *VOTE*" });
   }
   const episode = { series: "Fix Theo", season, day: f.day, of: f.of, score: f.score, cur: "$", food: "Takeout", writer,
     facts: f.result.facts, beats: [...opening, ...middle, ...status, ...tail] };
