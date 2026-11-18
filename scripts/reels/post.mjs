@@ -41,7 +41,7 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) || "").split("=")[1];
 const [FOOT, WORK] = args.filter((a) => !a.startsWith("--")).map((p) => path.resolve(p));
-const DRY = flag("dry"), FORCE = flag("force"), CHECK = flag("check");
+const DRY = flag("dry"), FORCE = flag("force"), CHECK = flag("check"), RESEND = flag("resend");
 const SITE = (process.env.SITE || "https://ledgedesk.com").replace(/\/+$/, "");
 const GRAPH = "https://graph.instagram.com/" + (process.env.IG_API_VERSION || "v24.0");
 const ROTATION = ["mood", "tour", "themes", "market", "word", "habit"];
@@ -261,6 +261,18 @@ function manualPage(kind, n, file, caption, videoUrl) {
 let kind = null, stage = "starting", record = null;
 try {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("Supabase secrets missing");
+  if (RESEND) {
+    // Send the newest post's notification again (nothing is made or counted).
+    const { data: last } = await db.from("social_posts").select("*").order("id", { ascending: false }).limit(1).maybeSingle();
+    if (!last) throw new Stop("No post yet to send again.");
+    const manual = /^Manual mode/.test(last.error || "");
+    const sent = await tellOwner(manual ? "Today's Instagram video is ready" : `Instagram: ${KIND_NAMES[last.kind] || last.kind}`,
+      manual ? `${KIND_NAMES[last.kind] || last.kind}. Tap to open the caption and posting steps; the video is attached.` : (last.error || "Posted."),
+      last.permalink || last.video_url, last.video_url);
+    if (!sent) throw new Error("the owner could not be notified (check the NTFY_TOPIC secret)");
+    throw new Stop(`Sent again through ${sent} channel(s): ${last.kind} of ${last.day}.`);
+  }
+
   // A dry run needs no Instagram connection and no tables: it only makes the video.
   let tok = null, me = null;
   if (!DRY) {

@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "post (the normal daily post), dry (make and upload the video, don't post), check (test the Instagram connection only)"
+        description: "post (the normal daily post), dry (make and upload the video, don't post), check (test the Instagram connection only), resend (send the latest notification again)"
         default: "post"
         required: true
       kind:
@@ -74,8 +74,12 @@ jobs:
         if: env.WHAT == 'check'
         run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --check
 
+      - name: Send the latest notification again
+        if: env.WHAT == 'resend'
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --resend
+
       - name: Tools (Playwright, fonts, ffmpeg)
-        if: env.WHAT != 'check'
+        if: env.WHAT != 'check' && env.WHAT != 'resend'
         run: |
           mkdir -p /tmp/rec && cd /tmp/rec && npm init -y >/dev/null
           npm i --no-audit --no-fund playwright @fontsource/doto @fontsource/cormorant-garamond @fontsource/geist-sans @fontsource/geist-mono @fontsource/source-serif-4 >/dev/null
@@ -83,13 +87,13 @@ jobs:
           which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
 
       - name: Film the site
-        if: env.WHAT != 'check'
+        if: env.WHAT != 'check' && env.WHAT != 'resend'
         env:
           PW: /tmp/rec/node_modules/playwright/index.mjs
         run: node scripts/reels/capture.mjs /tmp/footage "$SITE"
 
       - name: Make and post
-        if: env.WHAT != 'check'
+        if: env.WHAT != 'check' && env.WHAT != 'resend'
         env:
           PW: /tmp/rec/node_modules/playwright/index.mjs
           FONTS: /tmp/rec/node_modules/@fontsource
