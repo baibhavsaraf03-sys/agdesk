@@ -300,6 +300,12 @@ async function theoPrepare(tok) {
   } else {
     if (state.day >= state.of) throw new Stop("Fix Theo season 1 is finished. Nothing to post.");
     let counts = await voteCounts(tok), winner;
+    if (!counts) {
+      // Votes entered by hand (Actions -> Fix Theo -> what: votes) while comments can't be read.
+      const { data: v } = await db.from("social_tokens").select("token").eq("name", "theo_votes").maybeSingle();
+      const hand = v ? JSON.parse(v.token) : null;
+      if (hand && hand.day === state.day) { counts = { a: hand.a, b: hand.b }; log(`  votes entered by hand for Day ${hand.day}: A ${hand.a}, B ${hand.b}`); }
+    }
     if (counts && counts.a + counts.b > 0) winner = counts.b > counts.a ? "b" : "a";
     else {
       counts = null;
@@ -330,6 +336,17 @@ async function theoSave(next) {
 let kind = null, stage = "starting", record = null;
 try {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("Supabase secrets missing");
+  if (THEO && opt("votes-a") !== "" && args.some((a) => a.startsWith("--votes-a="))) {
+    // Record the A/B votes counted by hand for the episode now showing; the next episode uses them.
+    const a = Math.max(0, parseInt(opt("votes-a"), 10) || 0), b = Math.max(0, parseInt(opt("votes-b"), 10) || 0);
+    const { data: row } = await db.from("social_tokens").select("token").eq("name", "theo_state").maybeSingle();
+    const day = row ? JSON.parse(row.token).day : 0;
+    if (!day) throw new Stop("No Fix Theo episode has been posted yet, so there is nothing to vote on.");
+    const { error } = await db.from("social_tokens").upsert({ name: "theo_votes", token: JSON.stringify({ day, a, b }), refreshed_at: new Date().toISOString() });
+    if (error) throw new Error("could not save the votes: " + error.message);
+    throw new Stop(`Saved: Day ${day} votes A ${a}, B ${b}. Day ${day + 1} will follow ${b > a ? "B" : "A"}.`);
+  }
+
   if (RESEND) {
     // Send the newest post's notification again (nothing is made or counted).
     const { data: last } = await mine(db.from("social_posts").select("*")).order("id", { ascending: false }).limit(1).maybeSingle();

@@ -16,9 +16,17 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "post (the normal daily episode), dry (write and draw the next episode without posting or moving the story on), check (test the Instagram connection), resend (send the latest Theo notification again)"
+        description: "post (the normal daily episode), votes (enter today's A and B comment counts below), dry (write and draw the next episode without posting or moving the story on), check (test the Instagram connection), resend (send the latest Theo notification again)"
         default: "post"
         required: true
+      votes_a:
+        description: "votes: how many comments said A"
+        default: "0"
+        required: false
+      votes_b:
+        description: "votes: how many comments said B"
+        default: "0"
+        required: false
       force:
         description: "Post even if today's episode is already done"
         type: boolean
@@ -64,6 +72,13 @@ jobs:
       - name: Check the connection
         if: env.WHAT == 'check'
         run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=theo --check
+
+      - name: Enter the votes
+        if: env.WHAT == 'votes'
+        env:
+          VA: ${{ github.event.inputs.votes_a }}
+          VB: ${{ github.event.inputs.votes_b }}
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=theo --votes-a="$VA" --votes-b="$VB"
 
       - name: Send the latest notification again
         if: env.WHAT == 'resend'
