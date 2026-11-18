@@ -55,7 +55,7 @@ const log = (...a) => console.log(...a);
 class Stop extends Error {}
 
 /* ---------- notifications to the owner ---------- */
-async function tellOwner(title, body) {
+async function tellOwner(title, body, url = "https://github.com/baibhavsaraf03-sys/agdesk/actions/workflows/instagram.yml") {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return 0;
   try {
     webpush.setVapidDetails(SITE, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
@@ -67,7 +67,7 @@ async function tellOwner(title, body) {
     for (const d of devs || []) {
       try {
         await webpush.sendNotification({ endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } },
-          JSON.stringify({ title, body, url: "https://github.com/baibhavsaraf03-sys/agdesk/actions/workflows/instagram.yml", tag: "instagram" }),
+          JSON.stringify({ title, body, url, tag: "instagram" }),
           { TTL: 86400, urgency: "high" });
         n++;
       } catch (e) { console.warn(`  push to one device failed (${e.statusCode || e.message})`); }
@@ -215,6 +215,30 @@ async function prepare(kind, n) {
   return { item, caption };
 }
 
+/* ---------- manual mode: a GitHub release page per day ---------- */
+const KIND_NAMES = { mood: "The mood", tour: "The tour", themes: "Noir or Blanc", market: "Markets today", word: "One money word", habit: "Money habit" };
+function manualPage(kind, n, file, caption, videoUrl) {
+  const tag = `post-${today}`;
+  const repo = process.env.GITHUB_REPOSITORY || "baibhavsaraf03-sys/agdesk";
+  const notes = path.join(WORK, "release-notes.md");
+  fs.writeFileSync(notes, [
+    `**${KIND_NAMES[kind]}**, post ${n + 1} (slot ${n % ROTATION.length + 1} of 6).`,
+    "",
+    "1. Tap **" + path.basename(file) + "** under Assets (or [open the video](" + videoUrl + ")), then Share → **Save Video**.",
+    "2. In Instagram: **+** → **Reel** → pick the video → paste the caption below → **Share**.",
+    "3. On the new Reel, tap the paper plane → **Add to story** → **Your story**.",
+    "",
+    "Caption (press and hold inside the box, Select All, Copy):",
+    "",
+    "```",
+    caption,
+    "```"
+  ].join("\n"));
+  try { execFileSync("gh", ["release", "delete", tag, "--yes", "--cleanup-tag", "-R", repo], { stdio: "ignore" }); } catch { /* none yet */ }
+  execFileSync("gh", ["release", "create", tag, file, "-R", repo, "--title", `Instagram ${today}: ${KIND_NAMES[kind]}`, "--notes-file", notes, "--latest"], { stdio: "inherit" });
+  return `https://github.com/${repo}/releases/tag/${tag}`;
+}
+
 /* ---------- main ---------- */
 let kind = null, stage = "starting", record = null;
 try {
@@ -223,7 +247,16 @@ try {
   let tok = null, me = null;
   if (!DRY) {
     tok = await token();
-    if (!tok) throw new Stop("Instagram is not connected yet (no INSTAGRAM_TOKEN secret). Nothing posted.");
+    if (!tok && CHECK) throw new Stop("Instagram is not connected yet (no INSTAGRAM_TOKEN secret).");
+  }
+  const MANUAL = !DRY && !tok;
+  if (MANUAL) log("  Manual mode: Instagram isn't connected, so the video goes to the owner's phone to post by hand.");
+  if (MANUAL) {
+    const { data: done, error: dErr } = await db.from("social_posts").select("id,kind").eq("day", today).in("status", ["posted", "partial"]);
+    if (dErr) throw new Error("could not read social_posts: " + dErr.message);
+    if (done.length && !FORCE) throw new Stop(`Today's video was already made (${done[0].kind}). Nothing to do.`);
+  }
+  if (!DRY && tok) {
     stage = "checking the Instagram account";
     me = await ig("GET", "/me", { fields: "user_id,username,account_type" }, tok);
     log(`  Instagram: @${me.username} (${me.account_type || "account type not reported"})`);
@@ -260,6 +293,16 @@ try {
   const videoUrl = db.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
   log(`  video: ${videoUrl}`);
   if (DRY) throw new Stop("Dry run: rendered and uploaded, not posted.");
+
+  if (MANUAL) {
+    stage = "publishing the video page for posting by hand";
+    const page = manualPage(kind, n, file, caption, videoUrl);
+    await db.from("social_posts").insert({ day: today, slot: n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
+    const sent = await tellOwner("Today's Instagram video is ready", `${KIND_NAMES[kind]}. Tap to save the video and copy the caption.`, page);
+    log(`Done (manual): ${page}. Notified ${sent} device(s).`);
+    if (!sent) throw new Error("the video page is up but no device could be notified: " + page);
+    process.exit(0);
+  }
 
   record = { day: today, slot: n % ROTATION.length, kind, status: "failed", video_url: videoUrl, caption };
 

@@ -65,6 +65,8 @@ self.addEventListener("notificationclick", (event) => {
   const target = new URL(event.notification.data?.url || "/#ALR", self.location.origin).href;
   event.waitUntil(
     (async () => {
+      // Links off the site (the daily Instagram video page on GitHub) open in their own window.
+      if (new URL(target).origin !== self.location.origin) return self.clients.openWindow(target);
       const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       for (const w of wins) {
         if (new URL(w.url).origin === self.location.origin) {
