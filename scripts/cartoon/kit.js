@@ -20,13 +20,19 @@
     shrug: { L: [[128, 362], [78, 440], [38, 392]], R: [[272, 362], [322, 440], [362, 392]] },
     point: { L: [[128, 362], [108, 455], [116, 548]], R: [[272, 362], [334, 410], [392, 378]] }
   };
+  // Looks: Theo (curls, green hoodie) and Maya (long hair, mustard sweater).
+  const LOOKS = {
+    theo: { skin: "#c68863", skinD: "#a86c4b", bag: "#8c5a3e", hair: "#23202b", top: "#2a9d68", topD: "#1f7a50", jean: "#3f5d8f", jeanD: "#324a73", style: "curls" },
+    maya: { skin: "#e2b08a", skinD: "#c48f69", bag: "#c9926c", hair: "#3b2418", top: "#e0a526", topD: "#b98318", jean: "#2b2a33", jeanD: "#1d1c24", style: "long" }
+  };
+  let L = LOOKS.theo;
   function arm(pts, id) {
     const d = `M${pts[0]} L${pts[1]} L${pts[2]}`;
     const [hx, hy] = pts[2];
     return `<g id="${id}">
       <path d="${d}" fill="none" stroke="${C.line}" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${d}" fill="none" stroke="${C.hood}" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${hx}" cy="${hy}" r="25" fill="${C.skin}" stroke="${C.line}" stroke-width="6"/></g>`;
+      <path d="${d}" fill="none" stroke="${L.top}" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${hx}" cy="${hy}" r="25" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/></g>`;
   }
   function eye(cx, face) {
     const cy = 228, ry = face === "shock" ? 39 : 33, rx = face === "shock" ? 33 : 30;
@@ -37,7 +43,7 @@
       <circle cx="${cx + look[0]}" cy="${cy + look[1]}" r="${pr}" fill="${C.line}"/>
       <circle cx="${cx + look[0] - 4}" cy="${cy + look[1] - 5}" r="4" fill="#fff"/>`;
     if (face === "smug" || face === "sad" || face === "worried")
-      s += `<path d="M${cx - rx},${cy + (face === "smug" ? 2 : -6)} A${rx},${ry} 0 0 1 ${cx + rx},${cy + (face === "smug" ? 2 : -6)} Z" fill="${C.skin}" stroke="${C.line}" stroke-width="5"/>`;
+      s += `<path d="M${cx - rx},${cy + (face === "smug" ? 2 : -6)} A${rx},${ry} 0 0 1 ${cx + rx},${cy + (face === "smug" ? 2 : -6)} Z" fill="${L.skin}" stroke="${C.line}" stroke-width="5"/>`;
     return s + `</g>`;
   }
   function brows(face) {
@@ -49,7 +55,7 @@
       smug: [[134, 192, 186, 192], [214, 178, 266, 172]],
       worried: [[134, 190, 186, 176], [214, 176, 266, 190]]
     }[face] || [[132, 186, 186, 182], [214, 182, 268, 186]];
-    return b.map(([a, c, d, e]) => `<path d="M${a},${c} L${d},${e}" stroke="${C.hair}" stroke-width="13" stroke-linecap="round"/>`).join("");
+    return b.map(([a, c, d, e]) => `<path d="M${a},${c} L${d},${e}" stroke="${L.hair}" stroke-width="13" stroke-linecap="round"/>`).join("");
   }
   function mouth(face) {
     switch (face) {
@@ -62,36 +68,42 @@
     }
   }
   const CURLS = [[96, 186, 30], [104, 146, 32], [130, 112, 34], [168, 92, 36], [210, 86, 37], [250, 96, 35], [284, 120, 33], [304, 156, 31], [308, 192, 26], [150, 128, 30], [200, 120, 30], [250, 130, 30]];
-  function theo({ face = "neutral", pose = "idle" } = {}) {
+  function theo(o = {}) { return person(o, "theo"); }
+  function maya(o = {}) { return person(o, "maya"); }
+  function person({ face = "neutral", pose = "idle" } = {}, who = "theo") {
+    L = LOOKS[who];
     const P = POSES[pose] || POSES.idle;
-    const curls = (stroke) => CURLS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${C.hair}"${stroke ? ` stroke="${C.line}" stroke-width="12"` : ""}/>`).join("");
+    const isMaya = who === "maya";
+    const curls = (stroke) => CURLS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${L.hair}"${stroke ? ` stroke="${C.line}" stroke-width="12"` : ""}/>`).join("");
     return `<svg viewBox="0 0 400 820" width="540" height="1107" overflow="visible">
       <!-- legs and shoes -->
-      <path d="M120,566 L192,566 L188,748 L132,748 Z" fill="${C.jean}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
-      <path d="M208,566 L280,566 L268,748 L212,748 Z" fill="${C.jean}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
-      <path d="M160,600 L158,740 M240,600 L242,740" stroke="${C.jeanD}" stroke-width="4"/>
+      <path d="M120,566 L192,566 L188,748 L132,748 Z" fill="${L.jean}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M208,566 L280,566 L268,748 L212,748 Z" fill="${L.jean}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M160,600 L158,740 M240,600 L242,740" stroke="${L.jeanD}" stroke-width="4"/>
       <path d="M118,742 L190,742 L192,770 Q192,786 176,786 L102,786 Q88,786 94,770 Z" fill="${C.shoe}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
       <path d="M210,742 L282,742 L306,770 Q312,786 296,786 L222,786 Q208,786 208,770 Z" fill="${C.shoe}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
       <path d="M96,774 L190,774 M210,774 L306,774" stroke="${C.sole}" stroke-width="6"/>
-      <path d="M140,756 L176,756 M228,756 L268,756" stroke="${C.gold}" stroke-width="7" stroke-linecap="round"/>
+      <path d="M140,756 L176,756 M228,756 L268,756" stroke="${isMaya ? "#ff7ab6" : C.gold}" stroke-width="7" stroke-linecap="round"/>
       <!-- body -->
-      <rect x="178" y="318" width="44" height="40" fill="${C.skinD}" stroke="${C.line}" stroke-width="6"/>
-      <ellipse cx="200" cy="350" rx="96" ry="30" fill="${C.hoodD}" stroke="${C.line}" stroke-width="6"/>
-      <path d="M110,368 Q112,344 152,338 L248,338 Q288,344 290,368 L300,560 Q300,578 284,578 L116,578 Q100,578 100,560 Z" fill="${C.hood}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
-      <path d="M140,482 L260,482 L270,544 L130,544 Z" fill="${C.hoodD}" stroke="${C.line}" stroke-width="5" stroke-linejoin="round"/>
+      <rect x="178" y="318" width="44" height="40" fill="${L.skinD}" stroke="${C.line}" stroke-width="6"/>
+      ${isMaya ? "" : `<ellipse cx="200" cy="350" rx="96" ry="30" fill="${L.topD}" stroke="${C.line}" stroke-width="6"/>`}
+      <path d="M110,368 Q112,344 152,338 L248,338 Q288,344 290,368 L300,560 Q300,578 284,578 L116,578 Q100,578 100,560 Z" fill="${L.top}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
+      ${isMaya ? `<path d="M168,340 Q200,372 232,340" fill="none" stroke="${C.line}" stroke-width="6"/><path d="M110,540 L290,540" stroke="${L.topD}" stroke-width="16"/><path d="M130,420 L150,400 L170,420 L190,400 L210,420 L230,400 L250,420 L270,400" fill="none" stroke="${L.topD}" stroke-width="6"/>` : `<path d="M140,482 L260,482 L270,544 L130,544 Z" fill="${L.topD}" stroke="${C.line}" stroke-width="5" stroke-linejoin="round"/>
       <path d="M184,350 L180,416 M216,350 L220,416" stroke="${C.shoe}" stroke-width="6" stroke-linecap="round"/>
-      <circle cx="180" cy="420" r="7" fill="${C.shoe}" stroke="${C.line}" stroke-width="3"/><circle cx="220" cy="420" r="7" fill="${C.shoe}" stroke="${C.line}" stroke-width="3"/>
+      <circle cx="180" cy="420" r="7" fill="${C.shoe}" stroke="${C.line}" stroke-width="3"/><circle cx="220" cy="420" r="7" fill="${C.shoe}" stroke="${C.line}" stroke-width="3"/>`}
       ${arm(P.L, "armL")}${arm(P.R, "armR")}
       <!-- head -->
       <g id="head">
-        <ellipse cx="88" cy="232" rx="22" ry="28" fill="${C.skin}" stroke="${C.line}" stroke-width="6"/>
-        <ellipse cx="312" cy="232" rx="22" ry="28" fill="${C.skin}" stroke="${C.line}" stroke-width="6"/>
-        ${curls(true)}
-        <ellipse cx="200" cy="222" rx="112" ry="120" fill="${C.skin}" stroke="${C.line}" stroke-width="6"/>
-        ${curls(false)}
-        <path d="M92,190 Q120,150 200,146 Q280,150 308,190 Q290,168 200,166 Q110,168 92,190 Z" fill="${C.hair}"/>
+        ${isMaya ? `<path d="M74,230 Q60,90 200,82 Q340,90 326,230 L338,420 Q300,446 262,430 L262,300 L138,300 L138,430 Q100,446 62,420 Z" fill="${L.hair}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>` : ""}
+        <ellipse cx="88" cy="232" rx="22" ry="28" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/>
+        <ellipse cx="312" cy="232" rx="22" ry="28" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/>
+        ${isMaya ? `<circle cx="88" cy="266" r="8" fill="${C.gold}" stroke="${C.line}" stroke-width="3"/><circle cx="312" cy="266" r="8" fill="${C.gold}" stroke="${C.line}" stroke-width="3"/>` : curls(true)}
+        <ellipse cx="200" cy="222" rx="112" ry="120" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/>
+        ${isMaya ? `<path d="M86,212 Q92,104 200,98 Q308,104 314,212 Q292,150 238,140 Q210,176 150,176 Q110,170 86,212 Z" fill="${L.hair}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>` : curls(false)}
+        ${isMaya ? "" : `<path d="M92,190 Q120,150 200,146 Q280,150 308,190 Q290,168 200,166 Q110,168 92,190 Z" fill="${L.hair}"/>`}
         ${eye(160, face)}${eye(240, face)}
-        <path d="M134,266 Q160,276 186,266 M214,266 Q240,276 266,266" fill="none" stroke="${C.bag}" stroke-width="4" stroke-linecap="round"/>
+        ${isMaya ? `<path d="M128,206 L120,198 M134,200 L130,190 M272,206 L280,198 M266,200 L270,190" stroke="${C.line}" stroke-width="5" stroke-linecap="round"/>` : ""}
+        <path d="M134,266 Q160,276 186,266 M214,266 Q240,276 266,266" fill="none" stroke="${L.bag}" stroke-width="4" stroke-linecap="round"/>
         ${brows(face)}
         <path d="M197,240 Q188,264 204,268" fill="none" stroke="${C.line}" stroke-width="5" stroke-linecap="round"/>
         ${mouth(face)}
@@ -219,17 +231,58 @@
   }
   function end(b, ep) {
     return `<rect width="${W}" height="${H}" fill="#050505"/><path d="M90,1330 L990,1330" stroke="#c8a96a" stroke-width="3"/>
-      ${T(540, 1150, 130, "FIX THEO", { f: C.gold, st: "#000", sw: 4 })}
+      ${T(540, 1150, ep.season === 2 ? 110 : 130, ep.season === 2 ? "THEO & MAYA" : "FIX THEO", { f: C.gold, st: "#000", sw: 4 })}
       ${T(540, 1250, 50, ep.day >= ep.of ? "SEASON 2 SOON" : ep.day + 1 >= ep.of ? "THE FINALE TOMORROW" : `DAY ${ep.day + 1} TOMORROW`, { ff: "Nunito", w: 900, ls: 6 })}
       ${T(540, 1430, 44, "LEDGE · DESK", { f: "#c8a96a", ff: "Nunito", w: 900, ls: 14 })}
       ${T(540, 1490, 34, "ledgedesk.com", { f: "#8f8a80", ff: "Nunito", w: 800, ls: 2 })}`;
   }
-  const SCENES = { room, bank, calendar, receipt, subs, card, stat, crypto, vote, end };
+  // Theo's phone showing Ledge Desk, drawn in the site's Noir look.
+  function wrapText(txt, n) { const out = [""]; String(txt).split(" ").forEach((w) => { if ((out[out.length - 1] + " " + w).trim().length > n) out.push(w); else out[out.length - 1] = (out[out.length - 1] + " " + w).trim(); }); return out; }
+  function desk(b) {
+    const G = "#c8a96a", INK = "#ece7dc", MUTE = "#8f8a80";
+    let s = bg("#1a1610", "#050403") + `<g class="pop"><rect x="230" y="260" width="620" height="1140" rx="84" fill="#111" stroke="${C.line}" stroke-width="8"/>
+      <rect x="258" y="300" width="564" height="1060" rx="58" fill="#050505"/>
+      <rect x="470" y="316" width="140" height="22" rx="11" fill="#111"/>
+      ${T(540, 420, 30, "LEDGE · DESK", { f: G, ff: "Nunito", w: 900, ls: 10 })}
+      <path d="M300,450 L780,450" stroke="#2a2723" stroke-width="3"/>`;
+    const label = (t) => T(300, 520, 26, t, { a: "start", f: MUTE, ff: "Nunito", w: 900, ls: 5 });
+    const serif = (x, y, size, t, f = INK, a = "start") => `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${a}" fill="${f}" font-family="Cormorant" font-weight="600">${esc(t)}</text>`;
+    if (b.screen === "glossary") {
+      s += label("GLOSSARY") + serif(300, 640, 104, b.term || "", G) + `<path d="M300,680 L360,680" stroke="${G}" stroke-width="4"/>`;
+      wrapText(b.def || "", 26).forEach((l, i) => (s += T(300, 760 + i * 58, 40, l, { a: "start", f: INK, ff: "Nunito", w: 800 })));
+    } else if (b.screen === "lesson") {
+      s += label("LESSON");
+      wrapText(b.title || "", 16).forEach((l, i) => (s += serif(300, 640 + i * 88, 84, l, G)));
+      const y0 = 660 + wrapText(b.title || "", 16).length * 88;
+      wrapText(b.line || "", 26).forEach((l, i) => (s += T(300, y0 + i * 56, 38, l, { a: "start", f: INK, ff: "Nunito", w: 800 })));
+      s += `<rect x="300" y="1180" width="480" height="12" rx="6" fill="#2a2723"/><rect class="grow" x="300" y="1180" width="300" height="12" rx="6" fill="${G}"/>`;
+    } else if (b.screen === "calendar") {
+      s += label("ECONOMIC CALENDAR") + serif(300, 640, 76, b.title || "", G) + T(300, 700, 36, b.when || "", { a: "start", f: C.green, ff: "Nunito", w: 900, ls: 4 });
+      (b.rows || []).forEach(([a, c], i) => { const y = 800 + i * 110; s += `<path d="M300,${y - 50} L780,${y - 50}" stroke="#2a2723" stroke-width="3"/>` + T(300, y, 40, a, { a: "start", f: INK, ff: "Nunito", w: 800 }) + `<rect x="680" y="${y - 36}" width="100" height="46" rx="8" fill="none" stroke="${G}" stroke-width="3"/>` + T(730, y - 2, 28, c, { f: G, ff: "Nunito", w: 900 }); });
+    } else if (b.screen === "mood") {
+      s += label("MARKET MOOD");
+      const cx = 540, cy = 900, r = 210;
+      s += `<path d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx + r},${cy}" fill="none" stroke="#2a2723" stroke-width="26" stroke-linecap="round"/>
+        <path d="M${cx - r},${cy} A${r},${r} 0 0 1 ${cx - r * 0.5},${cy - r * 0.866}" fill="none" stroke="${C.red}" stroke-width="26" stroke-linecap="round"/>
+        <g class="needle" style="transform-origin:${cx}px ${cy}px"><path d="M${cx},${cy} L${cx - r * 0.82},${cy - 40}" stroke="${INK}" stroke-width="10" stroke-linecap="round"/></g>
+        <circle cx="${cx}" cy="${cy}" r="18" fill="${G}"/>` + T(540, 1060, 92, b.word || "", { f: C.red, ff: "Nunito", w: 900, ls: 6 }) + T(540, 1130, 30, "READ OFF THE VIX", { f: MUTE, ff: "Nunito", w: 900, ls: 5 });
+    } else if (b.screen === "alert") {
+      s += label("ALERTS") + `<rect x="300" y="580" width="480" height="300" rx="20" fill="#0f0e0c" stroke="${G}" stroke-width="3"/>` +
+        serif(330, 680, 64, b.title || "", G) + wrapText(b.detail || "", 24).map((l, i) => T(330, 750 + i * 44, 32, l, { a: "start", f: INK, ff: "Nunito", w: 800 })).join("") +
+        `<rect x="640" y="800" width="110" height="56" rx="28" fill="${C.green}"/><circle cx="722" cy="828" r="22" fill="#fff"/>` + T(330, 840, 28, "ON", { a: "start", f: C.green, ff: "Nunito", w: 900, ls: 4 });
+    } else if (b.screen === "watchlist") {
+      s += label("WATCHLIST");
+      (b.rows || []).forEach(([a, n], i) => { const y = 640 + i * 140; s += `<path d="M300,${y - 70} L780,${y - 70}" stroke="#2a2723" stroke-width="3"/>` + serif(300, y, 58, a, INK) + T(300, y + 46, 30, n, { a: "start", f: MUTE, ff: "Nunito", w: 800 }) +
+        `<path d="M600,${y} l30,-14 l30,10 l30,-26 l30,6 l40,-20" fill="none" stroke="${C.green}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`; });
+    }
+    return s + `</g>`;
+  }
+  const SCENES = { room, bank, calendar, receipt, subs, card, stat, crypto, vote, end, desk, couple: room, maya: room };
 
   /* ---------- HUD, stamp, caption ---------- */
   function hud(ep) {
     return `<g><rect x="36" y="96" width="180" height="120" rx="20" fill="#1c2033" stroke="#3b4266" stroke-width="5"/>
-      ${T(126, 136, 26, "DAY", { f: "#aab1d6", ff: "Nunito", w: 900, ls: 3 })}${T(126, 198, 60, `${ep.day}/${ep.of}`, {})}
+      ${T(126, 136, 26, ep.season === 2 ? "S2 · DAY" : "DAY", { f: "#aab1d6", ff: "Nunito", w: 900, ls: 3 })}${T(126, 198, 60, `${ep.day}/${ep.of}`, {})}
       <rect x="232" y="96" width="250" height="120" rx="20" fill="#1c2033" stroke="#3b4266" stroke-width="5"/>
       ${T(357, 136, 26, "MONEY SCORE", { f: "#aab1d6", ff: "Nunito", w: 900, ls: 3 })}${T(310, 196, 56, `${ep.score}%`, { a: "start", f: C.green })}
       <rect x="252" y="160" width="46" height="14" rx="7" fill="#2e3452"/><rect x="252" y="160" width="${Math.max(6, 46 * ep.score / 100)}" height="14" rx="7" fill="${C.green}"/>
@@ -254,17 +307,24 @@
     const b = EP.beats[i];
     const stage = document.getElementById("stage");
     const scene = (SCENES[b.scene] || room)(b, EP);
-    const withTheo = b.scene === "room" || b.scene === "end";
+    const cast = b.scene === "couple" || (b.scene === "end" && EP.season === 2) ? ["theo", "maya"] : b.scene === "maya" ? ["maya"] : (b.scene === "room" || b.scene === "end") ? ["theo"] : [];
+    const withTheo = cast.length > 0;
+    const place = (who, i) => {
+      const end = b.scene === "end", duo = cast.length === 2;
+      const left = end && duo ? (i ? 400 : 140) : duo ? (i ? 520 : 30) : 270, top = end ? -100 : duo ? 560 : 420, sc = end ? 0.6 : duo ? 0.8 : 1;
+      const o = who === "maya" ? { face: b.mface || b.face || "neutral", pose: b.mpose || (duo ? "idle" : b.pose) || "idle" } : { face: b.face || (end ? "happy" : "neutral"), pose: b.pose || (end ? "wave" : "idle") };
+      return `<div class="person" data-sc="${sc}" style="position:absolute;left:${left}px;top:${top}px;transform-origin:50% 100%;transform:scale(${sc})">${who === "maya" ? maya(o) : theo(o)}</div>`;
+    };
     stage.innerHTML = `<div id="punch" style="position:absolute;inset:0;transform-origin:50% 45%">
         <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${scene}</svg>
-        ${withTheo ? `<div id="theo" style="position:absolute;left:270px;top:${b.scene === "end" ? -100 : 420}px;transform-origin:50% 100%;${b.scene === "end" ? "transform:scale(.6)" : ""}">${theo({ face: b.face || (b.scene === "end" ? "happy" : "neutral"), pose: b.pose || (b.scene === "end" ? "wave" : "idle") })}</div>` : ""}
+        ${cast.map(place).join("")}
         ${b.stamp ? `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${stampSVG(b.stamp)}</svg>` : ""}
       </div>
       ${b.scene === "end" ? "" : `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${hud(EP)}</svg>`}
-      <div id="cap" style="position:absolute;left:40px;right:40px;top:${b.scene === "end" ? 1580 : withTheo ? 980 : 1440}px;text-align:center"></div>`;
+      <div id="cap" style="position:absolute;left:40px;right:40px;top:${b.scene === "end" ? 1580 : cast.length === 2 ? 1560 : withTheo ? 980 : 1440}px;text-align:center"></div>`;
     els = {
-      punch: document.getElementById("punch"), theo: document.getElementById("theo"), cap: document.getElementById("cap"),
-      eyes: [...stage.querySelectorAll(".eye")], armR: stage.querySelector("#armR"), pops: [...stage.querySelectorAll(".pop")],
+      punch: document.getElementById("punch"), people: [...stage.querySelectorAll(".person")], cap: document.getElementById("cap"),
+      eyes: [...stage.querySelectorAll(".eye")], armR: [...stage.querySelectorAll("#armR")], pops: [...stage.querySelectorAll(".pop")], needle: stage.querySelector(".needle"),
       stamp: stage.querySelector(".bigstamp"), smallStamps: [...stage.querySelectorAll(".stamp")], tiles: [...stage.querySelectorAll(".tile")],
       line: stage.querySelector(".drawline"), newLine: stage.querySelector(".line-new"), opts: [...stage.querySelectorAll(".opt")], chunk: -1
     };
@@ -276,13 +336,11 @@
     if (i !== cur) { build(i); cur = i; }
     const B = TL.beats[i], b = EP.beats[i], lt = t - B.start, D = B.end - B.start;
     els.punch.style.transform = `scale(${1.07 - 0.07 * ease(lt / 0.28)})`;
-    if (els.theo) {
-      const base = b.scene === "end" ? "scale(.6) " : "";
-      els.theo.style.transform = `${base}translateY(${Math.sin(t * 2.4) * 6}px)`;
-      const blink = (t % 3.3) < 0.12;
-      els.eyes.forEach((e) => (e.style.transform = blink ? "scaleY(.08)" : ""));
-      if (els.armR && (b.pose === "wave" || (b.scene === "end"))) els.armR.setAttribute("transform", `rotate(${Math.sin(t * 9) * 9} 272 362)`);
-    }
+    els.people.forEach((p, k) => { p.style.transform = `scale(${p.dataset.sc}) translateY(${Math.sin(t * 2.4 + k * 1.3) * 6}px)`; });
+    const blink = (t % 3.3) < 0.12;
+    els.eyes.forEach((e) => (e.style.transform = blink ? "scaleY(.08)" : ""));
+    els.armR.forEach((a, k) => { const pose = k === 0 ? b.pose : b.mpose; if (pose === "wave" || b.scene === "end") a.setAttribute("transform", `rotate(${Math.sin(t * 9) * 9} 272 362)`); });
+    if (els.needle) els.needle.style.transform = `rotate(${-8 + 10 * ease(lt / 0.8) + Math.sin(t * 7) * 1.5}deg)`;
     els.pops.forEach((p) => { p.style.transformOrigin = "540px 800px"; p.style.transform = `scale(${0.6 + 0.4 * back(lt / 0.35)})`; p.style.opacity = Math.min(1, lt / 0.12); });
     if (els.stamp) { const a = Math.min(1, Math.max(0, (lt - 0.25) / 0.18)); els.stamp.style.opacity = a; els.stamp.style.transform = `scale(${2.2 - 1.2 * ease(a)})`; }
     els.smallStamps.forEach((s) => { const a = Math.min(1, Math.max(0, (lt - D * 0.45) / 0.18)); s.style.opacity = a; s.style.transform = `scale(${2 - ease(a)})`; });

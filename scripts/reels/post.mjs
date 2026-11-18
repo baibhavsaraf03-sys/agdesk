@@ -300,7 +300,7 @@ async function theoPrepare(tok) {
     ep = JSON.parse(fs.readFileSync(path.join(CARTOON, "episodes", "theo-001.json"), "utf8"));
     next = START; caption = DAY1_CAPTION;
   } else {
-    if (state.day >= state.of) throw new Stop("Fix Theo season 1 is finished. Nothing to post.");
+    if (state.season === 2 && state.day >= state.of) throw new Stop("Fix Theo season 2 is finished. Nothing to post.");
     let counts = await voteCounts(tok), winner;
     if (!counts) {
       // Votes entered by hand (Actions -> Fix Theo -> what: votes) while comments can't be read.
@@ -311,8 +311,9 @@ async function theoPrepare(tok) {
     if (counts && counts.a + counts.b > 0) winner = counts.b > counts.a ? "b" : "a";
     else {
       counts = null;
-      const [ka, kb] = state.vote;
-      winner = (ACTIONS[kb]?.points || 0) > (ACTIONS[ka]?.points || 0) ? "b" : "a";
+      const [ka, kb] = state.vote || [];
+      const A = state.season === 2 ? (await import("../cartoon/theo.mjs")).ACTIONS2 : ACTIONS;
+      winner = (A[kb]?.points || 0) > (A[ka]?.points || 0) ? "b" : "a";
     }
     const { writeEpisode } = await import("../cartoon/write.mjs");
     const r = await writeEpisode(state, winner, counts);

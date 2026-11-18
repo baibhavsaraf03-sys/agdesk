@@ -35,6 +35,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 ${face("Luckiest Guy", "luckiest-guy/files/luckiest-guy-latin-400-normal.woff2")}
 ${face("Nunito", "nunito/files/nunito-latin-800-normal.woff2", 800)}
 ${face("Nunito", "nunito/files/nunito-latin-900-normal.woff2", 900)}
+${face("Cormorant", "cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2", 600)}
 html,body{margin:0;width:${W}px;height:${H}px;overflow:hidden;background:#000}
 #stage{position:absolute;inset:0;overflow:hidden}
 .cap{display:inline-block;font-family:'Luckiest Guy';font-size:118px;line-height:1.05;color:#fff;letter-spacing:2px;

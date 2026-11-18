@@ -41,7 +41,7 @@ export const minimum = (s) => Math.max(35, s.card * s.apr / 12 + 0.01 * s.card);
 export const monthlyInterest = (s) => (s.promo ? 0 : s.card * s.apr / 12);
 export function leftover(s) {
   const card = s.card > 0 ? (s.promo ? s.promo.monthly : minimum(s) + s.cardExtra) : 0;
-  return s.income + s.side - (s.rent + s.takeout + s.subs + s.bnpl + s.phone + s.other + card + s.autoSave * 26 / 12);
+  return s.income + s.side - (s.rent + s.takeout + s.subs + s.bnpl + s.phone + s.other + card + s.autoSave * 26 / 12 + (s.dates || 0) + (s.monthly || 0));
 }
 
 /**
@@ -231,15 +231,16 @@ export function nextVote(s) {
  */
 export function advance(state, winner, counts = null) {
   const s = JSON.parse(JSON.stringify(state));
+  const S2 = s.season === 2;
   const [ka, kb] = s.vote;
-  const key = winner === "b" ? kb : ka;
-  const act = ACTIONS[key];
+  const key = winner === "b" && kb ? kb : ka;
+  const act = (S2 ? ACTIONS2 : ACTIONS)[key];
   const res = act.apply(s);
-  s.done.push(key);
+  (S2 ? (s.done2 = s.done2 || []) : s.done).push(key);
   s.day += 1;
-  s.score = Math.min(97, s.score + act.points);
+  s.score = Math.min(97, s.score + (S2 ? Math.ceil(act.points / 2) : act.points));
   let event = null;
-  if (s.day % 4 === 0) {
+  if (!S2 && s.day % 4 === 0) {
     event = EVENTS[(s.day / 4 - 1) % EVENTS.length];
     if (event.cost > 0) {
       // Savings first; whatever savings can't cover goes on the card.
@@ -250,16 +251,175 @@ export function advance(state, winner, counts = null) {
     } else s.savings += -event.cost;
   }
   const lo = leftover(s);
-  s.vote = nextVote(s);
+  s.vote = S2 ? (PAIRS2[s.day - 1] || []) : nextVote(s);
   const choice = { key, label: act.label, letter: winner === "b" ? "B" : "A", counts };
-  s.history.push({ day: s.day, choice: key, counts, event: event?.key || null });
+  s.history.push({ season: s.season || 1, day: s.day, choice: key, counts, event: event?.key || null });
   return {
     state: s,
     facts: {
       day: s.day, of: s.of, score: s.score, choice, result: res, event,
       leftover: Math.round(lo), card: Math.round(s.card), savings: Math.round(s.savings),
-      next: s.vote.map((k) => ({ key: k, label: ACTIONS[k].label })),
+      season: s.season || 1, jokes: act.jokes || [],
+      next: s.vote.map((k) => ({ key: k, label: (S2 ? ACTIONS2 : ACTIONS)[k].label })),
       monthlyInterest: Math.round(monthlyInterest(s))
     }
   };
 }
+
+/* ---------------- Season 2: Theo and Maya (10 episodes) ---------------- */
+
+/** Maya's money when Season 2 starts. Theo's carries over from Season 1. */
+export const MAYA = { income: 3400, rent: 1300, loans: 24000, loanApr: 0.055, loanPay: 260, saves: 0.15 };
+const loanPayoff = (bal, apr, pmt) => { let b = bal, m = 0, i = 0; while (b > 0.005 && m < 1200) { const x = b * apr / 12; i += x; b = b + x - Math.min(b + x, pmt); m++; } return { months: m, interest: Math.round(i) }; };
+const share = (s) => s.income / (s.income + MAYA.income);
+
+export const ACTIONS2 = {
+  date_budget: { label: "A $50 date-night budget", points: 4,
+    jokes: [{ say: "Date night is now a picnic. Theo made sandwiches. They are fine.", cap: "THEY ARE / *FINE*", face: "smug", pose: "point" },
+            { say: "Maya says it is the best date they have had. Theo suspects she is being nice.", cap: "SHE'S BEING / *NICE*", face: "worried", pose: "shrug" }],
+    apply(s) { s.dates = 100; return { big: "$280/MO", small: "SAVED TOGETHER", facts: [
+      "Theo and Maya go out 4 nights a month, and dinner was costing about $120 a night.",
+      "They set a $50 budget per date night instead.",
+      "That saves $280 a month between them, $140 each."] }; } },
+  money_date: { label: "A monthly money date", points: 4,
+    jokes: [{ say: "They make it a proper date: snacks, a spreadsheet, and Maya's playlist.", cap: "SNACKS AND / *SPREADSHEETS*", face: "happy", pose: "wave" },
+            { say: "Maya finds her own leak. She is mortified. Theo is thrilled.", cap: "HER *OWN* / LEAK", face: "smug", pose: "point", stamp: "THE TURN" }],
+    apply(s) { return { big: "$540/YR", small: "FOUND ON DATE ONE", facts: [
+      "Once a month, they sit down together and go through their spending.",
+      "On the first one, Maya finds a $45 a month yoga membership she has not used since March.",
+      "Cancelling it saves her $540 a year."] }; } },
+  split_income: { label: "Split rent by income", points: 6,
+    jokes: [{ say: "Theo moves in with two bags and a box of cables. Maya moves in with a plan.", cap: "A BOX OF / *CABLES*", face: "happy", pose: "shrug" },
+            { say: "Theo's old roommates throw him a goodbye party. It is takeout. Some habits die hard.", cap: "IT WAS / *TAKEOUT*", face: "smug", pose: "point" }],
+    apply(s) { const t = Math.round(1950 * share(s)), m = 1950 - t, was = s.rent; s.rent = t; return { big: `$${t}`, small: "THEO'S SHARE", facts: [
+      "They move into a one-bed for $1,950 a month, bills included.",
+      `They split it by income: Theo earns about ${Math.round(share(s) * 100)}% of what they make together, so he pays $${t} and Maya pays $${m}.`,
+      `Theo was paying $${was}, so he saves $${was - t} a month. Maya was paying $1,300, so she saves $${1300 - m}.`] }; } },
+  split_even: { label: "Split rent 50/50", points: 5,
+    jokes: [{ say: "Theo moves in with two bags and a box of cables. Maya moves in with a plan.", cap: "A BOX OF / *CABLES*", face: "happy", pose: "shrug" },
+            { say: "Fifty fifty sounds fair. Theo's budget disagrees, quietly.", cap: "THE BUDGET / *DISAGREES*", face: "worried", pose: "idle" }],
+    apply(s) { const was = s.rent; s.rent = 975; return { big: "$975", small: "EACH", facts: [
+      "They move into a one-bed for $1,950 a month, bills included.",
+      "They split it down the middle: $975 each.",
+      `Theo was paying $${was}, so he saves $${was - 975} a month. Maya was paying $1,300, so she saves $325.`] }; } },
+  joint_account: { label: "A shared account for bills", points: 5,
+    jokes: [{ say: "They name the account Ours. Theo wanted to call it The Vault. He was outvoted.", cap: "THE *VAULT*", face: "sad", pose: "shrug", stamp: "OUTVOTED" },
+            { say: "No more who paid for groceries arguments. Just one card for the boring stuff.", cap: "ONE CARD / FOR *BORING*", face: "happy", pose: "wave" }],
+    apply(s) { const t = Math.round(500 * share(s)); return { big: "YOURS MINE OURS", small: "THREE ACCOUNTS", facts: [
+      "They keep their own accounts and open a third one together, just for shared bills.",
+      `Groceries are about $500 a month. Split by income, Theo puts in $${t} and Maya puts in $${500 - t}.`,
+      "Each pays in on payday, and the shared bills come out of that account."] }; } },
+  trip_fund: { label: "Save for a trip together", points: 4,
+    jokes: [{ say: "They pin a beach photo to the fridge. Theo looks at it every time he wants takeout.", cap: "THE *FRIDGE* / PHOTO", face: "happy", pose: "point" },
+            { say: "Maya already has a spreadsheet for the trip. Of course she does.", cap: "OF COURSE / SHE *DOES*", face: "smug", pose: "shrug" }],
+    apply(s) { s.monthly = (s.monthly || 0) + 125; return { big: "$2,000", small: "TRIP FUND", facts: [
+      "They want a $2,000 trip in 8 months.",
+      "That is $250 a month together, $125 each.",
+      "They set it aside on payday, so the trip is paid for before they book it."] }; } },
+  loan_extra: { label: "Extra $100 on Maya's loans", points: 6,
+    jokes: [{ say: "Theo offers to help. Maya says no. She just wants him to cheer. He cheers loudly.", cap: "HE CHEERS / *LOUDLY*", face: "happy", pose: "wave" },
+            { say: "She makes the first extra payment and does a small victory dance.", cap: "VICTORY / *DANCE*", face: "smug", pose: "point" }],
+    apply(s) { const a = loanPayoff(MAYA.loans, MAYA.loanApr, MAYA.loanPay), b = loanPayoff(MAYA.loans, MAYA.loanApr, MAYA.loanPay + 100);
+      return { big: `${a.months - b.months} MONTHS`, small: "SOONER", facts: [
+      "Maya has $24,000 of student loans at 5.5%, paying $260 a month.",
+      `At that rate they take ${a.months} months to clear and cost $${a.interest.toLocaleString("en-US")} in interest.`,
+      `Paying $100 more each month clears them in ${b.months} months, with $${b.interest.toLocaleString("en-US")} in interest.`,
+      `That saves her $${(a.interest - b.interest).toLocaleString("en-US")}.`] }; } },
+  renters_insurance: { label: "Get renters insurance", points: 3,
+    jokes: [{ say: "Theo asks what happens if the upstairs bath floods. Maya hands him the quote.", cap: "SHE HAD THE / *QUOTE*", face: "shock", pose: "shrug" },
+            { say: "Insurance is boring until the day it isn't.", cap: "BORING / UNTIL IT *ISN'T*", face: "smug", pose: "point" }],
+    apply(s) { s.other += 8; return { big: "$15/MO", small: "RENTERS INSURANCE", facts: [
+      "Their landlord's insurance covers the building, not their stuff.",
+      "The quote they get covers $20,000 of their belongings for $15 a month.",
+      "They split it, so it is about $8 each."] }; } },
+  adopt_dog: { label: "Adopt the dog now", points: 2,
+    jokes: [{ say: "The dog's name is Budget. Theo picked it. Maya allowed it.", cap: "HIS NAME IS / *BUDGET*", face: "happy", pose: "wave", stamp: "GOOD BOY" },
+            { say: "Budget has already eaten one of Theo's sneakers. Not the expensive ones, luckily. He sold those.", cap: "NOT THE / *EXPENSIVE ONES*", face: "shock", pose: "shrug" }],
+    apply(s) { s.other += 75; s.savings = Math.max(0, s.savings - 100); return { big: "$150/MO", small: "THE DOG", facts: [
+      "They adopt a dog from a shelter. The adoption fee is $200, split between them.",
+      "Food, vet and pet insurance come to about $150 a month.",
+      "That is $75 each a month, or $1,800 a year together."] }; } },
+  wait_dog: { label: "Save a dog fund first", points: 4,
+    jokes: [{ say: "Maya makes a folder of dogs they might adopt. It has forty dogs in it.", cap: "FORTY / *DOGS*", face: "worried", pose: "shrug" },
+            { say: "Theo walks the neighbour's dog for practice. The dog is not impressed.", cap: "NOT / *IMPRESSED*", face: "sad", pose: "idle" }],
+    apply(s) { s.monthly = (s.monthly || 0) + 75; return { big: "$1,800", small: "DOG FUND", facts: [
+      "They decide to wait and save first.",
+      "A dog costs about $150 a month in food, vet and insurance.",
+      "Saving that $150 a month for a year builds an $1,800 dog fund before the dog arrives."] }; } },
+  roth_ira: { label: "Theo opens a Roth IRA", points: 7,
+    jokes: [{ say: "Theo opens a retirement account. He is 24. He feels very old and very smart.", cap: "OLD AND / *SMART*", face: "smug", pose: "point" },
+            { say: "Maya opened hers at 21. She does not mention this. Much.", cap: "SHE DOES NOT / *MENTION IT*", face: "smug", pose: "shrug" }],
+    apply(s) { s.monthly = (s.monthly || 0) + 100; return { big: "$262,481", small: "IF 7% A YEAR FOR 40 YEARS", facts: [
+      "Theo opens a Roth IRA and puts in $100 a month.",
+      "Over 40 years that is $48,000 of his own money.",
+      "If it grew 7% a year on average, it would reach about $262,481. Markets are not guaranteed, but time does the heavy lifting."] }; } },
+  index_fund: { label: "Theo buys his first index fund", points: 6,
+    jokes: [{ say: "He clicks buy. Then he refreshes the app every four minutes. Maya takes his phone.", cap: "SHE TOOK / HIS *PHONE*", face: "worried", pose: "shrug", stamp: "PHONE JAIL" },
+            { say: "It goes down 1% the next day. Old Theo would panic. New Theo shrugs.", cap: "NEW THEO / *SHRUGS*", face: "smug", pose: "shrug" }],
+    apply(s) { s.savings = Math.max(0, s.savings - 100); return { big: "$100", small: "FIRST INVESTMENT", facts: [
+      "Theo puts $100 from his savings into an index fund that owns a small slice of hundreds of companies.",
+      "Its yearly fee is under 0.1%, so it costs him less than 10 cents a year on $100.",
+      "It is money he will not need for years, so the daily ups and downs do not matter."] }; } },
+  keep_phones: { label: "Keep the phones", points: 4,
+    jokes: [{ say: "Theo sells phones all day and keeps his own. His manager calls it a cry for help.", cap: "A CRY / FOR *HELP*", face: "smug", pose: "point" },
+            { say: "Maya fixes her cracked screen with Theo's weekend repair service. It's free. He hopes for a tip.", cap: "HE HOPES / FOR A *TIP*", face: "happy", pose: "wave" }],
+    apply(s) { return { big: "$84/MO", small: "NOT SPENT", facts: [
+      "Two new phones would cost $1,000 each, paid over 24 months.",
+      "That is about $42 a month each, $84 together.",
+      "They keep their phones and Theo fixes Maya's screen himself instead."] }; } },
+  upgrade_phones: { label: "Upgrade with Theo's discount", points: 2,
+    jokes: [{ say: "Theo uses his staff discount. He has never been more powerful.", cap: "NEVER MORE / *POWERFUL*", face: "smug", pose: "point" },
+            { say: "Maya asks if they really needed new phones. Theo pretends he cannot hear her.", cap: "HE CAN'T / *HEAR HER*", face: "worried", pose: "shrug" }],
+    apply(s) { s.other += 33; return { big: "$800", small: "EACH, WITH DISCOUNT", facts: [
+      "Theo's 20% staff discount takes each $1,000 phone down to $800.",
+      "Paid over 24 months, that is about $33 a month each.",
+      "Cheaper than full price, but still $66 a month they did not spend before."] }; } },
+  gift_budget: { label: "A $150 gift budget each", points: 5,
+    jokes: [{ say: "Theo makes his gifts this year. Maya gets a framed copy of his first budget.", cap: "A FRAMED / *BUDGET*", face: "happy", pose: "point", stamp: "ROMANTIC?" },
+            { say: "Last year's Theo bought everyone gadgets on the card. This year's Theo has a list.", cap: "THIS YEAR: / A *LIST*", face: "smug", pose: "wave" }],
+    apply(s) { return { big: "$150", small: "EACH, CASH", facts: [
+      "Last year, Theo put $600 of holiday gifts on his credit card.",
+      "This year they each set a $150 gift budget, paid from savings, not the card.",
+      "No January bill, no interest, no regret."] }; } },
+  emergency_together: { label: "A shared emergency fund", points: 6,
+    jokes: [{ say: "They name it For When Budget Eats Something.", cap: "FOR WHEN / *BUDGET EATS*", face: "happy", pose: "wave" },
+            { say: "Theo checks the balance like it is a sports score.", cap: "LIKE A / *SPORTS SCORE*", face: "smug", pose: "point" }],
+    apply(s) { s.monthly = (s.monthly || 0) + 100; return { big: "$2,000", small: "SHARED SAFETY NET", facts: [
+      "They start a $2,000 emergency fund for the two of them.",
+      "Putting in $100 each a month, it is full in 10 months.",
+      "If the car, the dog or the boiler surprises them, it does not go on a card."] }; } },
+  car: { label: "Buy a used car", points: 1,
+    jokes: [{ say: "The car has a tape deck. Theo does not know what a tape is.", cap: "A *TAPE* / DECK", face: "shock", pose: "shrug" },
+            { say: "Freedom costs $500 a month, it turns out.", cap: "FREEDOM: / *$500 A MONTH*", face: "worried", pose: "idle" }],
+    apply(s) { s.other += 120; return { big: "$500/MO", small: "THE CAR", facts: [
+      "A used car would cost them about $250 a month in payments, $150 in insurance and $100 in gas.",
+      "That is about $500 a month, against $260 for their two train passes.",
+      "So the car costs them $240 a month more."] }; } },
+  transit: { label: "Keep taking the train", points: 5,
+    jokes: [{ say: "Theo reads Ledge Desk on the train every morning. He calls it his commute briefing.", cap: "COMMUTE / *BRIEFING*", face: "smug", pose: "point" },
+            { say: "Maya naps on the train. Theo guards her bag like it holds the emergency fund.", cap: "GUARDING / *THE BAG*", face: "happy", pose: "idle" }],
+    apply(s) { return { big: "$240/MO", small: "KEPT", facts: [
+      "A used car would cost them about $500 a month all in.",
+      "Their two train passes cost $260 a month.",
+      "Staying on the train keeps $240 a month in their pockets."] }; } }
+};
+
+/** One vote per Season 2 day (the vote shown at the end of day 1 through day 9). */
+export const PAIRS2 = [
+  ["date_budget", "money_date"], ["split_income", "split_even"], ["joint_account", "trip_fund"], ["loan_extra", "renters_insurance"],
+  ["adopt_dog", "wait_dog"], ["roth_ira", "index_fund"], ["keep_phones", "upgrade_phones"], ["gift_budget", "emergency_together"], ["transit", "car"]
+];
+
+/** Season 1 finished: Theo's money carries over, Maya joins, day 1 of 10. */
+export function startSeason2(s1) {
+  const s = JSON.parse(JSON.stringify(s1));
+  s.season = 2; s.day = 1; s.of = 10; s.dates = 240; s.vote = PAIRS2[0]; s.done2 = [];
+  s.history.push({ season: 2, day: 1, start: true });
+  return s;
+}
+export const s2Intro = (s) => ({
+  big: "MAYA", small: "SEASON 2", facts: [
+    "Maya is 24, a nurse, and the organised one.",
+    `She takes home $${MAYA.income.toLocaleString("en-US")} a month and saves 15% of every paycheck.`,
+    `She has $${MAYA.loans.toLocaleString("en-US")} of student loans at 5.5%, and one weakness: online shopping at 2am.`,
+    `Theo now has $${Math.round(leftover(s))} left over each month and a money score of ${s.score}%.`] });
