@@ -39,8 +39,36 @@ if model.startswith("kokoro:"):
     from kokoro_onnx import Kokoro
     k = Kokoro(os.path.join(kdir, "kokoro-v1.0.onnx"), os.path.join(kdir, "voices-v1.0.bin"))
     lang = "en-gb" if kvoice.startswith("b") else "en-us"
+    # Words spelt alike but said differently. The voice guesses from the word
+    # alone, so "lives with two roommates" came out as "nine lives". Each rule
+    # matches the word in a context and gives the sound to use; {word|sound}
+    # in a script forces a sound by hand.
+    FIXES = [
+        (r"\b(?P<w>lives)\s+(with|in|at|on|alone|off|by|near|paycheck|together|here|there)\b", "lˈɪvz"),
+        (r"\b(?P<w>live)\s+(with|in|at|on|alone|off|by|near|paycheck|together|here|there)\b", "lˈɪv"),
+        (r"\b(to|will|can|could|should|would|must|may|might|i|we|you|they)\s+(?P<w>read)\b", "ɹˈiːd"),
+        (r"\b(has|have|had|was|were|been|already|just)\s+(?P<w>read)\b", "ɹˈɛd"),
+        (r"\b(?P<w>minute)\s+(details?|amounts?|changes?)\b", "maɪnjˈuːt"),
+    ]
+    def phon(text):
+        marks = []
+        def keep(m):
+            marks.append(m.group(2)); return f" \u2063{len(marks) - 1}\u2063 "
+        t = re.sub(r"\{([^|}]+)\|([^}]+)\}", keep, text)
+        for rx, ipa in FIXES:
+            def swap(m, ipa=ipa):
+                marks.append(ipa)
+                a, b = m.span("w"); s0 = m.start()
+                g = m.group(0)
+                return g[: a - s0] + f" \u2063{len(marks) - 1}\u2063 " + g[b - s0:]
+            t = re.sub(rx, swap, t, flags=re.I)
+        out = []
+        for part in re.split(r"\s*\u2063(\d+)\u2063\s*", t):
+            if part.isdigit(): out.append(marks[int(part)])
+            elif part.strip(): out.append(k.tokenizer.phonemize(part.strip(), lang))
+        return " ".join(out)
     for b in ep["beats"]:
-        a, rate = k.create(spoken(b["say"]), voice=kvoice, speed=float(os.environ.get("SPEED", "1.08")), lang=lang)
+        a, rate = k.create(phon(spoken(b["say"])), voice=kvoice, speed=float(os.environ.get("SPEED", "1.08")), lang=lang, is_phonemes=True)
         voices.append(to_sr(np.asarray(a, dtype=np.float32), rate))
     model = "kokoro"
 elif model != "none" and os.path.exists(model):
