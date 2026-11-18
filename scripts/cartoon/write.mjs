@@ -72,6 +72,7 @@ function check(beats, f) {
     const bad = nums(text).filter((n) => !ok.has(n));
     if (bad.length) problems.push(`beat ${i + 1}: figures not in the facts: ${bad.join(", ")}`);
     if (/\b(I|I'm|I've|I'll|my|me|we|our)\b/.test(b.say || "")) problems.push(`beat ${i + 1}: the narrator talks about Theo in the third person (he, his), never I or my`);
+    if (b.scene === "stat" && !(b.big || "").trim()) problems.push(`beat ${i + 1}: a stat scene needs its big figure`);
     if (b.scene === "bank" && !/\d/.test(b.balance || "")) problems.push(`beat ${i + 1}: a bank scene needs a balance from the facts`);
     if (b.scene === "receipt" && !(b.lines || []).some((l) => /\d/.test(l.value || ""))) problems.push(`beat ${i + 1}: a receipt scene needs lines with figures from the facts`);
   });
