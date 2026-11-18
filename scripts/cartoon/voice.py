@@ -21,8 +21,11 @@ GAP, LEAD, TAIL = 0.22, 0.25, 0.6
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
-    t = re.sub(r"£([\d,.]+)", r"\1 pounds", text)
-    t = re.sub(r"\$([\d,.]+)", r"\1 dollars", t)
+    t = text.replace("401(k)", "four oh one k").replace("50/30/20", "fifty thirty twenty")
+    t = re.sub(r"([£$])([\d,]+)\.(\d\d)\b", lambda m: f"{m.group(2)} {'pounds' if m.group(1) == '£' else 'dollars'} and {int(m.group(3))} {'pence' if m.group(1) == '£' else 'cents'}", t)
+    t = re.sub(r"£([\d,]+)", r"\1 pounds", t)
+    t = re.sub(r"\$([\d,]+)", r"\1 dollars", t)
+    t = re.sub(r"/MO\b", " a month", t)
     t = t.replace("%", " percent")
     return re.sub(r"\s+", " ", t).strip()
 

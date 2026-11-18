@@ -1,7 +1,7 @@
 {
   "series": "Fix Theo",
   "day": 1,
-  "of": 30,
+  "of": 14,
   "score": 8,
   "cur": "$",
   "food": "Takeout",
@@ -128,11 +128,11 @@
       "cap": "BOLD / *STRATEGY*"
     },
     {
-      "say": "So we're fixing Theo. Thirty days.",
+      "say": "So we're fixing Theo. Fourteen days.",
       "scene": "room",
       "face": "worried",
       "pose": "idle",
-      "cap": "WE'RE FIXING / *THEO*"
+      "cap": "14 DAYS TO / FIX *THEO*"
     },
     {
       "say": "Day two is your call. A, cancel the subscriptions. Or B, delete the food delivery apps. Comment A, or B.",

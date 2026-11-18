@@ -42,6 +42,9 @@ const flag = (n) => args.includes(`--${n}`);
 const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) || "").split("=")[1];
 const [FOOT, WORK] = args.filter((a) => !a.startsWith("--")).map((p) => path.resolve(p));
 const DRY = flag("dry"), FORCE = flag("force"), CHECK = flag("check"), RESEND = flag("resend");
+// --series=theo posts the daily "Fix Theo" cartoon instead of the rotation (scripts/cartoon/).
+const THEO = opt("series") === "theo";
+const mine = (q) => (THEO ? q.eq("kind", "theo") : q.neq("kind", "theo"));
 const SITE = (process.env.SITE || "https://ledgedesk.com").replace(/\/+$/, "");
 const GRAPH = "https://graph.instagram.com/" + (process.env.IG_API_VERSION || "v24.0");
 const ROTATION = ["mood", "tour", "themes", "market", "word", "habit"];
@@ -159,7 +162,7 @@ async function publish(igId, tok, params, label) {
 
 /* ---------- what to post ---------- */
 async function postedCount() {
-  const { data, error } = await db.from("social_posts").select("id").in("status", ["posted", "partial"]);
+  const { data, error } = await mine(db.from("social_posts").select("id").in("status", ["posted", "partial"]));
   if (error) throw new Error("could not read social_posts: " + error.message);
   return data.length;
 }
@@ -234,13 +237,13 @@ async function prepare(kind, n) {
 }
 
 /* ---------- manual mode: a GitHub release page per day ---------- */
-const KIND_NAMES = { mood: "The mood", tour: "The tour", themes: "Noir or Blanc", market: "Markets today", word: "One money word", habit: "Money habit" };
-function manualPage(kind, n, file, caption, videoUrl) {
-  const tag = `post-${today}`;
+const KIND_NAMES = { mood: "The mood", tour: "The tour", themes: "Noir or Blanc", market: "Markets today", word: "One money word", habit: "Money habit", theo: "Fix Theo" };
+function manualPage(kind, n, file, caption, videoUrl, title = null) {
+  const tag = `${THEO ? "theo" : "post"}-${today}`;
   const repo = process.env.GITHUB_REPOSITORY || "baibhavsaraf03-sys/agdesk";
   const notes = path.join(WORK, "release-notes.md");
   fs.writeFileSync(notes, [
-    `**${KIND_NAMES[kind]}**, post ${n + 1} (slot ${n % ROTATION.length + 1} of 6).`,
+    title ? `**${title}**` : `**${KIND_NAMES[kind]}**, post ${n + 1} (slot ${n % ROTATION.length + 1} of 6).`,
     "",
     "1. Tap **" + path.basename(file) + "** under Assets (or [open the video](" + videoUrl + ")), then Share → **Save Video**.",
     "2. In Instagram: **+** → **Reel** → pick the video → paste the caption below → **Share**.",
@@ -253,8 +256,74 @@ function manualPage(kind, n, file, caption, videoUrl) {
     "```"
   ].join("\n"));
   try { execFileSync("gh", ["release", "delete", tag, "--yes", "--cleanup-tag", "-R", repo], { stdio: "ignore" }); } catch { /* none yet */ }
-  execFileSync("gh", ["release", "create", tag, file, "-R", repo, "--title", `Instagram ${today}: ${KIND_NAMES[kind]}`, "--notes-file", notes, "--latest"], { stdio: "inherit" });
+  execFileSync("gh", ["release", "create", tag, file, "-R", repo, "--title", `Instagram ${today}: ${title || KIND_NAMES[kind]}`, "--notes-file", notes, "--latest"], { stdio: "inherit" });
   return `https://github.com/${repo}/releases/tag/${tag}`;
+}
+
+/* ---------- Fix Theo ---------- */
+const CARTOON = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "cartoon");
+const DAY1_CAPTION = "Meet Theo. He's 23, has $4.12 in the bank and $1,800 on a credit card at 24.9%. His plan is crypto. " +
+  "We have 14 days to fix his money, and you decide every move.\n\nComment A or B for Day 2.";
+
+/** Counts A and B comments on the last Theo Reel (needs the comments permission; null if unavailable). */
+async function voteCounts(tok) {
+  const { data: last } = await db.from("social_posts").select("reel_id").eq("kind", "theo").not("reel_id", "is", null).order("id", { ascending: false }).limit(1).maybeSingle();
+  if (!last?.reel_id || !tok) return null;
+  const c = { a: 0, b: 0 };
+  try {
+    let url = `${GRAPH}/${last.reel_id}/comments?fields=text&limit=100&access_token=${encodeURIComponent(tok)}`;
+    for (let page = 0; url && page < 10; page++) {
+      const j = await (await fetch(url)).json();
+      if (j.error) throw new Error(j.error.message);
+      for (const x of j.data || []) {
+        const m = String(x.text || "").trim().match(/^\(?\s*(a|b)\s*\)?(?![a-z])/i);
+        if (m) c[m[1].toLowerCase()]++;
+      }
+      url = j.paging?.next || null;
+    }
+    log(`  votes on the last episode: A ${c.a}, B ${c.b}`);
+    return c;
+  } catch (e) {
+    console.warn("  could not read the comments (is the comments permission on?):", e.message);
+    return null;
+  }
+}
+
+async function theoPrepare(tok) {
+  const { START, ACTIONS } = await import("../cartoon/theo.mjs");
+  const { data: row } = await db.from("social_tokens").select("token").eq("name", "theo_state").maybeSingle();
+  const state = row ? JSON.parse(row.token) : null;
+  let ep, next, caption, tags = [];
+  if (!state) {
+    ep = JSON.parse(fs.readFileSync(path.join(CARTOON, "episodes", "theo-001.json"), "utf8"));
+    next = START; caption = DAY1_CAPTION;
+  } else {
+    if (state.day >= state.of) throw new Stop("Fix Theo season 1 is finished. Nothing to post.");
+    let counts = await voteCounts(tok), winner;
+    if (counts && counts.a + counts.b > 0) winner = counts.b > counts.a ? "b" : "a";
+    else {
+      counts = null;
+      const [ka, kb] = state.vote;
+      winner = (ACTIONS[kb]?.points || 0) > (ACTIONS[ka]?.points || 0) ? "b" : "a";
+    }
+    const { writeEpisode } = await import("../cartoon/write.mjs");
+    const r = await writeEpisode(state, winner, counts);
+    ep = r.episode; next = r.state; caption = r.caption; tags = r.hashtags || [];
+    log(`  Day ${ep.day}: ${ep.beats.length} beats, middle written by ${ep.writer}`);
+    ep.beats.forEach((b) => log(`    [${b.scene}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
+  }
+  fs.mkdirSync(WORK, { recursive: true });
+  const epFile = path.join(WORK, `theo-${String(ep.day).padStart(3, "0")}.json`);
+  fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));
+  execFileSync("node", [path.join(CARTOON, "render.mjs"), epFile, WORK], { stdio: "inherit" });
+  const file = path.join(WORK, `fix-theo-day-${String(ep.day).padStart(2, "0")}.mp4`);
+  const full = finishCaption(caption, ["fixtheo", "budgeting", "debtfree", "creditcard", "brokeLife", "moneytips", ...tags]);
+  fs.writeFileSync(path.join(WORK, "caption.txt"), full);
+  return { ep, next, caption: full, file };
+}
+async function theoSave(next) {
+  const { error } = await db.from("social_tokens").upsert({ name: "theo_state", token: JSON.stringify(next), refreshed_at: new Date().toISOString() });
+  if (error) console.warn("  could not save Theo's state:", error.message);
 }
 
 /* ---------- main ---------- */
@@ -263,7 +332,7 @@ try {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("Supabase secrets missing");
   if (RESEND) {
     // Send the newest post's notification again (nothing is made or counted).
-    const { data: last } = await db.from("social_posts").select("*").order("id", { ascending: false }).limit(1).maybeSingle();
+    const { data: last } = await mine(db.from("social_posts").select("*")).order("id", { ascending: false }).limit(1).maybeSingle();
     if (!last) throw new Stop("No post yet to send again.");
     const manual = /^Manual mode/.test(last.error || "");
     const sent = await tellOwner(manual ? "Today's Instagram video is ready" : `Instagram: ${KIND_NAMES[last.kind] || last.kind}`,
@@ -282,7 +351,7 @@ try {
   const MANUAL = !DRY && !tok;
   if (MANUAL) log("  Manual mode: Instagram isn't connected, so the video goes to the owner's phone to post by hand.");
   if (MANUAL) {
-    const { data: done, error: dErr } = await db.from("social_posts").select("id,kind").eq("day", today).in("status", ["posted", "partial"]);
+    const { data: done, error: dErr } = await mine(db.from("social_posts").select("id,kind").eq("day", today).in("status", ["posted", "partial"]));
     if (dErr) throw new Error("could not read social_posts: " + dErr.message);
     if (done.length && !FORCE) throw new Stop(`Today's video was already made (${done[0].kind}). Nothing to do.`);
   }
@@ -293,30 +362,39 @@ try {
     if (me.account_type && me.account_type !== "BUSINESS") console.warn("  Note: Instagram only lets Business accounts post Stories through its API.");
     if (CHECK) throw new Stop("Connection check only: it works.");
 
-    const { data: done, error: dErr } = await db.from("social_posts").select("id,kind").eq("day", today).in("status", ["posted", "partial"]);
+    const { data: done, error: dErr } = await mine(db.from("social_posts").select("id,kind").eq("day", today).in("status", ["posted", "partial"]));
     if (dErr) throw new Error("could not read social_posts: " + dErr.message);
     if (done.length && !FORCE) throw new Stop(`Already posted today (${done[0].kind}). Nothing to do.`);
   }
 
-  const n = DRY ? await postedCount().catch(() => 0) : await postedCount();
-  kind = opt("kind") || ROTATION[n % ROTATION.length];
-  if (!ROTATION.includes(kind)) throw new Error(`unknown kind ${kind}`);
-  log(`  post ${n + 1}, slot ${n % ROTATION.length + 1} of 6: ${kind}`);
+  let n, caption, file, theoRun = null;
+  if (THEO) {
+    kind = "theo";
+    stage = "writing and drawing the Fix Theo episode";
+    theoRun = await theoPrepare(tok);
+    n = theoRun.ep.day - 1; caption = theoRun.caption; file = theoRun.file;
+  } else {
+    n = DRY ? await postedCount().catch(() => 0) : await postedCount();
+    kind = opt("kind") || ROTATION[n % ROTATION.length];
+    if (!ROTATION.includes(kind)) throw new Error(`unknown kind ${kind}`);
+    log(`  post ${n + 1}, slot ${n % ROTATION.length + 1} of 6: ${kind}`);
 
-  stage = "writing the caption";
-  fs.mkdirSync(WORK, { recursive: true });
-  const { item, caption } = await prepare(kind, n);
-  const scriptFile = path.join(WORK, "script.json");
-  fs.writeFileSync(scriptFile, JSON.stringify(item || {}));
-  fs.writeFileSync(path.join(WORK, "caption.txt"), caption);
+    stage = "writing the caption";
+    fs.mkdirSync(WORK, { recursive: true });
+    const prep = await prepare(kind, n);
+    caption = prep.caption;
+    const scriptFile = path.join(WORK, "script.json");
+    fs.writeFileSync(scriptFile, JSON.stringify(prep.item || {}));
+    fs.writeFileSync(path.join(WORK, "caption.txt"), caption);
 
-  stage = "making the video";
-  execFileSync("node", [path.join(path.dirname(new URL(import.meta.url).pathname), "compose.mjs"), kind, FOOT, WORK],
-    { stdio: "inherit", env: { ...process.env, SCRIPT_FILE: scriptFile } });
-  const file = path.join(WORK, `${kind}.mp4`);
+    stage = "making the video";
+    execFileSync("node", [path.join(path.dirname(new URL(import.meta.url).pathname), "compose.mjs"), kind, FOOT, WORK],
+      { stdio: "inherit", env: { ...process.env, SCRIPT_FILE: scriptFile } });
+    file = path.join(WORK, `${kind}.mp4`);
+  }
 
   stage = "uploading the video";
-  const key = `reels/${today}-${kind}.mp4`;
+  const key = THEO ? `reels/${today}-${path.basename(file)}` : `reels/${today}-${kind}.mp4`;
   const up = await db.storage.from(BUCKET).upload(key, fs.readFileSync(file), { contentType: "video/mp4", upsert: true });
   if (up.error && DRY) throw new Stop(`Dry run: video made (${file}); upload skipped: ${up.error.message}`);
   if (up.error) throw new Error("upload to Supabase Storage failed: " + up.error.message);
@@ -326,21 +404,24 @@ try {
 
   if (MANUAL) {
     stage = "publishing the video page for posting by hand";
-    const page = manualPage(kind, n, file, caption, videoUrl);
-    await db.from("social_posts").insert({ day: today, slot: n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
-    const sent = await tellOwner("Today's Instagram video is ready", `${KIND_NAMES[kind]}. Tap to open the caption and posting steps; the video is attached.`, page, videoUrl);
+    const title = THEO ? `Fix Theo, Day ${theoRun.ep.day} of ${theoRun.ep.of}` : null;
+    const page = manualPage(kind, n, file, caption, videoUrl, title);
+    await db.from("social_posts").insert({ day: today, slot: THEO ? theoRun.ep.day : n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
+    if (THEO) await theoSave(theoRun.next);
+    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : "Today's Instagram video is ready", `${title || KIND_NAMES[kind]}. Tap to open the caption and posting steps; the video is attached.`, page, videoUrl);
     log(`Done (manual): ${page}. Notified through ${sent} channel(s).`);
     if (!sent) throw new Error("the video page is up but the owner could not be notified: " + page);
     process.exit(0);
   }
 
-  record = { day: today, slot: n % ROTATION.length, kind, status: "failed", video_url: videoUrl, caption };
+  record = { day: today, slot: THEO ? theoRun.ep.day : n % ROTATION.length, kind, status: "failed", video_url: videoUrl, caption };
 
   stage = "publishing the Reel";
-  const reelId = await publish(me.user_id || me.id, tok, { media_type: "REELS", video_url: videoUrl, caption, share_to_feed: "true", thumb_offset: "4000" }, "Reel");
+  const reelId = await publish(me.user_id || me.id, tok, { media_type: "REELS", video_url: videoUrl, caption, share_to_feed: "true", thumb_offset: THEO ? "1200" : "4000" }, "Reel");
   record.reel_id = reelId;
   try { record.permalink = (await ig("GET", `/${reelId}`, { fields: "permalink" }, tok)).permalink || null; } catch { /* not essential */ }
   record.status = "partial";
+  if (THEO) await theoSave(theoRun.next);   // the story moves on once the Reel is up
   log(`  Reel published: ${record.permalink || reelId}`);
 
   stage = "publishing the Story";
