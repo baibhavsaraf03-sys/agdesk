@@ -91,11 +91,16 @@ jobs:
           FORCE: ${{ inputs.force && '--force' || '' }}
         run: |
           if [ "$ZONE" = "all" ]; then ZONES="ams eur doom ag eas ind anz"; else ZONES="$ZONE"; fi
-          failed=""
+          failed=""; kept=""
           for z in $ZONES; do
-            node scripts/feed-read.mjs --zone "$z" --phase "$PHASE" $FORCE || failed="$failed $z"
+            rc=0
+            node scripts/feed-read.mjs --zone "$z" --phase "$PHASE" $FORCE || rc=$?
+            # 3 = every free model was busy and the read on screen is recent:
+            # it stays up, which is fine, so that is a warning, not a failure.
+            if [ "$rc" = "3" ]; then kept="$kept $z"; elif [ "$rc" != "0" ]; then failed="$failed $z"; fi
           done
+          [ -n "$kept" ] && echo "::warning::Free models busy, these zones kept their recent read:$kept"
           if [ -n "$failed" ]; then
-            echo "::warning::These zones kept their previous read:$failed"
+            echo "::error::These zones failed:$failed"
             exit 1
           fi

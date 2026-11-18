@@ -561,6 +561,14 @@ async function main() {
       console.log(`[${zone}/${phase}] nothing new since the read of ${prev.payload.stamp}; left as it is`);
       return;
     }
+    // The Doomsday read is the largest prompt (too big for Groq's free models)
+    // and the slowest-moving story, so it is rewritten every 3 hours (18 Nov),
+    // which leaves the free Gemini allowance for the market zones.
+    const doomEvery = Number(process.env.DOOM_EVERY_HOURS || 3) * 3600000;
+    if (zone === "doom" && age < doomEvery) {
+      console.log(`[doom/${phase}] rewritten every ${doomEvery / 3600000} hours; the current read is ${Math.round(age / 60000)} minutes old, left as it is`);
+      return;
+    }
   }
 
   console.log(`[${zone}/${phase}] writing the read via ${FEED_PROVIDER}…`);
@@ -608,7 +616,11 @@ async function main() {
         const why = process.env.FEED_ALLOW_PAID !== "1" || !process.env.ANTHROPIC_API_KEY
           ? "the paid fallback is off"
           : `the current read is only ${Math.round(age / 60000)} minutes old`;
-        throw new Error(`every free model failed and ${why}, so the previous read stays up`);
+        // Not a fault: the free models are busy and the read on screen is recent.
+        // Exit code 3 tells the workflow to warn instead of failing the run.
+        const e = new Error(`every free model failed and ${why}, so the previous read stays up`);
+        e.soft = true;
+        throw e;
       }
       console.warn("  falling back to anthropic (billed) on the same material");
       payload = await readViaAnthropic(PROMPT);
@@ -676,6 +688,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`[${zone}/${phase}] FAILED: ${err.message}`);
-  process.exit(1);
+  console.error(`[${zone}/${phase}] ${err.soft ? "KEPT" : "FAILED"}: ${err.message}`);
+  process.exit(err.soft ? 3 : 1);
 });
