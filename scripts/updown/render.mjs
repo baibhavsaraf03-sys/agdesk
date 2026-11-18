@@ -40,7 +40,7 @@ const data = {
 // Sound: the question and the answer spoken, a tick each simulated minute,
 // a quickening pulse in the last seconds, and a hit on the reveal.
 execFileSync("python3", [path.join(here, "audio.py"), OUT, process.env.VOICE || "none",
-  JSON.stringify({ seconds: SECONDS, T, ask: `Will ${name} go up or down in the next 15 minutes?`, answer: win.dir === "up" ? "Up." : "Down.", dir: win.dir })], { stdio: "inherit" });
+  JSON.stringify({ seconds: SECONDS, T, ask: `Will ${name} go up or down in the next 15 minutes?`, answer: `${lead} went ${win.dir}.`, dir: win.dir })], { stdio: "inherit" });
 
 const face = (fam, file, w = 400) => {
   const f = path.join(FONTS, file);
