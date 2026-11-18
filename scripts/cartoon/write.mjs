@@ -147,7 +147,9 @@ export async function writeEpisode(state, winner, counts) {
 
   const c = f.choice, tot = counts ? counts.a + counts.b : 0;
   const opening = [{ scene: "room", say: `Day ${f.day} of fixing Theo.`, cap: `DAY *${f.day}*`, face: "neutral", pose: "wave" }];
-  if (tot > 0) {
+  if (tot > 0 && tot < 20) {
+    opening.push({ scene: "stat", say: `You voted ${c.letter}: ${c.label.toLowerCase()}.`, cap: `YOU VOTED / *${c.letter}*`, big: c.letter, small: c.label.toUpperCase(), bg: "green" });
+  } else if (tot > 0) {
     const pct = Math.round(100 * (c.letter === "A" ? counts.a : counts.b) / tot);
     opening.push({ scene: "stat", say: `${pct}% of you voted ${c.letter}: ${c.label.toLowerCase()}.`, cap: `*${pct}%* VOTED / *${c.letter}*`, big: `${pct}%`, small: `VOTED ${c.letter}`, bg: "green" });
   } else {
