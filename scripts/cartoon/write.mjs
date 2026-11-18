@@ -71,7 +71,15 @@ function check(beats, f) {
     const text = [b.say, b.cap, b.big, b.small, b.balance, ...(b.lines || []).flatMap((l) => [l.label, l.value])].join(" ");
     const bad = nums(text).filter((n) => !ok.has(n));
     if (bad.length) problems.push(`beat ${i + 1}: figures not in the facts: ${bad.join(", ")}`);
+    if (/\b(I|I'm|I've|I'll|my|me|we|our)\b/.test(b.say || "")) problems.push(`beat ${i + 1}: the narrator talks about Theo in the third person (he, his), never I or my`);
+    if (b.scene === "bank" && !/\d/.test(b.balance || "")) problems.push(`beat ${i + 1}: a bank scene needs a balance from the facts`);
+    if (b.scene === "receipt" && !(b.lines || []).some((l) => /\d/.test(l.value || ""))) problems.push(`beat ${i + 1}: a receipt scene needs lines with figures from the facts`);
   });
+  // Every figure that matters must actually be said out loud.
+  const said = new Set(nums((beats || []).map((b) => b.say).join(" ")));
+  const key = [...new Set(f.result.facts.flatMap(nums))].filter((n) => Number(n) > 12);
+  const missing = key.filter((n) => !said.has(n));
+  if (missing.length) problems.push(`these figures from the facts are never said aloud: ${missing.join(", ")}`);
   return problems;
 }
 
@@ -105,7 +113,7 @@ async function aiMiddle(f, last) {
     `Facts you must act out, in order:\n${f.result.facts.map((x) => "- " + x).join("\n")}\n` +
     (f.event ? `Then a surprise: ${f.event.text}${f.event.onCard ? ` His savings could not cover it, so ${money(f.event.onCard)} went on the credit card.` : ""}\n` : "") +
     `Big number for one stat scene: ${f.result.big} (${f.result.small}).\n` +
-    `Write 4 to 8 beats. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines).\n` +
+    `Write 4 to 8 beats, narrated about Theo in the third person (he, his). Every figure in the facts must be said aloud in some beat. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines).\n` +
     `Do not write an opening, a vote or an ending: those are added separately.\n` +
     `The ONLY figures you may write: ${[...allowedNumbers(f)].filter((n) => Number(n) > 12 || n.includes(".")).join(", ")} (and small counts up to 12). Never add, subtract or multiply them into new figures.\n` +
     `Ideas for jokes you may use or improve:\n${(ACTIONS[f.choice.key]?.jokes || []).map((j) => "- " + j.say).join("\n")}` +
