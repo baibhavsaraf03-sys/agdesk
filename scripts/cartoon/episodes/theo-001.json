@@ -3,7 +3,9 @@
   "day": 1,
   "of": 30,
   "score": 8,
-  "note": "Figures: card £1,400 at 24.9% APR; interest in month one 1400 x 0.249 / 12 = £29.05; paying only the usual minimum (interest + 1% of the balance, at least £25) clears it in 109 months (about 9 years) with £1,772 interest. Subscriptions: six at £44.94 a month in total.",
+  "cur": "$",
+  "food": "Takeout",
+  "note": "US edition. Card $1,800 at 24.9% APR: month-one interest 1800 x 0.249 / 12 = $37.35; paying only a typical minimum (interest + 1% of the balance, at least $35) clears it in 101 months (8.4 years) with $2,149 interest.",
   "beats": [
     {
       "say": "This is Theo.",
@@ -13,17 +15,17 @@
       "cap": "THIS IS / *THEO*"
     },
     {
-      "say": "He's twenty three, lives in a London flat share, and sells phones for a living.",
+      "say": "He's twenty-three, lives with two roommates, and sells phones for a living.",
       "scene": "room",
       "face": "neutral",
       "pose": "idle",
-      "cap": "23 / LONDON / SELLS *PHONES*"
+      "cap": "23 / TWO ROOMMATES / SELLS *PHONES*"
     },
     {
-      "say": "It's the nineteenth of the month, and he has four pounds twelve in the bank.",
+      "say": "It's the nineteenth, and he has four dollars and twelve cents in the bank.",
       "scene": "bank",
-      "balance": "£4.12",
-      "cap": "HE HAS / *£4.12*",
+      "balance": "$4.12",
+      "cap": "HE HAS / *$4.12*",
       "tone": "red"
     },
     {
@@ -49,38 +51,38 @@
       "cap": "WHERE DID / IT *GO*"
     },
     {
-      "say": "Rent, seven eighty. Takeaways, one eighty six.",
+      "say": "Rent, one thousand and fifty. Takeout, two hundred and forty.",
       "scene": "receipt",
       "lines": [
         [
           "RENT",
-          "£780"
+          "$1,050"
         ],
         [
-          "TAKEAWAYS",
-          "£186"
+          "TAKEOUT",
+          "$240"
         ]
       ],
-      "cap": "*£186* ON / TAKEAWAYS"
+      "cap": "*$240* ON / TAKEOUT"
     },
     {
-      "say": "And four pay later instalments, for trainers he's worn twice.",
+      "say": "And four buy now, pay later payments, for sneakers he's worn twice.",
       "scene": "receipt",
       "lines": [
         [
           "RENT",
-          "£780"
+          "$1,050"
         ],
         [
-          "TAKEAWAYS",
-          "£186"
+          "TAKEOUT",
+          "$240"
         ],
         [
           "PAY LATER x4",
-          "£120"
+          "$160"
         ]
       ],
-      "cap": "TRAINERS / WORN *TWICE*"
+      "cap": "SNEAKERS / WORN *TWICE*"
     },
     {
       "say": "He pays for six streaming services. He watches one.",
@@ -88,28 +90,28 @@
       "cap": "PAYS FOR *SIX* / WATCHES *ONE*"
     },
     {
-      "say": "Then there's the credit card. Fourteen hundred pounds, at twenty five percent.",
+      "say": "Then there's the credit card. Eighteen hundred dollars, at almost twenty-five percent.",
       "scene": "card",
-      "owed": "£1,400",
+      "owed": "$1,800",
       "apr": "24.9% APR",
-      "cap": "*£1,400* / AT *24.9%*",
+      "cap": "*$1,800* / AT *24.9%*",
       "tone": "red"
     },
     {
-      "say": "That's about twenty nine pounds of interest every month. For nothing.",
+      "say": "That's about thirty-seven dollars of interest, every single month. For nothing.",
       "scene": "stat",
-      "big": "£29",
+      "big": "$37",
       "small": "INTEREST EVERY MONTH",
       "bg": "red",
-      "cap": "*£29* A MONTH / FOR *NOTHING*"
+      "cap": "*$37* A MONTH / FOR *NOTHING*"
     },
     {
-      "say": "Paying only the minimum, it takes nine years to clear, and nearly eighteen hundred pounds in interest.",
+      "say": "Paying only the minimum, it takes over eight years to clear, and more than two thousand dollars in interest.",
       "scene": "stat",
-      "big": "9 YEARS",
-      "small": "+ £1,772 INTEREST",
+      "big": "8 YEARS",
+      "small": "+ $2,149 INTEREST",
       "bg": "navy",
-      "cap": "*9 YEARS* / *£1,772* INTEREST"
+      "cap": "*8 YEARS* / *$2,149* INTEREST"
     },
     {
       "say": "His plan? Crypto. It's down forty percent.",
@@ -133,11 +135,11 @@
       "cap": "WE'RE FIXING / *THEO*"
     },
     {
-      "say": "Day two is your call. A, cancel the subscriptions. Or B, delete the takeaway apps. Comment A or B.",
+      "say": "Day two is your call. A, cancel the subscriptions. Or B, delete the food delivery apps. Comment A, or B.",
       "scene": "vote",
       "q": "DAY 2: YOU DECIDE",
       "a": "CANCEL THE SUBSCRIPTIONS",
-      "b": "DELETE THE TAKEAWAY APPS",
+      "b": "DELETE THE DELIVERY APPS",
       "cap": "COMMENT / *A* OR *B*"
     },
     {

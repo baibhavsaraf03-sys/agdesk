@@ -134,14 +134,15 @@
   }
   const bg = (c1, c2) => `<defs><radialGradient id="g" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#g)"/>`;
 
-  function bank(b) {
-    const rows = [["Takeaway", "-£23.40"], ["Pay later", "-£30.00"], ["Streaming", "-£10.99"], ["Takeaway", "-£18.75"], ["Takeaway", "-£16.20"]];
+  function bank(b, ep) {
+    const c = ep.cur || "£", food = ep.food || "Takeaway";
+    const rows = [[food, `-${c}23.40`], ["Pay later", `-${c}40.00`], ["Streaming", `-${c}10.99`], [food, `-${c}18.75`], [food, `-${c}16.20`]];
     let s = bg("#2b3a6b", "#141b33");
     s += `<g class="pop"><rect x="250" y="300" width="580" height="1080" rx="80" fill="#0e0f14" stroke="${C.line}" stroke-width="8"/>
       <rect x="278" y="340" width="524" height="1000" rx="52" fill="#f5f6fb"/>
       <rect x="470" y="356" width="140" height="22" rx="11" fill="#0e0f14"/>
       ${T(540, 470, 34, "CURRENT ACCOUNT", { f: "#7b8094", ff: "Nunito", w: 900, ls: 3 })}
-      ${T(540, 640, 170, b.balance || "£0.00", { f: C.red })}
+      ${T(540, 640, 170, b.balance || "0.00", { f: C.red })}
       ${T(540, 700, 32, "Available balance", { f: "#7b8094", ff: "Nunito", w: 800 })}
       <path d="M320,760 L760,760" stroke="#dfe2ec" stroke-width="4"/>`;
     rows.forEach(([a, v], i) => {

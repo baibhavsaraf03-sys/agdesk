@@ -21,11 +21,29 @@ GAP, LEAD, TAIL = 0.22, 0.25, 0.6
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
-    t = text.replace("£", " pounds ").replace("%", " percent")
+    t = re.sub(r"£([\d,.]+)", r"\1 pounds", text)
+    t = re.sub(r"\$([\d,.]+)", r"\1 dollars", t)
+    t = t.replace("%", " percent")
     return re.sub(r"\s+", " ", t).strip()
 
 voices = []
-if model != "none" and os.path.exists(model):
+def to_sr(data, rate):
+    nz = np.where(np.abs(data) > 0.02)[0]
+    if len(nz): data = data[max(0, nz[0] - int(0.02 * rate)): nz[-1] + int(0.05 * rate)]
+    idx = np.linspace(0, len(data) - 1, int(len(data) * SR / rate))
+    return np.interp(idx, np.arange(len(data)), data)
+
+if model.startswith("kokoro:"):
+    # kokoro:<dir>:<voice>  e.g. kokoro:/tmp/kokoro:af_heart  (af/am = American, bf/bm = British)
+    _, kdir, kvoice = model.split(":", 2)
+    from kokoro_onnx import Kokoro
+    k = Kokoro(os.path.join(kdir, "kokoro-v1.0.onnx"), os.path.join(kdir, "voices-v1.0.bin"))
+    lang = "en-gb" if kvoice.startswith("b") else "en-us"
+    for b in ep["beats"]:
+        a, rate = k.create(spoken(b["say"]), voice=kvoice, speed=float(os.environ.get("SPEED", "1.08")), lang=lang)
+        voices.append(to_sr(np.asarray(a, dtype=np.float32), rate))
+    model = "kokoro"
+elif model != "none" and os.path.exists(model):
     from piper import PiperVoice
     try:
         from piper import SynthesisConfig

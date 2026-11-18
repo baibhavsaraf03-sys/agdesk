@@ -1,7 +1,7 @@
 /**
  * Renders one cartoon episode (18 Nov): "Fix Theo".
  *
- *   PW=<playwright index.mjs> FONTS=<@fontsource dir> VOICE=<piper .onnx | none> \
+ *   PW=<playwright index.mjs> FONTS=<@fontsource dir> VOICE=<kokoro:<dir>:<voice> | piper .onnx | none> \
  *     node scripts/cartoon/render.mjs <episode.json> <outdir>
  *
  * voice.py speaks the beats and writes timeline.json and audio.wav; the
