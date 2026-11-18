@@ -23,6 +23,12 @@ import { KIND_TXT, LEADS, describeAlert } from "@/lib/alert-rules";
 
 const LEAD_TXT = { 5: "5 minutes", 15: "15 minutes", 60: "1 hour", 1440: "1 day" };
 
+function sameBytes(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 function b64ToBytes(s) {
   const pad = "=".repeat((4 - (s.length % 4)) % 4);
   const raw = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
@@ -60,7 +66,20 @@ function useDevice(signedIn) {
     if (!key.current) return setSt({ k: "nokey" });
     if (Notification.permission === "denied") return setSt({ k: "denied" });
     const reg = await navigator.serviceWorker.getRegistration("/");
-    const sub = await reg?.pushManager.getSubscription();
+    let sub = await reg?.pushManager.getSubscription();
+    // A device signed up under an older key can never receive alerts again:
+    // sign it up afresh with the current key (permission is already given).
+    const had = sub?.options?.applicationServerKey;
+    if (sub && had && Notification.permission === "granted" && !sameBytes(new Uint8Array(had), b64ToBytes(key.current))) {
+      try {
+        await fetch("/api/push", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+        await sub.unsubscribe();
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key.current) });
+        await fetch("/api/push", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+      } catch {
+        sub = await reg.pushManager.getSubscription();
+      }
+    }
     setSt({ k: sub ? "on" : "off", endpoint: sub?.endpoint });
   }, []);
 
