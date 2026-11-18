@@ -51,6 +51,7 @@ export function leftover(s) {
  */
 export const ACTIONS = {
   cancel_subs: {
+    jokes: [{ say: "He opens his phone. Five different apps ask who's watching. Nobody is.", cap: "WHO'S / *WATCHING?*", face: "smug", pose: "point" }, { say: "He cancels them one by one. One of them offers him a discount to stay. He stays strong.", cap: "HE STAYED / *STRONG*", face: "happy", pose: "wave", stamp: "CHARACTER GROWTH" }],
     label: "Cancel the subscriptions", points: 6,
     apply(s) {
       const keep = 10.99, save = s.subs - keep;
@@ -62,6 +63,7 @@ export const ACTIONS = {
     }
   },
   delete_delivery: {
+    jokes: [{ say: "He opens the fridge. It's just ketchup and a lemon.", cap: "KETCHUP / AND A *LEMON*", face: "shock", pose: "shrug", stamp: "CHEF THEO" }, { say: "Night one, he makes pasta. It's burnt, but it's his.", cap: "BURNT / BUT *HIS*", face: "happy", pose: "point" }],
     label: "Delete the delivery apps", points: 7,
     apply(s) {
       const before = s.takeout; s.takeout = 60;
@@ -73,6 +75,7 @@ export const ACTIONS = {
     }
   },
   extra_card: {
+    jokes: [{ say: "He finally opens the credit card app. He was scared of it for months.", cap: "HE OPENED / THE *APP*", face: "worried", pose: "idle" }, { say: "He sets up the extra payment before he can change his mind.", cap: "NO TAKE- / *BACKS*", face: "smug", pose: "point", stamp: "LOCKED IN" }],
     label: "Pay $100 extra on the card", points: 8,
     apply(s) {
       const a = payoff(s.card, s.apr, 0), b = payoff(s.card, s.apr, 100);
@@ -85,6 +88,7 @@ export const ACTIONS = {
     }
   },
   balance_transfer: {
+    jokes: [{ say: "Theo reads the fine print. All of it. For the first time in his life.", cap: "HE READ / THE *FINE PRINT*", face: "worried", pose: "idle" }, { say: "He sets a reminder for when the 0% ends. Three reminders, actually.", cap: "THREE / *REMINDERS*", face: "smug", pose: "point", stamp: "ORGANISED?" }],
     label: "Move the debt to a 0% card", points: 8,
     apply(s) {
       const fee = Math.round(s.card * 0.03), months = 15, monthly = Math.ceil((s.card + fee) / months);
@@ -99,6 +103,7 @@ export const ACTIONS = {
     }
   },
   sell_sneakers: {
+    jokes: [{ say: "He lists the sneakers online. Someone offers him half. He counters.", cap: "HE / *COUNTERED*", face: "smug", pose: "point", stamp: "BUSINESSMAN" }, { say: "He packs them up. They still smell new. Because they basically are.", cap: "BASICALLY / *NEW*", face: "sad", pose: "shrug" }],
     label: "Sell the sneakers", points: 3,
     apply(s) {
       s.savings += 90;
@@ -109,6 +114,7 @@ export const ACTIONS = {
     }
   },
   sell_crypto: {
+    jokes: [{ say: "He takes down the To the Moon poster. The moon will have to wait.", cap: "THE MOON / CAN *WAIT*", face: "sad", pose: "idle", stamp: "GROUNDED" }, { say: "He checks the price one last time. It went down again. Good timing.", cap: "DOWN / *AGAIN*", face: "shock", pose: "shrug" }],
     label: "Sell the crypto", points: 4,
     apply(s) {
       const v = s.crypto, cut = v * s.apr / 12;
@@ -120,6 +126,7 @@ export const ACTIONS = {
     }
   },
   phone_plan: {
+    jokes: [{ say: "He sells phone plans all day. He was on the worst one in the store.", cap: "THE *WORST* / PLAN", face: "shock", pose: "shrug", stamp: "THE IRONY" }, { say: "He switches in five minutes. His manager is not impressed.", cap: "FIVE / *MINUTES*", face: "smug", pose: "point" }],
     label: "Switch phone plans", points: 3,
     apply(s) {
       const before = s.phone; s.phone = 40;
@@ -130,6 +137,7 @@ export const ACTIONS = {
     }
   },
   side_hustle: {
+    jokes: [{ say: "He fixes his first screen for a friend. It only took three tries.", cap: "THREE / *TRIES*", face: "worried", pose: "idle" }, { say: "Word gets around. Now the whole building has his number.", cap: "THE WHOLE / *BUILDING*", face: "happy", pose: "wave", stamp: "LOCAL LEGEND" }],
     label: "Fix phones on weekends", points: 6,
     apply(s) {
       s.side += 200;
@@ -140,6 +148,7 @@ export const ACTIONS = {
     }
   },
   automate_savings: {
+    jokes: [{ say: "He sets it up once. Future Theo will never even notice.", cap: "FUTURE / *THEO*", face: "smug", pose: "point", stamp: "BIG BRAIN" }, { say: "For once, his money moves without him buying something.", cap: "NOTHING / *BOUGHT*", face: "happy", pose: "wave" }],
     label: "Auto-save $50 every payday", points: 4,
     apply(s) {
       s.autoSave = 50;
@@ -150,6 +159,7 @@ export const ACTIONS = {
     }
   },
   emergency_fund: {
+    jokes: [{ say: "He names the account Do Not Touch. In capital letters.", cap: "DO NOT / *TOUCH*", face: "smug", pose: "point" }, { say: "Every past emergency went on the credit card. Not anymore.", cap: "NOT / *ANYMORE*", face: "happy", pose: "wave", stamp: "GROWTH" }],
     label: "Build a $1,000 safety net", points: 5,
     apply(s) {
       const per = 50, paydays = Math.ceil(Math.max(0, 1000 - s.savings) / per);
@@ -162,6 +172,7 @@ export const ACTIONS = {
     }
   },
   budget: {
+    jokes: [{ say: "He makes a spreadsheet. It has colors. He's very proud of the colors.", cap: "IT HAS / *COLORS*", face: "happy", pose: "point", stamp: "SPREADSHEET KING" }, { say: "Then he sees the wants column. Most of it was takeout.", cap: "THE *WANTS* / COLUMN", face: "shock", pose: "shrug" }],
     label: "Try the 50/30/20 budget", points: 5,
     apply(s) {
       const i = s.income;
@@ -172,6 +183,7 @@ export const ACTIONS = {
     }
   },
   match_401k: {
+    jokes: [{ say: "Free money was sitting there the whole time. He just never clicked the button.", cap: "FREE / *MONEY*", face: "shock", pose: "shrug", stamp: "HOW?!" }, { say: "He clicks the button.", cap: "HE CLICKED / THE *BUTTON*", face: "happy", pose: "wave" }],
     label: "Sign up for the 401(k) match", points: 6,
     apply(s) {
       s.match = true;
@@ -182,6 +194,7 @@ export const ACTIONS = {
     }
   },
   credit_report: {
+    jokes: [{ say: "He was scared to look. It's not as bad as he thought.", cap: "NOT AS / *BAD*", face: "worried", pose: "idle" }, { say: "Being scared of your money doesn't make it go away. Looking does.", cap: "JUST / *LOOK*", face: "smug", pose: "point", stamp: "WISDOM" }],
     label: "Check his credit report", points: 2,
     apply(s) {
       return { big: "FREE", small: "CREDIT REPORTS", facts: [

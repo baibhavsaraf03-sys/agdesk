@@ -10,7 +10,7 @@
  * that fails too a plain middle is built from the facts, so an episode always
  * comes out.
  */
-import { advance, money } from "./theo.mjs";
+import { advance, money, ACTIONS } from "./theo.mjs";
 import { geminiJson, groqJson, GEMINI_FEED_MODEL, GROQ_FEED_MODELS } from "../../lib/providers.mjs";
 
 const FACES = ["neutral", "happy", "shock", "sad", "smug", "worried"];
@@ -85,11 +85,14 @@ function clean(b) {
 }
 
 function plainMiddle(f) {
-  const r = f.result, out = [];
+  // Hand-written fallback: the facts, with the choice's own two jokes in between.
+  const r = f.result, jokes = (ACTIONS[f.choice.key]?.jokes || []).map((j) => ({ scene: "room", ...j })), out = [];
   out.push({ scene: "room", say: r.facts[0], cap: "TODAY'S / *MOVE*", face: "worried", pose: "idle" });
+  if (jokes[0]) out.push(jokes[0]);
   out.push({ scene: "stat", say: r.facts[1] || r.facts[0], cap: `*${r.big}*`, big: r.big, small: r.small, bg: "green" });
-  r.facts.slice(2).forEach((x) => out.push({ scene: "room", say: x, cap: "NOT BAD / *THEO*", face: "happy", pose: "point" }));
-  if (f.event) out.push({ scene: "room", say: f.event.text, cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", stamp: "PLOT TWIST" });
+  r.facts.slice(2, 4).forEach((x) => out.push({ scene: "room", say: x, cap: "NOT BAD / *THEO*", face: "happy", pose: "point" }));
+  if (jokes[1]) out.push(jokes[1]);
+  if (f.event) out.push({ scene: "room", say: f.event.text + (f.event.onCard ? ` No savings yet, so it goes on the card.` : ""), cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", stamp: "PLOT TWIST" });
   return out.slice(0, 8);
 }
 
@@ -103,7 +106,9 @@ async function aiMiddle(f, last) {
     (f.event ? `Then a surprise: ${f.event.text}${f.event.onCard ? ` His savings could not cover it, so ${money(f.event.onCard)} went on the credit card.` : ""}\n` : "") +
     `Big number for one stat scene: ${f.result.big} (${f.result.small}).\n` +
     `Write 4 to 8 beats. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines).\n` +
-    `Do not write an opening, a vote or an ending: those are added separately.` +
+    `Do not write an opening, a vote or an ending: those are added separately.\n` +
+    `The ONLY figures you may write: ${[...allowedNumbers(f)].filter((n) => Number(n) > 12 || n.includes(".")).join(", ")} (and small counts up to 12). Never add, subtract or multiply them into new figures.\n` +
+    `Ideas for jokes you may use or improve:\n${(ACTIONS[f.choice.key]?.jokes || []).map((j) => "- " + j.say).join("\n")}` +
     (last ? `\n\nYour last attempt was rejected: ${last.join("; ")}. Fix exactly those problems.` : "");
   const tries = [
     ...GEMINI_FEED_MODEL.split(",").map((m) => m.trim()).filter(Boolean).map((model) => () => geminiJson({ model, system, prompt, schema: SCHEMA, maxTokens: 3000 })),
@@ -122,7 +127,7 @@ async function aiMiddle(f, last) {
 export async function writeEpisode(state, winner, counts) {
   const { state: next, facts: f } = advance(state, winner, counts);
   let mid = null, why = null, writer = "plain";
-  for (let attempt = 0; attempt < 2 && !mid; attempt++) {
+  for (let attempt = 0; attempt < 3 && !mid; attempt++) {
     const o = await aiMiddle(f, why);
     if (!o) break;
     const problems = check(o.beats, f);
