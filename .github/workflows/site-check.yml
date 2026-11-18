@@ -48,6 +48,14 @@ jobs:
           if [ -n "$PRIV" ]; then echo "GitHub secret VAPID_PRIVATE_KEY is set"; else echo "GitHub secret VAPID_PRIVATE_KEY is missing"; fi
           code=$(curl -sS -o push.json -w "%{http_code}" --max-time 20 "$SITE/api/push")
           if grep -q '"publicKey":"B' push.json; then echo "Vercel VAPID_PUBLIC_KEY is set (HTTP $code)"; else echo "Vercel VAPID_PUBLIC_KEY looks missing (HTTP $code)"; fi
+          site=$(python3 -c 'import json;print(json.load(open("push.json")).get("publicKey",""))' 2>/dev/null)
+          if [ -n "$site" ] && [ "$site" = "$(printf %s "$PUB" | tr -d '[:space:]')" ]; then echo "Public keys match: Vercel and GitHub"; else echo "PUBLIC KEYS DIFFER: Vercel's VAPID_PUBLIC_KEY is not the same as GitHub's (fingerprints $(printf %s "$site" | sha256sum | cut -c1-8) vs $(printf %s "$PUB" | tr -d '[:space:]' | sha256sum | cut -c1-8))"; fi
+          # Does the private key belong to GitHub's public key? (web-push signs with the pair)
+          cd "$GITHUB_WORKSPACE" && npm i --no-save --no-audit --no-fund web-push >/dev/null 2>&1 && node -e '
+            const c=require("crypto");const b=s=>Buffer.from(s.trim().replace(/-/g,"+").replace(/_/g,"/"),"base64");
+            try{const e=c.createECDH("prime256v1");e.setPrivateKey(b(process.env.PRIV));
+              console.log(e.getPublicKey().equals(b(process.env.PUB))?"GitHub private key matches GitHub public key":"GITHUB KEYS ARE NOT A PAIR: the private key does not belong to the public key")}
+            catch(x){console.log("could not compare the GitHub keys:",x.message)}'
 
       - name: Pages
         run: |

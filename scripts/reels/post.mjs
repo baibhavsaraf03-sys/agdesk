@@ -70,7 +70,7 @@ async function tellOwner(title, body, url = "https://github.com/baibhavsaraf03-s
           JSON.stringify({ title, body, url, tag: "instagram" }),
           { TTL: 86400, urgency: "high" });
         n++;
-      } catch (e) { console.warn(`  push to one device failed (${e.statusCode || e.message})`); }
+      } catch (e) { console.warn(`  push to one device (${new URL(d.endpoint).host}) failed: ${e.statusCode || ""} ${String(e.body || e.message).slice(0, 160)}`); }
     }
     return n;
   } catch (e) {
