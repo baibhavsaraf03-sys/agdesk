@@ -27,6 +27,15 @@ jobs:
             if [ "$code" = "200" ] || [ "$code" = "206" ]; then echo "$t: ready, $rows rows"; else echo "$t: MISSING (HTTP $code)"; fi
           done
 
+      - name: Market reads on the live site (what the home brief chooses from)
+        run: |
+          curl -sS --max-time 30 "$SITE/api/feed" | python3 -c '
+          import json,sys
+          r=json.load(sys.stdin).get("reads",{})
+          for z,v in sorted(r.items(), key=lambda kv: kv[1].get("_updatedAt",""), reverse=True):
+              s=v.get("short") or []
+              print(f"{z:5} {v.get("_updatedAt","")[:16]}  {v.get("phase",""):9} writer={v.get("writer","?"):9} short={len(s)}  {(s[0] if s else v.get("headline",""))[:90]}")'
+
       - name: Scheduler and Instagram checklist (public.ledge_check)
         env:
           SB: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
