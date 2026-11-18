@@ -41,6 +41,26 @@ export function usePulse() {
 }
 
 /** The newest market read with a short version: `{ text, stamp, zone }` or null. */
+const ZONE_NAMES = { ams: "Americas", eur: "Europe", eas: "East Asia", ind: "India", anz: "Australia & NZ", ag: "Farm markets" };
+
+/**
+ * The hour's headlines (18 Nov, owner: "I like hourly headlines"): every
+ * market read's headline, newest first, with the time it was written. The
+ * first is shown large on the home page, the rest as a short list.
+ */
+export function hourlyHeadlines(reads) {
+  return [...MARKET_ZONES, "ag"]
+    .map((z) => ({ z, r: reads?.[z] }))
+    .filter(({ r }) => r && (r.headline || r.short?.length))
+    .map(({ z, r }) => ({
+      zone: z, name: ZONE_NAMES[z] || z, at: r._updatedAt || null,
+      headline: (r.headline || r.short[0]).replace(/\s+/g, " ").trim(),
+      line: Array.isArray(r.short) && r.short.length ? r.short[0] : ""
+    }))
+    .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+}
+const hhmm = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
+
 export function deskBrief(reads) {
   const pick = MARKET_ZONES.map((z) => ({ z, r: reads?.[z] }))
     .filter(({ r }) => r && (r.short?.length || r.headline))
@@ -203,7 +223,8 @@ export function Instruments({ pulse, failed, reads, onAsk, onShare, onChart, onC
   const now = useClock();
   const inst = Object.fromEntries((pulse?.instruments || []).map((i) => [i.k, i]));
   const lights = doomLights(reads);
-  const brief = deskBrief(reads);
+  const heads = hourlyHeadlines(reads);
+  const top = heads[0];
   const next = useMemo(() => upcomingEvents(now, 20).find((e) => e.tier === 1 && Date.parse(e.at) > now - 60000), [Math.floor(now / 60000)]); // eslint-disable-line react-hooks/exhaustive-deps
   const chg = (k) => inst[k]?.change;
   const day = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(now).toUpperCase();
@@ -264,8 +285,19 @@ export function Instruments({ pulse, failed, reads, onAsk, onShare, onChart, onC
 
       <section className="inst-brief">
         <div className="inst-brieftext">
-          <div className="inst-k">The hour&apos;s brief{brief?.stamp ? ` · ${brief.stamp}` : ""}</div>
-          <p>{brief ? brief.text : "The first read of the day has not landed yet."}</p>
+          <div className="inst-k">The hour&apos;s headline{top ? ` · ${top.name} · ${hhmm(top.at)}` : ""}</div>
+          <p>{top ? top.headline : "The first read of the day has not landed yet."}</p>
+          {heads.length > 1 && (
+            <ul className="inst-heads">
+              {heads.slice(1, 5).map((h) => (
+                <li key={h.zone}>
+                  <span className="inst-heads-t">{hhmm(h.at)}</span>
+                  <span className="inst-heads-z">{h.name}</span>
+                  <span className="inst-heads-h">{h.headline}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="inst-actions">
           <button type="button" className="btn pri" onClick={onAsk}>Question the analyst</button>

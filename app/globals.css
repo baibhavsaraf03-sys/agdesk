@@ -1272,6 +1272,12 @@ a.btn{display:inline-block;text-decoration:none}
 .inst-note{margin:26px auto 0;max-width:760px;text-align:center;font-family:var(--sans);font-size:12px;line-height:1.6;color:var(--fg-dim)}
 .inst-brief{display:flex;flex-wrap:wrap;gap:28px 56px;align-items:flex-end;padding:40px 0;border-bottom:1px solid var(--line)}
 .inst-brieftext{flex:999 1 520px;min-width:0}
+.inst-heads{list-style:none;margin:26px 0 0;padding:0;border-top:1px solid var(--line)}
+.inst-heads li{display:grid;grid-template-columns:56px 128px 1fr;gap:14px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)}
+.inst-heads-t{font-family:var(--mono);font-size:13px;color:var(--fg-dim)}
+.inst-heads-z{font-family:var(--sans);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.inst-heads-h{font-family:var(--sans);font-size:15px;line-height:1.4;color:var(--fg)}
+@media(max-width:620px){.inst-heads li{grid-template-columns:48px 1fr}.inst-heads-z{grid-column:2}.inst-heads-h{grid-column:1 / -1}}
 .inst-brieftext p{margin:14px 0 0;font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(28px,3.6vw,46px);line-height:1.14;color:var(--fg)}
 .inst-k{font-family:var(--mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold)}
 .inst-actions{flex:1 1 260px;display:flex;flex-direction:column;gap:10px}
