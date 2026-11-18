@@ -1,0 +1,149 @@
+{
+  "series": "Fix Theo",
+  "day": 1,
+  "of": 30,
+  "score": 8,
+  "note": "Figures: card £1,400 at 24.9% APR; interest in month one 1400 x 0.249 / 12 = £29.05; paying only the usual minimum (interest + 1% of the balance, at least £25) clears it in 109 months (about 9 years) with £1,772 interest. Subscriptions: six at £44.94 a month in total.",
+  "beats": [
+    {
+      "say": "This is Theo.",
+      "scene": "room",
+      "face": "happy",
+      "pose": "wave",
+      "cap": "THIS IS / *THEO*"
+    },
+    {
+      "say": "He's twenty three, lives in a London flat share, and sells phones for a living.",
+      "scene": "room",
+      "face": "neutral",
+      "pose": "idle",
+      "cap": "23 / LONDON / SELLS *PHONES*"
+    },
+    {
+      "say": "It's the nineteenth of the month, and he has four pounds twelve in the bank.",
+      "scene": "bank",
+      "balance": "£4.12",
+      "cap": "HE HAS / *£4.12*",
+      "tone": "red"
+    },
+    {
+      "say": "Payday is nine days away.",
+      "scene": "calendar",
+      "date": "19",
+      "month": "NOVEMBER",
+      "sub": "PAYDAY: THE 28TH",
+      "cap": "*9 DAYS* / TO PAYDAY"
+    },
+    {
+      "say": "He is, once again, broke.",
+      "scene": "room",
+      "face": "shock",
+      "pose": "shrug",
+      "stamp": "STILL BROKE",
+      "cap": "ONCE AGAIN / *BROKE*"
+    },
+    {
+      "say": "So where did it all go?",
+      "scene": "receipt",
+      "lines": [],
+      "cap": "WHERE DID / IT *GO*"
+    },
+    {
+      "say": "Rent, seven eighty. Takeaways, one eighty six.",
+      "scene": "receipt",
+      "lines": [
+        [
+          "RENT",
+          "£780"
+        ],
+        [
+          "TAKEAWAYS",
+          "£186"
+        ]
+      ],
+      "cap": "*£186* ON / TAKEAWAYS"
+    },
+    {
+      "say": "And four pay later instalments, for trainers he's worn twice.",
+      "scene": "receipt",
+      "lines": [
+        [
+          "RENT",
+          "£780"
+        ],
+        [
+          "TAKEAWAYS",
+          "£186"
+        ],
+        [
+          "PAY LATER x4",
+          "£120"
+        ]
+      ],
+      "cap": "TRAINERS / WORN *TWICE*"
+    },
+    {
+      "say": "He pays for six streaming services. He watches one.",
+      "scene": "subs",
+      "cap": "PAYS FOR *SIX* / WATCHES *ONE*"
+    },
+    {
+      "say": "Then there's the credit card. Fourteen hundred pounds, at twenty five percent.",
+      "scene": "card",
+      "owed": "£1,400",
+      "apr": "24.9% APR",
+      "cap": "*£1,400* / AT *24.9%*",
+      "tone": "red"
+    },
+    {
+      "say": "That's about twenty nine pounds of interest every month. For nothing.",
+      "scene": "stat",
+      "big": "£29",
+      "small": "INTEREST EVERY MONTH",
+      "bg": "red",
+      "cap": "*£29* A MONTH / FOR *NOTHING*"
+    },
+    {
+      "say": "Paying only the minimum, it takes nine years to clear, and nearly eighteen hundred pounds in interest.",
+      "scene": "stat",
+      "big": "9 YEARS",
+      "small": "+ £1,772 INTEREST",
+      "bg": "navy",
+      "cap": "*9 YEARS* / *£1,772* INTEREST"
+    },
+    {
+      "say": "His plan? Crypto. It's down forty percent.",
+      "scene": "crypto",
+      "change": "-40%",
+      "cap": "HIS PLAN? / *CRYPTO*"
+    },
+    {
+      "say": "Bold strategy, Theo.",
+      "scene": "room",
+      "face": "smug",
+      "pose": "point",
+      "stamp": "BOLD STRATEGY",
+      "cap": "BOLD / *STRATEGY*"
+    },
+    {
+      "say": "So we're fixing Theo. Thirty days.",
+      "scene": "room",
+      "face": "worried",
+      "pose": "idle",
+      "cap": "WE'RE FIXING / *THEO*"
+    },
+    {
+      "say": "Day two is your call. A, cancel the subscriptions. Or B, delete the takeaway apps. Comment A or B.",
+      "scene": "vote",
+      "q": "DAY 2: YOU DECIDE",
+      "a": "CANCEL THE SUBSCRIPTIONS",
+      "b": "DELETE THE TAKEAWAY APPS",
+      "cap": "COMMENT / *A* OR *B*"
+    },
+    {
+      "say": "Follow, for day two.",
+      "scene": "end",
+      "cap": "FOLLOW / FOR *DAY 2*"
+    }
+  ]
+}
