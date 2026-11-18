@@ -71,11 +71,11 @@ begin
   else result := 'NO'; todo := 'The Vault could not be read. Search for Vault in the dashboard and open it once, then run this again.'; end if;
   return next;
 
-  item := 'Schedules set up (6 expected)';
+  item := 'Schedules set up (7 expected)';
   if to_regclass('cron.job') is not null then
     execute 'select count(*) from cron.job where jobname like ''ledge-%'' and active' into n;
-    result := case when n >= 6 then 'yes' else 'NO' end;
-    todo := case when n >= 6 then n || ' schedules' else 'Only ' || n || ' found. Run this script again.' end;
+    result := case when n >= 7 then 'yes' else 'NO' end;
+    todo := case when n >= 7 then n || ' schedules' else 'Only ' || n || ' found. Run this script again.' end;
   else result := 'NO'; todo := 'Switch on pg_cron first (line 1).'; end if;
   return next;
 
@@ -162,6 +162,7 @@ begin
   perform cron.schedule('ledge-news-notes',   '5 6,12,22 * * *',  $j$select public.dispatch_workflow('notes.yml')$j$);
   perform cron.schedule('ledge-instagram',    '40 17 * * *',      $j$select public.dispatch_workflow('instagram.yml')$j$);
   perform cron.schedule('ledge-cartoon',      '10 13 * * *',      $j$select public.dispatch_workflow('cartoon.yml')$j$);
+  perform cron.schedule('ledge-updown',       '5 20 * * *',       $j$select public.dispatch_workflow('updown.yml')$j$);
   -- Start the alert checker once right now, so the checklist has an answer from GitHub to show.
   perform public.dispatch_workflow('alerts.yml');
 end
