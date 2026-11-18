@@ -43,8 +43,10 @@ const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) || "").split("=")[
 const [FOOT, WORK] = args.filter((a) => !a.startsWith("--")).map((p) => path.resolve(p));
 const DRY = flag("dry"), FORCE = flag("force"), CHECK = flag("check"), RESEND = flag("resend");
 // --series=theo posts the daily "Fix Theo" cartoon instead of the rotation (scripts/cartoon/).
-const THEO = opt("series") === "theo";
-const mine = (q) => (THEO ? q.eq("kind", "theo") : q.neq("kind", "theo"));
+// --series=updown posts the daily "Up or Down" price game (scripts/updown/).
+const SERIES = opt("series") || "";
+const THEO = SERIES === "theo", UPDOWN = SERIES === "updown";
+const mine = (q) => (SERIES ? q.eq("kind", SERIES) : q.not("kind", "in", "(theo,updown)"));
 const SITE = (process.env.SITE || "https://ledgedesk.com").replace(/\/+$/, "");
 const GRAPH = "https://graph.instagram.com/" + (process.env.IG_API_VERSION || "v24.0");
 const ROTATION = ["mood", "tour", "themes", "market", "word", "habit"];
@@ -237,9 +239,9 @@ async function prepare(kind, n) {
 }
 
 /* ---------- manual mode: a GitHub release page per day ---------- */
-const KIND_NAMES = { mood: "The mood", tour: "The tour", themes: "Noir or Blanc", market: "Markets today", word: "One money word", habit: "Money habit", theo: "Fix Theo" };
+const KIND_NAMES = { mood: "The mood", tour: "The tour", themes: "Noir or Blanc", market: "Markets today", word: "One money word", habit: "Money habit", theo: "Fix Theo", updown: "Up or Down" };
 function manualPage(kind, n, file, caption, videoUrl, title = null) {
-  const tag = `${THEO ? "theo" : "post"}-${today}`;
+  const tag = `${SERIES || "post"}-${today}`;
   const repo = process.env.GITHUB_REPOSITORY || "baibhavsaraf03-sys/agdesk";
   const notes = path.join(WORK, "release-notes.md");
   fs.writeFileSync(notes, [
@@ -332,6 +334,24 @@ async function theoSave(next) {
   if (error) console.warn("  could not save Theo's state:", error.message);
 }
 
+/* ---------- Up or Down ---------- */
+async function updownPrepare() {
+  const { today: pick, fmt, nyTime, nyDate } = await import("../updown/data.mjs");
+  const w = await pick();
+  fs.mkdirSync(WORK, { recursive: true });
+  const wf = path.join(WORK, "window.json");
+  fs.writeFileSync(wf, JSON.stringify(w));
+  log(`  ${w.market.name}: ${nyTime(w.start)} New York, ${fmt(w.market, w.target)} to ${fmt(w.market, w.final)} (${w.dir}, ${w.crossings} crossings)`);
+  execFileSync("node", [path.join(path.dirname(new URL(import.meta.url).pathname), "..", "updown", "render.mjs"), wf, WORK], { stdio: "inherit" });
+  const lead = w.market.name.replace(/^the /, "The ");
+  const text = `${lead} at ${nyTime(w.start)} New York time on ${nyDate(w.start)}: did it go up or down over the next 15 minutes?\n\n` +
+    `Comment your call before the timer hits 00:00. The answer is at the end, so no skipping.\n\n` +
+    `Real prices, replayed (delayed data from Yahoo Finance). A game, not a bet. A new one every day.`;
+  const caption = finishCaption(text, ["upordown", "gold", "bitcoin", "sp500", "markets", "chart"]);
+  fs.writeFileSync(path.join(WORK, "caption.txt"), caption);
+  return { file: path.join(WORK, "updown.mp4"), caption, title: `Up or Down: ${lead}, ${nyDate(w.start)}` };
+}
+
 /* ---------- main ---------- */
 let kind = null, stage = "starting", record = null;
 try {
@@ -384,8 +404,13 @@ try {
     if (done.length && !FORCE) throw new Stop(`Already posted today (${done[0].kind}). Nothing to do.`);
   }
 
-  let n, caption, file, theoRun = null;
-  if (THEO) {
+  let n, caption, file, theoRun = null, udRun = null;
+  if (UPDOWN) {
+    kind = "updown"; n = 0;
+    stage = "picking today's window and drawing it";
+    udRun = await updownPrepare();
+    caption = udRun.caption; file = udRun.file;
+  } else if (THEO) {
     kind = "theo";
     stage = "writing and drawing the Fix Theo episode";
     theoRun = await theoPrepare(tok);
@@ -411,7 +436,7 @@ try {
   }
 
   stage = "uploading the video";
-  const key = THEO ? `reels/${today}-${path.basename(file)}` : `reels/${today}-${kind}.mp4`;
+  const key = THEO ? `reels/${today}-${path.basename(file)}` : `reels/${today}-${kind}.mp4`;   // updown -> reels/<day>-updown.mp4
   const up = await db.storage.from(BUCKET).upload(key, fs.readFileSync(file), { contentType: "video/mp4", upsert: true });
   if (up.error && DRY) throw new Stop(`Dry run: video made (${file}); upload skipped: ${up.error.message}`);
   if (up.error) throw new Error("upload to Supabase Storage failed: " + up.error.message);
@@ -421,20 +446,20 @@ try {
 
   if (MANUAL) {
     stage = "publishing the video page for posting by hand";
-    const title = THEO ? `Fix Theo, Day ${theoRun.ep.day} of ${theoRun.ep.of}` : null;
+    const title = THEO ? `Fix Theo, Day ${theoRun.ep.day} of ${theoRun.ep.of}` : UPDOWN ? udRun.title : null;
     const page = manualPage(kind, n, file, caption, videoUrl, title);
-    await db.from("social_posts").insert({ day: today, slot: THEO ? theoRun.ep.day : n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
+    await db.from("social_posts").insert({ day: today, slot: THEO ? theoRun.ep.day : SERIES ? 0 : n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
     if (THEO) await theoSave(theoRun.next);
-    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : "Today's Instagram video is ready", `${title || KIND_NAMES[kind]}. Tap to open the caption and posting steps; the video is attached.`, page, videoUrl);
+    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : UPDOWN ? "Today's Up or Down is ready" : "Today's Instagram video is ready", `${title || KIND_NAMES[kind]}. Tap to open the caption and posting steps; the video is attached.`, page, videoUrl);
     log(`Done (manual): ${page}. Notified through ${sent} channel(s).`);
     if (!sent) throw new Error("the video page is up but the owner could not be notified: " + page);
     process.exit(0);
   }
 
-  record = { day: today, slot: THEO ? theoRun.ep.day : n % ROTATION.length, kind, status: "failed", video_url: videoUrl, caption };
+  record = { day: today, slot: THEO ? theoRun.ep.day : SERIES ? 0 : n % ROTATION.length, kind, status: "failed", video_url: videoUrl, caption };
 
   stage = "publishing the Reel";
-  const reelId = await publish(me.user_id || me.id, tok, { media_type: "REELS", video_url: videoUrl, caption, share_to_feed: "true", thumb_offset: THEO ? "1200" : "4000" }, "Reel");
+  const reelId = await publish(me.user_id || me.id, tok, { media_type: "REELS", video_url: videoUrl, caption, share_to_feed: "true", thumb_offset: THEO ? "1200" : UPDOWN ? "800" : "4000" }, "Reel");
   record.reel_id = reelId;
   try { record.permalink = (await ig("GET", `/${reelId}`, { fields: "permalink" }, tok)).permalink || null; } catch { /* not essential */ }
   record.status = "partial";

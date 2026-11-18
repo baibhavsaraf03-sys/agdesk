@@ -1,0 +1,110 @@
+name: Up or Down
+
+# The daily "Up or Down" price game, the third post each day
+# (scripts/updown/ and scripts/reels/post.mjs --series=updown): a real
+# 15-minute window from today's Yahoo one-minute prices, replayed with a
+# countdown, then the answer. Markets rotate (gold, S&P 500, bitcoin, oil,
+# euro); bitcoin stands in when a market is closed.
+#
+# Started by the Supabase scheduler (job ledge-updown) at 20:05 UTC, with
+# GitHub's own schedule as a backup; a second start the same day stops.
+# Until Instagram is connected: manual mode (release updown-YYYY-MM-DD + ntfy).
+
+on:
+  schedule:
+    - cron: "5 20 * * *"
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "post (the normal daily video), dry (make it without posting), check (test the Instagram connection), resend (send the latest notification again)"
+        default: "post"
+        required: true
+      force:
+        description: "Post even if today's episode is already done"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # manual mode publishes the episode as a release
+
+concurrency:
+  group: updown
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SITE: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://ledgedesk.com' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+      VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GEMINI_FEED_MODEL: ${{ vars.GEMINI_HOURLY_MODELS || 'gemini-flash-lite-latest,gemini-flash-latest' }}
+      GH_TOKEN: ${{ github.token }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC || secrets.NFTY_TOPIC || vars.NTFY_TOPIC }}
+      NTFY_SERVER: ${{ vars.NTFY_SERVER }}
+      NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+      WHAT: ${{ github.event.inputs.what || 'post' }}
+      VOICE: kokoro:/tmp/kokoro:${{ vars.THEO_VOICE || 'af_heart' }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      - name: Check the connection
+        if: env.WHAT == 'check'
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=updown --check
+
+      - name: Send the latest notification again
+        if: env.WHAT == 'resend'
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=updown --resend
+
+      - name: Voice model (cached)
+        if: env.WHAT == 'post' || env.WHAT == 'dry'
+        uses: actions/cache@v4
+        with:
+          path: /tmp/kokoro
+          key: kokoro-v1.0
+
+      - name: Tools (voice, Playwright, fonts, ffmpeg)
+        if: env.WHAT == 'post' || env.WHAT == 'dry'
+        run: |
+          pip install -q kokoro-onnx soundfile numpy
+          mkdir -p /tmp/kokoro && cd /tmp/kokoro
+          for f in kokoro-v1.0.onnx voices-v1.0.bin; do
+            [ -s "$f" ] || curl -sSfL -o "$f" "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/$f"
+          done
+          mkdir -p /tmp/rec && cd /tmp/rec && npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright @fontsource/cormorant-garamond @fontsource/doto @fontsource/geist-sans @fontsource/geist-mono >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
+      - name: Pick, draw and post today's game
+        if: env.WHAT == 'post' || env.WHAT == 'dry'
+        env:
+          PW: /tmp/rec/node_modules/playwright/index.mjs
+          FONTS: /tmp/rec/node_modules/@fontsource
+          FORCE: ${{ github.event.inputs.force == 'true' && '--force' || '' }}
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=updown $FORCE $([ "$WHAT" = dry ] && echo --dry)
+
+      - name: Keep the video with the run
+        if: always() && (env.WHAT == 'post' || env.WHAT == 'dry')
+        uses: actions/upload-artifact@v4
+        with:
+          name: up-or-down
+          path: |
+            /tmp/reel/*.mp4
+            /tmp/reel/window.json
+            /tmp/reel/caption.txt
+          if-no-files-found: ignore
+          retention-days: 14
