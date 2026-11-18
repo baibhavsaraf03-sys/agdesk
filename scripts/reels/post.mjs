@@ -55,27 +55,45 @@ const log = (...a) => console.log(...a);
 class Stop extends Error {}
 
 /* ---------- notifications to the owner ---------- */
-async function tellOwner(title, body, url = "https://github.com/baibhavsaraf03-sys/agdesk/actions/workflows/instagram.yml") {
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return 0;
+// ntfy first (the owner's phone already uses it for Tap Hub; secret NTFY_TOPIC,
+// optional NTFY_SERVER and NTFY_TOKEN), then web push to the site's own
+// devices as a second channel. Returns how many channels got through.
+async function ntfy(title, body, url, attach) {
+  const topic = (process.env.NTFY_TOPIC || "").trim();
+  if (!topic) return 0;
+  const server = (process.env.NTFY_SERVER || "https://ntfy.sh").replace(/\/+$/, "");
+  const headers = { Title: title, Tags: "clapper", Click: url, Actions: `view, Open, ${url}` };
+  if (attach) { headers.Attach = attach; headers.Filename = attach.split("/").pop(); }
+  if (process.env.NTFY_TOKEN) headers.Authorization = `Bearer ${process.env.NTFY_TOKEN}`;
+  try {
+    const r = await fetch(`${server}/${encodeURIComponent(topic)}`, { method: "POST", headers, body });
+    if (r.ok) return 1;
+    console.warn(`  ntfy refused: ${r.status} ${(await r.text()).slice(0, 160)}`);
+  } catch (e) { console.warn("  ntfy failed:", e.message); }
+  return 0;
+}
+
+async function tellOwner(title, body, url = "https://github.com/baibhavsaraf03-sys/agdesk/actions/workflows/instagram.yml", attach = null) {
+  let n = await ntfy(title, body, url, attach);
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return n;
   try {
     webpush.setVapidDetails(SITE, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
     const { data: eds } = await db.from("article_editors").select("user_id");
     const ids = (eds || []).map((e) => e.user_id);
-    if (!ids.length) return 0;
+    if (!ids.length) return n;
     const { data: devs } = await db.from("push_subscriptions").select("endpoint, p256dh, auth").in("user_id", ids);
-    let n = 0;
+    let pushed = 0;
     for (const d of devs || []) {
       try {
         await webpush.sendNotification({ endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } },
-          JSON.stringify({ title, body, url, tag: "instagram" }),
-          { TTL: 86400, urgency: "high" });
-        n++;
-      } catch (e) { console.warn(`  push to one device (${new URL(d.endpoint).host}) failed: ${e.statusCode || ""} ${String(e.body || e.message).slice(0, 160)}`); }
+          JSON.stringify({ title, body, url, tag: "instagram" }), { TTL: 86400, urgency: "high" });
+        pushed++;
+      } catch (e) { console.warn(`  web push to one device (${new URL(d.endpoint).host}) failed: ${e.statusCode || ""} ${String(e.body || e.message).slice(0, 120)}`); }
     }
-    return n;
+    return n + (pushed ? 1 : 0);
   } catch (e) {
-    console.warn("  could not notify the owner:", e.message);
-    return 0;
+    console.warn("  web push skipped:", e.message);
+    return n;
   }
 }
 
@@ -298,9 +316,9 @@ try {
     stage = "publishing the video page for posting by hand";
     const page = manualPage(kind, n, file, caption, videoUrl);
     await db.from("social_posts").insert({ day: today, slot: n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
-    const sent = await tellOwner("Today's Instagram video is ready", `${KIND_NAMES[kind]}. Tap to save the video and copy the caption.`, page);
-    log(`Done (manual): ${page}. Notified ${sent} device(s).`);
-    if (!sent) throw new Error("the video page is up but no device could be notified: " + page);
+    const sent = await tellOwner("Today's Instagram video is ready", `${KIND_NAMES[kind]}. Tap to open the caption and posting steps; the video is attached.`, page, videoUrl);
+    log(`Done (manual): ${page}. Notified through ${sent} channel(s).`);
+    if (!sent) throw new Error("the video page is up but the owner could not be notified: " + page);
     process.exit(0);
   }
 
@@ -329,6 +347,6 @@ try {
   if (record) { record.error = msg.slice(0, 1000); await db.from("social_posts").insert(record); }
   const what = record?.status === "partial" ? "The Reel went up but the Story didn't" : "Today's Instagram post didn't go up";
   const n = await tellOwner(`Ledge Desk: ${what}`, msg.slice(0, 180));
-  log(n ? `Owner notified on ${n} device(s).` : "No device to notify; GitHub's failure email is the alert.");
+  log(n ? `Owner notified through ${n} channel(s).` : "Could not notify the owner; GitHub's failure email is the alert.");
   process.exit(1);
 }
