@@ -58,6 +58,7 @@ const JUDGE_SCHEMA = {
 
 const RULES =
   "Use only the facts given. Copy any figure exactly as it appears in the facts; do not calculate new numbers, round differently, or bring in anything you remember about the company. " +
+  "Do not argue that a company is short of cash from the cash line alone when the facts say short-term investments are not included. " +
   "Plain English for a reader who is new to markets. No advice to buy or sell, no price targets, no predictions of the share price.";
 
 async function write(system, prompt, schema, maxTokens) {
