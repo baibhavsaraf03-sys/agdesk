@@ -97,3 +97,14 @@ jobs:
 
       - name: Currencies
         run: curl -sS --max-time 40 "$SITE/api/fx" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))'
+
+      - name: Sovereign debt figures (World Bank)
+        run: |
+          curl -sS --max-time 60 "$SITE/api/sov" | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin)
+          print("status", d.get("status"))
+          for iso,c in sorted(d.get("countries",{}).items()):
+              f=lambda k: "-" if c.get(k) is None else f"{c[k]/1e9:.1f}"
+              print(iso, c.get("year"), "total", f("total"), "imf", f("imf"), "multi", f("multilateral"), "bilat", f("bilateral"), "bonds", f("bonds"), "banks", f("banks"), "other", f("other"), "service%", c.get("service"))
+          '
