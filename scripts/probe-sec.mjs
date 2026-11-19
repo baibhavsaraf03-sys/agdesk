@@ -47,3 +47,15 @@ const tk = await get("https://www.sec.gov/files/company_tickers.json");
 console.log("tickers map", tk.s, tk.t.length + " bytes");
 const sub = await get("https://data.sec.gov/submissions/CIK0000320193.json");
 try { const j = JSON.parse(sub.t); const r = j.filings.recent; const i = r.form.findIndex((f) => f === "10-K"); console.log("latest 10-K", r.filingDate[i], r.primaryDocument[i], r.accessionNumber[i]); } catch (e) { console.log("submissions", sub.s, sub.t.slice(0, 200)); }
+
+// Which balance-sheet tags do NVDA and GOOGL use for short-term investments and capital spending?
+for (const cik of ["0001045810", "0001652044"]) {
+  const j = JSON.parse((await get(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`)).t);
+  const g = j.facts["us-gaap"];
+  const keys = Object.keys(g).filter((k) => /(Marketable|ShortTermInvest|AvailableForSale.*Current|PaymentsToAcquireProperty|PaymentsToAcquireProductive)/.test(k));
+  console.log("\n" + j.entityName);
+  for (const k of keys) {
+    const u = (g[k].units.USD || []).filter((x) => /^10-K/.test(x.form)).sort((a, b) => b.end.localeCompare(a.end));
+    if (u[0]) console.log(" ", k, u[0].end, (u[0].val / 1e9).toFixed(1));
+  }
+}
