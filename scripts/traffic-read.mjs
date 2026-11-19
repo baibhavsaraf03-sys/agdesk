@@ -19,7 +19,7 @@
 import WebSocket from "ws";
 import { createClient } from "@supabase/supabase-js";
 import { CHOKES, RADIUS_NM, KEEP_MS, centre, countShips } from "../lib/traffic.mjs";
-import { pwQuery } from "../lib/portwatch.mjs";
+import { pwQuery, transits } from "../lib/portwatch.mjs";
 
 const PROBE = process.argv.includes("--probe");
 const LISTEN_MIN = Number(process.env.LISTEN_MIN || 6);
@@ -130,7 +130,33 @@ if (process.argv.includes("--coverage")) {
   process.exit(0);
 }
 
-const [ships, planes] = await Promise.all([listenShips(), countPlanes()]);
+// PortWatch publishes about weekly, so ask at most every six hours and keep
+// the last good answer for any chokepoint that does not reply.
+async function satellite(prev) {
+  if (prev?.fetched && Date.now() - new Date(prev.fetched) < 6 * 3600000 && !PROBE) {
+    status.transits = "cached";
+    return prev;
+  }
+  const at = { ...(prev?.at || {}) };
+  let ok = 0;
+  for (const c of CHOKES) {
+    try {
+      const t = await transits(c.pw);
+      if (t) { at[c.id] = t; ok++; }
+    } catch (e) {
+      status.transits = `${c.id}: ${e.message}`;
+    }
+  }
+  if (ok === CHOKES.length) status.transits = "ok";
+  console.log(`PortWatch: ${ok}/${CHOKES.length} chokepoints`);
+  return ok ? { fetched: new Date().toISOString(), at } : prev || null;
+}
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = !PROBE && url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
+const prev = db ? (await db.from("market_reads").select("payload").eq("zone", "traffic").maybeSingle()).data?.payload : null;
+
+const [ships, planes, sat] = await Promise.all([listenShips(), countPlanes(), satellite(prev?.transits)]);
 const now = new Date();
 const at = {};
 for (const c of CHOKES) {
@@ -143,22 +169,23 @@ for (const c of CHOKES) {
   const f = (v) => String(v ?? "-").padStart(6);
   console.log(c.name.padEnd(18), f(r.ships), f(r.tankers), f(r.cargo), f(r.stopped), f(r.planes));
 }
+for (const c of CHOKES) {
+  const t = sat?.at?.[c.id];
+  if (t) console.log(`${c.name.padEnd(22)} PortWatch ${t.from}..${t.date}: ${t.avg7}/day (tankers ${t.avg7Tankers}); a year earlier ${t.yearAgo7 ?? "n/a"} (tankers ${t.yearAgo7Tankers ?? "n/a"})`);
+}
 console.log("status", JSON.stringify(status));
 
 if (PROBE) process.exit(0);
-if (!ships && !planes) {
+if (!ships && !planes && !sat) {
   console.log("::warning::Traffic read: no source answered; the last read stays up.");
   process.exit(0);
 }
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
+if (!db) {
   console.log("::warning::Traffic read: Supabase secrets missing.");
   process.exit(0);
 }
-const db = createClient(url, key, { auth: { persistSession: false } });
-const { data: prev } = await db.from("market_reads").select("payload").eq("zone", "traffic").maybeSingle();
-const history = [...(prev?.payload?.history || []), { t: now.toISOString(), at }].filter((h) => now - new Date(h.t) < KEEP_MS);
+const history = [...(prev?.history || []), { t: now.toISOString(), at }].filter((h) => now - new Date(h.t) < KEEP_MS);
 
 const payload = {
   at: now.toISOString(),
@@ -167,7 +194,8 @@ const payload = {
   radius: RADIUS_NM,
   status,
   history,
-  sources: { ships: "AISStream.io (AIS, volunteer receivers)", planes: "adsb.lol (ADS-B, ODbL)" }
+  transits: sat,
+  sources: { ships: "AISStream.io (AIS, volunteer receivers)", planes: "adsb.lol (ADS-B, ODbL)", transits: "IMF PortWatch (satellite AIS, UN Global Platform)" }
 };
 const { error } = await db.from("market_reads").upsert(
   { zone: "traffic", phase: "hourly", stamp: now.toISOString().slice(0, 16).replace("T", " ") + " UTC", payload, updated_at: now.toISOString() },

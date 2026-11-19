@@ -2033,7 +2033,7 @@ export default function Terminal() {
 
                 <div className="sec">
                   <div className="trackhead">
-                    <span className="tt">Live traffic at the chokepoints</span>
+                    <span className="tt">Traffic at the chokepoints</span>
                     <span className="tc">{reads.traffic?.stamp || "hourly"}</span>
                   </div>
                   <Traffic read={reads.traffic} />
