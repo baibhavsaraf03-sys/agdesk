@@ -1511,3 +1511,36 @@ a.btn{display:inline-block;text-decoration:none}
   .sov-name{grid-column:1/-1}
   .sov-dl>div{grid-template-columns:1fr}
 }
+/* SOV country lookup */
+.sov-seg+.sov-seg{border-left-width:2px}
+.sov-look{display:flex;flex-direction:column;gap:12px}
+.sov-search{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sov-search label{flex-basis:100%;font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--fg-dim)}
+.sov-search input{flex:1;min-width:200px;font-family:var(--sans);font-size:15px;padding:9px 12px;background:var(--surface);color:var(--fg);border:1px solid var(--line-strong);border-radius:3px}
+.sov-search input:focus{outline:none;border-color:var(--gold)}
+.sov-country{display:flex;flex-direction:column;gap:14px;border:1px solid var(--line);background:var(--surface);padding:16px}
+.sov-country-head{display:flex;align-items:baseline;gap:12px}
+.sov-country-head h3{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg)}
+.sov-country-head span{font-family:var(--mono);font-size:12px;color:var(--fg-dim)}
+.sov-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+.sov-stats div{display:flex;flex-direction:column-reverse;gap:3px;border-top:1px solid var(--line);padding-top:8px}
+.sov-stats dt{font-family:var(--sans);font-size:12px;color:var(--fg-dim)}
+.sov-stats dd{margin:0;font-family:var(--mono);font-size:21px;color:var(--fg)}
+.sov-flag{font-family:var(--sans);font-size:13.5px;line-height:1.55;border-left:2px solid var(--gold);padding-left:12px}
+.sov-flag .dim{color:var(--fg-dim)}
+.sov-lenders{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.sov-lenders li{display:grid;grid-template-columns:minmax(140px,240px) 1fr 70px;gap:10px;align-items:center;font-family:var(--sans);font-size:13px}
+.sov-lname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sov-lbar{display:block;height:10px;background:var(--surface-2)}
+.sov-lbar i{display:block;height:100%;background:var(--gold);border-radius:0 2px 2px 0}
+.sov-lval{font-family:var(--mono);font-size:12.5px;text-align:right}
+.sov-tablewrap{overflow-x:auto}
+.sov-table{border-collapse:collapse;width:100%;min-width:640px;font-family:var(--mono);font-size:12.5px}
+.sov-table th{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;color:var(--fg-dim);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line-strong)}
+.sov-table td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+.sov-table th:first-child,.sov-table td:first-child{text-align:left}
+@media(max-width:760px){
+  .sov-stats{grid-template-columns:1fr 1fr}
+  .sov-lenders li{grid-template-columns:1fr 64px}
+  .sov-lbar{grid-column:1/-1;grid-row:2}
+}

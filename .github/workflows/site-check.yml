@@ -98,6 +98,18 @@ jobs:
       - name: Currencies
         run: curl -sS --max-time 40 "$SITE/api/fx" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status"))'
 
+      - name: Sovereign debt, one country (Nepal) and the country list
+        run: |
+          curl -sS --max-time 60 "$SITE/api/sov?list=1" | python3 -c 'import json,sys; c=json.load(sys.stdin).get("countries",[]); print(len(c), "countries", [x["name"] for x in c[:5]])'
+          curl -sS --max-time 60 "$SITE/api/sov?country=NPL" | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin)
+          print(d.get("name"), d.get("status"))
+          for r in d.get("rows",[])[-3:]:
+              print(r["year"], {k:(round(v/1e9,2) if isinstance(v,(int,float)) and v>1e6 else (round(v,1) if isinstance(v,(int,float)) else v)) for k,v in r.items() if k!="year"})
+          print("lenders", d.get("lendersYear"), [(l["name"], round(l["value"]/1e9,2)) for l in d.get("lenders",[])])
+          '
+
       - name: Sovereign debt figures (World Bank)
         run: |
           curl -sS --max-time 60 "$SITE/api/sov" | python3 -c '
