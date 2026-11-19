@@ -72,11 +72,13 @@ if (!PROBE && !db) { console.log("::warning::Insider read: Supabase secrets miss
 // the page; the public zone "insider" holds only clusters and biggest buys.
 const prev = db ? (await db.from("market_reads").select("payload").eq("zone", "raw_insider").maybeSingle()).data?.payload : null;
 
-const doneDays = new Set(prev?.days || []);
+// INSIDER_RESET=1 ignores what is stored and rebuilds from SEC (after a rule change).
+const RESET = process.env.INSIDER_RESET === "1";
+const doneDays = new Set(RESET ? [] : prev?.days || []);
 const wanted = (PROBE ? weekdays(1) : weekdays(doneDays.size ? 7 : BACKFILL)).filter((d) => !doneDays.has(iso(ymd(d))));
 if (!wanted.length) { console.log("Nothing new from EDGAR yet."); process.exit(0); }
 
-let buys = prev?.buys || [];
+let buys = RESET ? [] : prev?.buys || [];
 const days = [...doneDays];
 let changed = false;
 for (const d of wanted.slice(-MAX_DAYS_PER_RUN)) {

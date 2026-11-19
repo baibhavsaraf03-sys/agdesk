@@ -1604,3 +1604,4 @@ a.btn{display:inline-block;text-decoration:none}
 .bvb-facts a{font-family:var(--sans);font-size:12.5px}
 @media(max-width:760px){.bvb-sides{grid-template-columns:1fr}}
 .bvb-tickers .chip.on,.btnrow .chip[aria-selected="true"]{border-color:var(--gold);color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.ins-warn{margin:0;font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--warn)}

@@ -38,7 +38,7 @@ export default function Insider({ read, ask, openChart }) {
             {cl.map((c) => (
               <details className="ins-row" key={c.issuerCik}>
                 <summary>
-                  <span className="ins-name"><b>{c.ticker}</b><span>{c.company}</span></span>
+                  <span className="ins-name"><b>{c.ticker}</b><span>{c.company}{c.offering ? " · likely a share sale" : ""}</span></span>
                   <span className="ins-num" data-k="Insiders">{c.insiders}<small>{c.officers ? `${c.officers} officer${c.officers > 1 ? "s" : ""}` : "directors"}</small></span>
                   <span className="ins-num" data-k="Bought">{money(c.value)}<small>{day(c.first)}{c.last !== c.first ? `–${day(c.last)}` : ""}</small></span>
                   <span className="ins-num" data-k="Their average">{usd(c.avgPrice)}</span>
@@ -47,6 +47,9 @@ export default function Insider({ read, ask, openChart }) {
                     <small>{c.price != null ? `now ${usd(c.price)}` : "no price"}</small>
                   </span>
                 </summary>
+                {c.offering && (
+                  <p className="ins-warn">Every buyer paid {usd(c.avgPrice)} on the same day. That usually means insiders joined a share sale by the company rather than buying on the market.</p>
+                )}
                 <ul className="ins-people">
                   {c.people.map((p) => (
                     <li key={p.name}><span>{p.name}</span><span className="dim">{p.role}</span><span>{money(p.value)}</span><span className="dim">{day(p.last)}</span></li>
@@ -93,7 +96,7 @@ export default function Insider({ read, ask, openChart }) {
 
       <p className="trf-note">
         Source: SEC EDGAR Form 4 filings, read once a day. Counts only open-market purchases (transaction code P) by officers and directors;
-        option exercises, grants, gifts and purchases by funds that merely own 10% are left out. &quot;Since&quot; compares the latest delayed
+        option exercises, grants, gifts, and purchases by 10% owners (usually funds, even when they hold a board seat) are left out. &quot;Since&quot; compares the latest delayed
         Yahoo price with the insiders&apos; average price. Small companies dominate this list because their insiders buy more often.
       </p>
     </>
