@@ -30,6 +30,7 @@ import { TermsGate, TermsBar, useTerms } from "@/components/TermsGate";
 import { InstallButton } from "@/components/Install";
 import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
+import Traffic from "@/components/Traffic";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
 import NewsNote from "@/components/NewsNote";
 import { noteId } from "@/lib/notes";
@@ -2028,6 +2029,14 @@ export default function Terminal() {
                       </span>
                     </a>
                   ))}
+                </div>
+
+                <div className="sec">
+                  <div className="trackhead">
+                    <span className="tt">Live traffic at the chokepoints</span>
+                    <span className="tc">{reads.traffic?.stamp || "hourly"}</span>
+                  </div>
+                  <Traffic read={reads.traffic} />
                 </div>
 
                 {points.map((f) => (

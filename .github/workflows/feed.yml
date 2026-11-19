@@ -104,3 +104,9 @@ jobs:
             echo "::error::These zones failed:$failed"
             exit 1
           fi
+
+  # Ships and aircraft at the chokepoints (GEO screen). Its own job, so it
+  # runs alongside the reads and can never make them fail.
+  traffic:
+    uses: ./.github/workflows/traffic.yml
+    secrets: inherit

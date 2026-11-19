@@ -1,0 +1,43 @@
+name: Traffic read
+
+# Ships and aircraft at the shipping chokepoints, for the GEO screen
+# (scripts/traffic-read.mjs). Called every hour by the Market reads workflow,
+# so it needs no schedule of its own; run it here by hand with "probe" to see
+# the counts without touching the database. Never fails: a source that does
+# not answer is reported as a warning and the last read stays up.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "Only print the counts (no database)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: traffic-read
+  cancel-in-progress: false
+
+jobs:
+  traffic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --omit=dev
+
+      - name: Traffic read
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          FLAGS: ${{ inputs.probe && '--probe' || '' }}
+        run: node scripts/traffic-read.mjs $FLAGS
