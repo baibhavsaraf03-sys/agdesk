@@ -11,7 +11,7 @@ on:
         required: true
         default: worldbank
         type: choice
-        options: [worldbank, sec]
+        options: [worldbank, sec, feed]
 
 jobs:
   probe:
