@@ -19,6 +19,7 @@
 import WebSocket from "ws";
 import { createClient } from "@supabase/supabase-js";
 import { CHOKES, RADIUS_NM, KEEP_MS, centre, countShips } from "../lib/traffic.mjs";
+import { pwQuery } from "../lib/portwatch.mjs";
 
 const PROBE = process.argv.includes("--probe");
 const LISTEN_MIN = Number(process.env.LISTEN_MIN || 6);
@@ -97,6 +98,15 @@ async function countPlanes() {
   if (ok === CHOKES.length) status.planes = "ok";
   console.log(`adsb.lol: ${ok}/${CHOKES.length} areas`);
   return ok ? out : null;
+}
+
+// --portwatch-fields: print PortWatch's chokepoint names and one record.
+if (process.argv.includes("--portwatch-fields")) {
+  const names = await pwQuery({ where: "1=1", outFields: "portid,portname", returnDistinctValues: "true" });
+  console.log(JSON.stringify(names));
+  const last = await pwQuery({ where: "1=1", outFields: "*", orderByFields: "date DESC", resultRecordCount: "2" });
+  console.log(JSON.stringify(last, null, 1));
+  process.exit(0);
 }
 
 // --coverage: listen to the whole world for 90 seconds and print where
