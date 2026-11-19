@@ -110,3 +110,8 @@ jobs:
   traffic:
     uses: ./.github/workflows/traffic.yml
     secrets: inherit
+
+  # Insider purchases from SEC filings (INS screen); real work about once a weekday.
+  insider:
+    uses: ./.github/workflows/insider.yml
+    secrets: inherit

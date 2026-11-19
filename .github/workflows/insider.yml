@@ -1,0 +1,41 @@
+name: Insider read
+
+# Open-market purchases by company insiders from SEC Form 4 filings, for the
+# INS screen (scripts/insider-read.mjs). Called every hour by the Market reads
+# workflow; it only does work when SEC has published a new day's index
+# (about once a weekday), otherwise it exits at once. Run it here by hand
+# with "probe" to see one day's results without touching the database.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "Only print one day's results (no database)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: insider-read
+  cancel-in-progress: false
+
+jobs:
+  insider:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --omit=dev
+      - name: Insider read
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+          FLAGS: ${{ inputs.probe && '--probe' || '' }}
+        run: node scripts/insider-read.mjs $FLAGS
