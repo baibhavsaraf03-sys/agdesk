@@ -10,7 +10,7 @@
  * reads), shown once a day of history exists.
  */
 import { useMemo } from "react";
-import { CHOKES, usual, versus } from "@/lib/traffic.mjs";
+import { CHOKES, usual, versus, covered } from "@/lib/traffic.mjs";
 
 const n = (v) => (v == null ? "–" : v.toLocaleString("en-GB"));
 
@@ -48,16 +48,23 @@ export default function Traffic({ read, only }) {
         </div>
         {rows.map((c) => {
           const r = read.now?.[c.id] || {};
+          const sea = covered(c, read.history || []);
           return (
             <div className="trf-row" key={c.id}>
               <span className="trf-name">
                 <b>{c.name}</b>
                 <span className="trf-sub">{c.why}</span>
               </span>
-              <span className="trf-num" data-k="Ships">{n(r.ships)}<Vs now={r.ships} base={base[c.id]?.ships} /></span>
-              <span className="trf-num" data-k="Tankers">{n(r.tankers)}<Vs now={r.tankers} base={base[c.id]?.tankers} /></span>
-              <span className="trf-num" data-k="Cargo">{n(r.cargo)}</span>
-              <span className="trf-num" data-k="Stopped">{n(r.stopped)}</span>
+              {sea ? (
+                <>
+                  <span className="trf-num" data-k="Ships">{n(r.ships)}<Vs now={r.ships} base={base[c.id]?.ships} /></span>
+                  <span className="trf-num" data-k="Tankers">{n(r.tankers)}<Vs now={r.tankers} base={base[c.id]?.tankers} /></span>
+                  <span className="trf-num" data-k="Cargo">{n(r.cargo)}</span>
+                  <span className="trf-num" data-k="Stopped">{n(r.stopped)}</span>
+                </>
+              ) : (
+                <span className="trf-gap">No free ship data here: the volunteer receivers do not reach this strait.</span>
+              )}
               <span className="trf-num" data-k="Aircraft">{n(r.planes)}<Vs now={r.planes} base={base[c.id]?.planes} /></span>
             </div>
           );
@@ -65,7 +72,7 @@ export default function Traffic({ read, only }) {
       </div>
       <p className="trf-note">
         {at && `Read at ${at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}. `}
-        Ships seen by volunteer receivers in a {read.listen || 6}-minute window, from AISStream.io; tankers and cargo
+        Ships seen by volunteer receivers in a {read.listen || 6}-minute window, from AISStream.io, whose free coverage is strongest around Europe, North America and Singapore and missing in the Gulf; tankers and cargo
         are the ships whose type was broadcast in that window; stopped means under one knot, usually anchored or
         waiting. Aircraft are airborne within {read.radius || 150} nautical miles, from adsb.lol (open data, ODbL).
         Coverage is uneven, so compare a place with its own usual level, not with another place.

@@ -1455,3 +1455,5 @@ a.btn{display:inline-block;text-decoration:none}
   .trf-name{grid-column:1/-1}
   .trf-num::before{content:attr(data-k);font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--fg-dim)}
 }
+.trf-gap{grid-column:span 4;font-family:var(--sans);font-size:12.5px;line-height:1.45;color:var(--fg-dim);align-self:center}
+@media(max-width:760px){.trf-gap{grid-column:1/-1}}
