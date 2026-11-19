@@ -115,3 +115,8 @@ jobs:
   insider:
     uses: ./.github/workflows/insider.yml
     secrets: inherit
+
+  # Bull vs bear debates (BVB screen); at most one refreshed per hour.
+  debate:
+    uses: ./.github/workflows/debate.yml
+    secrets: inherit

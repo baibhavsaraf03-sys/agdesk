@@ -1,0 +1,52 @@
+name: Bull vs bear
+
+# AI debates on a fixed list of stocks from their SEC filings, for the BVB
+# screen (scripts/debate-read.mjs). Free writers only. Called every hour by
+# the Market reads workflow and refreshes at most one debate that is over a
+# week old. By hand: "probe" prints one debate without saving; "ticker"
+# writes that one now; "count" writes up to that many due debates.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "Print one debate, save nothing"
+        required: false
+        default: false
+        type: boolean
+      ticker:
+        description: "Write this ticker now (optional, e.g. NVDA)"
+        required: false
+        default: ""
+      count:
+        description: "How many due debates to write"
+        required: false
+        default: "1"
+
+concurrency:
+  group: debate-read
+  cancel-in-progress: false
+
+jobs:
+  debate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --omit=dev
+      - name: Bull vs bear
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_FEED_MODEL: ${{ vars.GEMINI_HOURLY_MODELS || 'gemini-flash-lite-latest,gemini-flash-latest' }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+          FLAGS: ${{ inputs.probe && '--probe' || '' }} ${{ inputs.ticker && format('--ticker={0}', inputs.ticker) || '' }} --count=${{ inputs.count || '1' }}
+        run: node scripts/debate-read.mjs $FLAGS
