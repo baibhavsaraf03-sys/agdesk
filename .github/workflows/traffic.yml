@@ -15,6 +15,11 @@ on:
         required: false
         default: false
         type: boolean
+      coverage:
+        description: "Only print where AISStream hears ships worldwide (90 s)"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: traffic-read
@@ -39,5 +44,5 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
-          FLAGS: ${{ inputs.probe && '--probe' || '' }}
+          FLAGS: ${{ inputs.probe && '--probe' || '' }} ${{ inputs.coverage && '--coverage' || '' }}
         run: node scripts/traffic-read.mjs $FLAGS

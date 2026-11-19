@@ -99,6 +99,27 @@ async function countPlanes() {
   return ok ? out : null;
 }
 
+// --coverage: listen to the whole world for 90 seconds and print where
+// AISStream actually hears ships (10-degree squares), to choose chokepoints.
+if (process.argv.includes("--coverage")) {
+  const cells = new Map(); let total = 0;
+  await new Promise((done) => {
+    const ws = new WebSocket("wss://stream.aisstream.io/v0/stream", { perMessageDeflate: true });
+    setTimeout(() => ws.close(), 90000);
+    ws.on("open", () => ws.send(JSON.stringify({ APIKey: KEY, BoundingBoxes: [[[-90, -180], [90, 180]]], FilterMessageTypes: ["PositionReport"] })));
+    ws.on("message", (raw) => {
+      let m; try { m = JSON.parse(raw.toString("utf8")); } catch { return; }
+      const md = m.MetaData || {}; const la = md.latitude, lo = md.longitude;
+      if (typeof la !== "number") return; total++;
+      const k = `${Math.floor(la / 10) * 10},${Math.floor(lo / 10) * 10}`; cells.set(k, (cells.get(k) || 0) + 1);
+    });
+    ws.on("error", (e) => console.log("error", e.message)); ws.on("close", done);
+  });
+  console.log(`world: ${total} position reports in 90 s`);
+  [...cells].sort((a, b) => b[1] - a[1]).slice(0, 40).forEach(([k, v]) => console.log(`  lat,lon ${k.padEnd(10)} ${v}`));
+  process.exit(0);
+}
+
 const [ships, planes] = await Promise.all([listenShips(), countPlanes()]);
 const now = new Date();
 const at = {};
