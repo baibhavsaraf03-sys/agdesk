@@ -32,6 +32,8 @@ import { watchQuotesConfig } from "@/lib/watchlist";
 import { scanFlashpoints, MARKERS } from "@/lib/geo";
 import Traffic from "@/components/Traffic";
 import Sovereign from "@/components/Sovereign";
+import Insider from "@/components/Insider";
+import Debate from "@/components/Debate";
 import { SOV_RE } from "@/lib/sovereign";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
 import NewsNote from "@/components/NewsNote";
@@ -67,6 +69,8 @@ const SCREENS = [
   { c: "NEWS",  t: "News",       d: "Finance, politics, international relations and law" },
   { c: "GEO",   t: "Political risk", d: "Flashpoints, how much reporting each is getting, and what they would disturb" },
   { c: "SOV",   t: "Sovereign debt", d: "Restructurings, the IMF, World Bank, Paris Club and Common Framework, and the law on holdouts" },
+  { c: "INS",   t: "Insider buying", d: "Company officers and directors buying their own shares, from SEC filings" },
+  { c: "BVB",   t: "Bull vs bear", d: "Two AI writers argue a stock from its SEC filings; a third judges" },
   { c: "START", t: "Start",      d: "Never traded before? Begin here" },
   { c: "RISK",  t: "Risk",       d: "How money is actually lost — the evidence and the six mechanisms" },
   { c: "TUT",   t: "Tutorials",  d: "Sixteen lessons from zero. TUT 7 opens lesson seven" },
@@ -117,6 +121,7 @@ const ALIAS = {
   SETTINGS: "SET", KEY: "SET", ACCOUNT: "SET", LOGIN: "SET", SIGNIN: "SET",
   ECONOMICS: "ECON", MICRO: "ECON", MACRO2: "ECON",
   LEGAL: "LAW", COMPANY: "LAW", CONTRACT: "LAW",
+  INSIDER: "INS", INSIDERS: "INS", BULL: "BVB", BEAR: "BVB", DEBATE: "BVB",
   SOVEREIGN: "SOV", DEBT: "SOV", IMF: "SOV", PARIS: "SOV", RESTRUCTURING: "SOV",
   INTERNATIONAL: "IR", GEOPOLITICS: "GEO", WAR: "GEO", CONFLICT: "GEO", POLRISK: "GEO",
   POLITICS: "POL", POLSCI: "POL", COMPARATIVE: "POL",
@@ -2103,6 +2108,18 @@ export default function Terminal() {
               </Panel>
             );
           })()}
+
+          {screen === "INS" && (
+            <Panel code="INS" title="Insider buying" meta={reads.insider?.through ? `SEC FILINGS TO ${reads.insider.through}` : "SEC FILINGS"}>
+              <Insider read={reads.insider} ask={ask} openChart={openChart} />
+            </Panel>
+          )}
+
+          {screen === "BVB" && (
+            <Panel code="BVB" title="Bull vs bear" meta="SEC FILINGS · AI DEBATE">
+              <Debate read={reads.debate} ask={ask} openChart={openChart} />
+            </Panel>
+          )}
 
           {/* ---------------- session screens ---------------- */}
           {["ASIA", "EMEA", "AMER"].includes(screen) && (
