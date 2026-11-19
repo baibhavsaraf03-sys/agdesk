@@ -106,5 +106,5 @@ jobs:
           print("status", d.get("status"))
           for iso,c in sorted(d.get("countries",{}).items()):
               f=lambda k: "-" if c.get(k) is None else f"{c[k]/1e9:.1f}"
-              print(iso, c.get("year"), "total", f("total"), "imf", f("imf"), "multi", f("multilateral"), "bilat", f("bilateral"), "bonds", f("bonds"), "banks", f("banks"), "other", f("other"), "service%", c.get("service"))
+              print(iso, c.get("year"), "total", f("total"), "imf", f("imf"), "multi", f("multilateral"), "bilat", f("bilateral"), "bonds", f("bonds"), "banks+", f("banks"), "other", f("other"), "service%", c.get("service"))
           '

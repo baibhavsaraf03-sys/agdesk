@@ -14,7 +14,7 @@ const PARTS = [
   ["multilateral", "Development banks"],
   ["bilateral", "Governments"],
   ["bonds", "Bonds"],
-  ["banks", "Banks"],
+  ["banks", "Banks and other lenders"],
   ["other", "Other"]
 ];
 
