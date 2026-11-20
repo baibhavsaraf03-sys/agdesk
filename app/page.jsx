@@ -34,6 +34,7 @@ import Traffic from "@/components/Traffic";
 import Sovereign from "@/components/Sovereign";
 import Insider from "@/components/Insider";
 import Debate from "@/components/Debate";
+import Track from "@/components/Track";
 import { SOV_RE } from "@/lib/sovereign";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
 import NewsNote from "@/components/NewsNote";
@@ -69,6 +70,7 @@ const SCREENS = [
   { c: "NEWS",  t: "News",       d: "Finance, politics, international relations and law" },
   { c: "GEO",   t: "Political risk", d: "Flashpoints, how much reporting each is getting, and what they would disturb" },
   { c: "SOV",   t: "Sovereign debt", d: "Restructurings, the IMF, World Bank, Paris Club and Common Framework, and the law on holdouts" },
+  { c: "TRK",   t: "Track record", d: "How the site's signals did afterwards against the S&P 500" },
   { c: "INS",   t: "Insider buying", d: "Company officers and directors buying their own shares, from SEC filings" },
   { c: "BVB",   t: "Bull vs bear", d: "Two AI writers argue a stock from its SEC filings; a third judges" },
   { c: "START", t: "Start",      d: "Never traded before? Begin here" },
@@ -121,6 +123,7 @@ const ALIAS = {
   SETTINGS: "SET", KEY: "SET", ACCOUNT: "SET", LOGIN: "SET", SIGNIN: "SET",
   ECONOMICS: "ECON", MICRO: "ECON", MACRO2: "ECON",
   LEGAL: "LAW", COMPANY: "LAW", CONTRACT: "LAW",
+  TRACK: "TRK", SCORECARD: "TRK", RECORD: "TRK",
   INSIDER: "INS", INSIDERS: "INS", BULL: "BVB", BEAR: "BVB", DEBATE: "BVB",
   SOVEREIGN: "SOV", DEBT: "SOV", IMF: "SOV", PARIS: "SOV", RESTRUCTURING: "SOV",
   INTERNATIONAL: "IR", GEOPOLITICS: "GEO", WAR: "GEO", CONFLICT: "GEO", POLRISK: "GEO",
@@ -925,6 +928,19 @@ export default function Terminal() {
   useEffect(() => {
     if (firstScreen.current) { firstScreen.current = false; return; }
     enterScreen(wrapRef.current);
+  }, [screen]);
+  // Usage count: "this screen was opened", once per screen per browser tab
+  // session, through public.count_visit (supabase/migrations/20261120_usage.sql).
+  // No cookie, no identifier; skipped when the browser asks not to be tracked.
+  useEffect(() => {
+    if (!supabaseConfigured || !screen) return;
+    try {
+      if (navigator.doNotTrack === "1" || window.globalPrivacyControl) return;
+      const seen = JSON.parse(sessionStorage.getItem("agdesk.counted") || "[]");
+      if (seen.includes(screen)) return;
+      sessionStorage.setItem("agdesk.counted", JSON.stringify([...seen, screen]));
+      browserClient()?.rpc("count_visit", { p_screen: screen }).then(() => {}, () => {});
+    } catch {}
   }, [screen]);
   // Home instruments and the menu dial (delayed prices and the VIX mood word).
   const { pulse, failed: pulseFailed } = usePulse();
@@ -2108,6 +2124,12 @@ export default function Terminal() {
               </Panel>
             );
           })()}
+
+          {screen === "TRK" && (
+            <Panel code="TRK" title="Track record" meta={reads.scorecard?.at ? `UPDATED ${new Date(reads.scorecard.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "DAILY"}>
+              <Track read={reads.scorecard} />
+            </Panel>
+          )}
 
           {screen === "INS" && (
             <Panel code="INS" title="Insider buying" meta={reads.insider?.through ? `SEC FILINGS TO ${reads.insider.through}` : "SEC FILINGS"}>

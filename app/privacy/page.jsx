@@ -30,6 +30,11 @@ export default function Privacy() {
           theme, the last screen you opened, lessons you have finished, your chart layout, a watchlist, an unsent article draft, and your own analyst
           key if you add one. Clearing your browser&apos;s site data removes all of it.
         </p>
+        <p className="doc-p">
+          To see which parts of the site are used, it counts how many times each screen is opened each day. The count is only a
+          screen name, a date and a number: no cookie, no IP address and nothing that identifies you. It is skipped if your browser
+          sends Do Not Track or Global Privacy Control.
+        </p>
       </section>
 
       <section className="doc-sec">
