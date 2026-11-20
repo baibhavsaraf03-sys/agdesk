@@ -57,7 +57,8 @@ if (ins?.buys?.length) {
 // 2. Meme labels.
 const meme = await zone("meme");
 if (meme?.rows?.length) {
-  const d = (meme.at || meme._updatedAt || today).slice(0, 10);
+  const when = [meme.at, meme.updated, meme.generated_at].find((v) => typeof v === "string");
+  const d = (when || today).slice(0, 10);
   for (const r of meme.rows) {
     if (!["Rally", "Buzzing", "Selling off"].includes(r.flag)) continue;
     if (recentSame("meme", r.ticker, nextDay(d), 7)) continue;
