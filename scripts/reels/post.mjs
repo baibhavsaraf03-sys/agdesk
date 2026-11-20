@@ -478,7 +478,9 @@ try {
     const page = manualPage(kind, n, file, caption, videoUrl, title);
     await db.from("social_posts").insert({ day: today, slot: THEO ? theoRun.ep.day : SERIES ? 0 : n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
     if (THEO) await theoSave(theoRun.next);
-    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : UPDOWN ? "Today's Up or Down is ready" : "Today's Instagram video is ready", `${title || KIND_NAMES[kind]}. Tap to open the caption and posting steps; the video is attached.`, page, videoUrl);
+    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : UPDOWN ? "Today's Up or Down is ready" : "Today's Instagram video is ready", `Tap to open the video, then save it. Caption to copy:\n\n${caption}`.slice(0, 3800), videoUrl, videoUrl);
+    // 20 Nov: GitHub's download failed on the owner's phone, so the tap opens the
+    // video itself (public Supabase Storage) and the caption travels in the message.
     log(`Done (manual): ${page}. Notified through ${sent} channel(s).`);
     if (!sent) throw new Error("the video page is up but the owner could not be notified: " + page);
     process.exit(0);
