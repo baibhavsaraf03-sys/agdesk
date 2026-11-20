@@ -1,0 +1,44 @@
+name: Track record
+
+# How the site's signals did afterwards, for the TRK screen
+# (scripts/scorecard-read.mjs). Called every hour by the Market reads
+# workflow; does its work once a day. By hand: "probe" prints the results
+# without saving; "force" redoes today's run.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: "Print results, save nothing"
+        required: false
+        default: false
+        type: boolean
+      force:
+        description: "Run again today"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: scorecard-read
+  cancel-in-progress: false
+
+jobs:
+  scorecard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --omit=dev
+      - name: Track record
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FLAGS: ${{ inputs.probe && '--probe' || '' }} ${{ inputs.force && '--force' || '' }}
+        run: node scripts/scorecard-read.mjs $FLAGS

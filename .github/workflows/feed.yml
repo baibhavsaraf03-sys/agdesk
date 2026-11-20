@@ -120,3 +120,10 @@ jobs:
   debate:
     uses: ./.github/workflows/debate.yml
     secrets: inherit
+
+  # Track record of the site's signals (TRK screen); real work once a day.
+  scorecard:
+    needs: [insider, debate]
+    if: always()
+    uses: ./.github/workflows/scorecard.yml
+    secrets: inherit
