@@ -15,7 +15,7 @@ export default function Privacy() {
   return (
     <DocShell crumbs={[{ t: "Privacy" }]}>
       <article className="doc-article">
-        <p className="doc-k">Last updated 12 November 2026</p>
+        <p className="doc-k">Last updated 20 November 2026</p>
         <h1>Privacy</h1>
         <p className="doc-lede">
           Ledge Desk keeps as little about you as it can. Most of the site works without an account, and nothing on it
@@ -27,7 +27,7 @@ export default function Privacy() {
         <h2>Without an account</h2>
         <p className="doc-p">
           Nothing about you is stored by this site. Your browser keeps a few settings on your own device: light or dark
-          theme, the last screen you opened, lessons you have finished, your chart layout, a watchlist, an unsent article draft, and your own analyst
+          theme, the last screen you opened, lessons you have finished, your chart layout, a watchlist, positions you type in or import on My positions, an unsent article draft, and your own analyst
           key if you add one. Clearing your browser&apos;s site data removes all of it.
         </p>
         <p className="doc-p">
@@ -44,6 +44,7 @@ export default function Privacy() {
           <li><strong>Your journal:</strong> the entries you save. Only your account can read them; the database enforces that.</li>
           <li><strong>Your alerts:</strong> the alerts you set up, the last ones sent to you, and, for each device you turn notifications on for, the address your browser&apos;s notification service gave it. Only your account can read them; turning notifications off on a device removes its address.</li>
           <li><strong>Your watchlist:</strong> the list of market symbols you choose to follow. Only your account can read it.</li>
+          <li><strong>A linked broker, if you link one:</strong> an encrypted pass from SnapTrade that lets this site read (never trade) your broker accounts. Only the server can unscramble it, and only your account can reach the row. Your positions are fetched from the broker when you open My positions and are not stored. Unlinking cancels the pass at SnapTrade and deletes it here; deleting your account does the same.</li>
           <li><strong>A daily count of analyst messages</strong>, for the free usage limit. Not the messages themselves.</li>
           <li><strong>Articles you submit:</strong> the name you give, the title and text, the editor&apos;s decision and any note. Published articles are public under that name.</li>
           <li><strong>Sign-in cookies</strong> that keep you signed in. These are needed for the account to work, so there is no banner asking about them.</li>
@@ -61,6 +62,7 @@ export default function Privacy() {
           <li><strong>Google</strong>, if you choose to sign in with it. The site&apos;s typefaces are also loaded from Google Fonts.</li>
           <li><strong>An email delivery service</strong> sends the sign-in links.</li>
           <li><strong>Your browser&apos;s notification service</strong> (Google for Chrome and Android, Apple for Safari and iPhone, Mozilla for Firefox) carries alerts to devices you turned notifications on for. Each alert is encrypted so that only your device can read it. The checks themselves run on GitHub&apos;s servers.</li>
+          <li><strong>SnapTrade</strong>, if you link a broker: you connect your broker in your own SnapTrade account and approve read-only access for this site. SnapTrade&apos;s own privacy policy covers what it holds.</li>
           <li><strong>{ANALYST}</strong> receives what you type to the analyst in order to write a reply. This site does not keep the conversation; it is gone when you leave the page.</li>
         </ul>
       </section>

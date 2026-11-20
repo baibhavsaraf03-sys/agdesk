@@ -35,6 +35,7 @@ import Sovereign from "@/components/Sovereign";
 import Insider from "@/components/Insider";
 import Debate from "@/components/Debate";
 import Track from "@/components/Track";
+import Positions from "@/components/Positions";
 import { SOV_RE } from "@/lib/sovereign";
 import { AI_TRADE_RE, DOOM_TABS, DOOM_WRITTEN } from "@/lib/doomsday";
 import NewsNote from "@/components/NewsNote";
@@ -70,6 +71,7 @@ const SCREENS = [
   { c: "NEWS",  t: "News",       d: "Finance, politics, international relations and law" },
   { c: "GEO",   t: "Political risk", d: "Flashpoints, how much reporting each is getting, and what they would disturb" },
   { c: "SOV",   t: "Sovereign debt", d: "Restructurings, the IMF, World Bank, Paris Club and Common Framework, and the law on holdouts" },
+  { c: "POS",   t: "My positions", d: "Your own holdings and how they stand: a linked broker (read-only) or entered by hand" },
   { c: "TRK",   t: "Track record", d: "How the site's signals did afterwards against the S&P 500" },
   { c: "INS",   t: "Insider buying", d: "Company officers and directors buying their own shares, from SEC filings" },
   { c: "BVB",   t: "Bull vs bear", d: "Two AI writers argue a stock from its SEC filings; a third judges" },
@@ -124,6 +126,7 @@ const ALIAS = {
   ECONOMICS: "ECON", MICRO: "ECON", MACRO2: "ECON",
   LEGAL: "LAW", COMPANY: "LAW", CONTRACT: "LAW",
   TRACK: "TRK", SCORECARD: "TRK", RECORD: "TRK",
+  POSITIONS: "POS", PORTFOLIO: "POS", HOLDINGS: "POS", BROKER: "POS",
   INSIDER: "INS", INSIDERS: "INS", BULL: "BVB", BEAR: "BVB", DEBATE: "BVB",
   SOVEREIGN: "SOV", DEBT: "SOV", IMF: "SOV", PARIS: "SOV", RESTRUCTURING: "SOV",
   INTERNATIONAL: "IR", GEOPOLITICS: "GEO", WAR: "GEO", CONFLICT: "GEO", POLRISK: "GEO",
@@ -1962,6 +1965,12 @@ export default function Terminal() {
           {screen === "ALR" && (
             <Panel code="ALR" title="Alerts" meta="NOTIFICATIONS, CHECKED EVERY 5 MINUTES">
               <AlertsScreen signedIn={Boolean(user)} canSignIn={Boolean(supabase)} request={alertReq} watch={watch.list} />
+            </Panel>
+          )}
+
+          {screen === "POS" && (
+            <Panel code="POS" title="My positions" meta="READ-ONLY · NOTHING IS TRADED">
+              <Positions signedIn={Boolean(user)} canSignIn={Boolean(supabase)} ask={ask} />
             </Panel>
           )}
 

@@ -1,4 +1,5 @@
 import { serverClient, adminClient } from "@/lib/supabase-server";
+import { revoke, unseal } from "@/lib/broker.mjs";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,10 @@ export async function DELETE(req) {
   if (articleError && articleError.code !== "42P01" && articleError.code !== "PGRST205") {
     return json({ error: "Your articles could not be removed, so nothing was deleted. Try again." }, 500);
   }
+
+  // A linked broker: cancel the read-only pass at SnapTrade first (the row itself goes with the account).
+  const { data: link } = await supabase.from("broker_links").select("tokens").maybeSingle();
+  if (link?.tokens) await revoke(unseal(link.tokens));
 
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) return json({ error: "The account could not be deleted. Try again." }, 500);
