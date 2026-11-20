@@ -15,6 +15,11 @@ on:
         required: false
         default: false
         type: boolean
+      recompute:
+        description: "Republish from stored purchases (no fetching)"
+        required: false
+        default: false
+        type: boolean
       reset:
         description: "Rebuild from SEC, ignoring stored purchases (after a rule change)"
         required: false
@@ -43,5 +48,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
           INSIDER_RESET: ${{ inputs.reset && '1' || '0' }}
+          INSIDER_RECOMPUTE: ${{ inputs.recompute && '1' || '0' }}
           FLAGS: ${{ inputs.probe && '--probe' || '' }}
         run: node scripts/insider-read.mjs $FLAGS

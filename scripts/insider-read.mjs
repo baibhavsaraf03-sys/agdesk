@@ -76,7 +76,9 @@ const prev = db ? (await db.from("market_reads").select("payload").eq("zone", "r
 const RESET = process.env.INSIDER_RESET === "1";
 const doneDays = new Set(RESET ? [] : prev?.days || []);
 const wanted = (PROBE ? weekdays(1) : weekdays(doneDays.size ? 7 : BACKFILL)).filter((d) => !doneDays.has(iso(ymd(d))));
-if (!wanted.length) { console.log("Nothing new from EDGAR yet."); process.exit(0); }
+// INSIDER_RECOMPUTE=1 republishes clusters from stored purchases (after a rule change that needs no new fetching).
+const RECOMPUTE = process.env.INSIDER_RECOMPUTE === "1";
+if (!wanted.length && !RECOMPUTE) { console.log("Nothing new from EDGAR yet."); process.exit(0); }
 
 let buys = RESET ? [] : prev?.buys || [];
 const days = [...doneDays];
@@ -92,7 +94,7 @@ for (const d of wanted.slice(-MAX_DAYS_PER_RUN)) {
     console.log(`::warning::${iso(ymd(d))}: ${e.message}`);
   }
 }
-if (!changed) process.exit(0);
+if (!changed && !RECOMPUTE) process.exit(0);
 
 // Keep KEEP_DAYS of purchases, without duplicates (amended filings repeat lines).
 const cutoff = new Date(Date.now() - KEEP_DAYS * 86400000).toISOString().slice(0, 10);
