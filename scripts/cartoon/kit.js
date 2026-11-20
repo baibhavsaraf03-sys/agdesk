@@ -174,7 +174,7 @@
     const n = (b.lines || []).length;
     const h = 210 + Math.max(1, n) * 120;
     let s = bg("#7a1f2b", "#3a0d14") + `<g class="pop"><path d="M250,300 L830,300 L830,${300 + h} ${Array.from({ length: 12 }, (_, i) => `L${830 - (i + 0.5) * 48.33},${300 + h + (i % 2 ? 0 : 26)}`).join(" ")} L250,${300 + h} Z" fill="#fbfaf5" stroke="${C.line}" stroke-width="8" stroke-linejoin="round"/>
-      ${T(540, 400, 60, "THIS MONTH", { f: "#22252f" })}<path d="M300,440 L780,440" stroke="#22252f" stroke-width="5" stroke-dasharray="14 10"/>`;
+      ${T(540, 400, 60, b.title || "THE MATH", { f: "#22252f" })}<path d="M300,440 L780,440" stroke="#22252f" stroke-width="5" stroke-dasharray="14 10"/>`;
     (b.lines || []).forEach(([a, v], i) => {
       const y = 540 + i * 120, last = i === n - 1;
       s += `<g class="${last ? "line-new" : ""}">${T(300, y, 52, a, { a: "start", f: "#22252f", ff: "Nunito", w: 900 })}${T(780, y, 60, v, { a: "end", f: C.red })}</g>`;
