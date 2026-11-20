@@ -209,8 +209,10 @@
   }
   function stat(b) {
     const c = { red: ["#c0303c", "#5e1018"], navy: ["#2a3870", "#0f1530"], green: ["#1f8f5a", "#0b3d25"] }[b.bg || "navy"];
-    return bg(c[0], c[1]) + `<g class="pop">${T(540, 860, b.big && b.big.length > 5 ? 190 : 260, b.big || "", { st: C.line, sw: 18 })}</g>
-      ${T(540, 990, 60, b.small || "", { f: C.gold, st: C.line, sw: 12 })}`;
+    // Sized to fit the 1080px frame: Luckiest Guy averages about 0.62em a character.
+    const fit = (txt, max, room = 980) => Math.max(40, Math.min(max, Math.floor(room / (0.62 * Math.max(1, String(txt || "").length)))));
+    return bg(c[0], c[1]) + `<g class="pop">${T(540, 860, fit(b.big, 260), b.big || "", { st: C.line, sw: 18 })}</g>
+      ${T(540, 990, fit(b.small, 60), b.small || "", { f: C.gold, st: C.line, sw: 12 })}`;
   }
   function crypto(b) {
     const pts = [[170, 520], [260, 470], [340, 560], [420, 520], [500, 660], [580, 620], [660, 780], [740, 740], [820, 930], [900, 1010]];

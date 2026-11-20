@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "post (the normal daily episode), votes (enter today's A and B comment counts below), dry (write and draw the next episode without posting or moving the story on), check (test the Instagram connection), resend (send the latest Theo notification again)"
+        description: "post (the normal daily episode), votes (enter today's A and B comment counts below), dry (write and draw the next episode without posting or moving the story on), redo (write and draw the latest episode again with the same choice, and send it again), check (test the Instagram connection), resend (send the latest Theo notification again)"
         default: "post"
         required: true
       votes_a:
@@ -85,14 +85,14 @@ jobs:
         run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=theo --resend
 
       - name: Voice model (cached)
-        if: env.WHAT == 'post' || env.WHAT == 'dry'
+        if: env.WHAT == 'post' || env.WHAT == 'dry' || env.WHAT == 'redo'
         uses: actions/cache@v4
         with:
           path: /tmp/kokoro
           key: kokoro-v1.0
 
       - name: Tools (voice, Playwright, fonts, ffmpeg)
-        if: env.WHAT == 'post' || env.WHAT == 'dry'
+        if: env.WHAT == 'post' || env.WHAT == 'dry' || env.WHAT == 'redo'
         run: |
           pip install -q kokoro-onnx soundfile numpy
           mkdir -p /tmp/kokoro && cd /tmp/kokoro
@@ -105,15 +105,15 @@ jobs:
           which ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
 
       - name: Write, draw and post today's episode
-        if: env.WHAT == 'post' || env.WHAT == 'dry'
+        if: env.WHAT == 'post' || env.WHAT == 'dry' || env.WHAT == 'redo'
         env:
           PW: /tmp/rec/node_modules/playwright/index.mjs
           FONTS: /tmp/rec/node_modules/@fontsource
           FORCE: ${{ github.event.inputs.force == 'true' && '--force' || '' }}
-        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=theo $FORCE $([ "$WHAT" = dry ] && echo --dry)
+        run: node scripts/reels/post.mjs /tmp/footage /tmp/reel --series=theo $FORCE $([ "$WHAT" = dry ] && echo --dry) $([ "$WHAT" = redo ] && echo --redo)
 
       - name: Keep the episode with the run
-        if: always() && (env.WHAT == 'post' || env.WHAT == 'dry')
+        if: always() && (env.WHAT == 'post' || env.WHAT == 'dry' || env.WHAT == 'redo')
         uses: actions/upload-artifact@v4
         with:
           name: fix-theo

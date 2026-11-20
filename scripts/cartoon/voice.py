@@ -98,11 +98,55 @@ else:
         words = len(b["say"].split())
         voices.append(np.zeros(int((0.35 + words * 0.31) * SR)))
 
+
+# Captions follow the words actually spoken (20 Nov: captions written separately
+# from the narration read as a different sentence). The line is cut into chunks
+# of up to three words, breaking at punctuation; figures and the words starred
+# in the beat's `cap` are highlighted.
+def speech_chunks(b):
+    norm = lambda w: re.sub(r"[^A-Z0-9$%.]", "", w.upper()).rstrip(".")
+    stars = set()
+    for m in re.findall(r"\*([^*]+)\*", b.get("cap", "")):
+        stars.update(norm(w) for w in m.split() if norm(w))
+    def mark(w):
+        n = norm(w)
+        bare = re.sub(r"[.,!?:;]+$", "", w).upper()
+        letter_ok = len(n) > 1 or re.search(r"[,.]$", w)   # "A," the vote letter, not the article "a"
+        if re.search(r"[$£%]|\d", w) or (n and n in stars and letter_ok):
+            m = re.match(r"^([^A-Za-z0-9$£]*)(.*?)([^A-Za-z0-9%]*)$", bare)
+            if m and m.group(2):
+                return f"{m.group(1)}*{m.group(2)}*{m.group(3)}"
+        return bare
+    # Phrases end at punctuation; each phrase is cut into even chunks of at most
+    # three words, so no word is left on its own at the end of a phrase.
+    phrases, cur = [], []
+    for w in b["say"].split():
+        cur.append(w)
+        if re.search(r"[.,!?:;]$", w):
+            phrases.append(cur); cur = []
+    if cur: phrases.append(cur)
+    out = []
+    for ph in phrases:
+        n = len(ph); letters = len(re.sub(r"[^A-Za-z0-9]", "", "".join(ph)))
+        k = min(n, max(1, -(-n // 3), -(-letters // 15)))
+        sizes = [n // k + (1 if i < n % k else 0) for i in range(k)]
+        i = 0
+        for sz in sizes:
+            out.append(" ".join(mark(w) for w in ph[i:i + sz])); i += sz
+    # Glue a lone one-word chunk (other than a vote letter) onto the one before.
+    merged = []
+    for c in out:
+        if merged and len(c.split()) == 1 and not re.fullmatch(r"\*?[AB]\*?", c) and len(re.sub(r"[^A-Za-z0-9]", "", merged[-1] + c)) <= 16:
+            merged[-1] += " " + c
+        else:
+            merged.append(c)
+    return merged or [b.get("cap", "")]
+
 # Timeline: beats end to end; caption chunks spread over the spoken line by length.
 beats, t = [], LEAD
 for b, vo in zip(ep["beats"], voices):
     dur = len(vo) / SR
-    chunks = [c.strip() for c in b["cap"].split("/") if c.strip()]
+    chunks = speech_chunks(b)
     weights = [max(3, len(re.sub(r"[^A-Za-z0-9£%]", "", c))) for c in chunks]
     acc, ch = 0, []
     for c, wgt in zip(chunks, weights):

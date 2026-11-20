@@ -46,28 +46,31 @@ export const DESK = {
   // Only what Ledge Desk really has: the glossary and lessons (wording quoted
   // from lib/content.js), the economic calendar, the mood dial, Fed-decision
   // alerts and the watchlist. Never a feature it doesn't have.
+  // `fits`: the choices a moment belongs with (20 Nov: a fixed day put the
+  // crypto-leverage moment into a credit-card episode). The day is only a
+  // preference; write.mjs uses a moment on a day whose choice it fits, once.
   1: {
-    3: { screen: "glossary", term: "Leverage", def: "Controlling a large position with a small deposit. It multiplies gains and losses equally.",
+    3: { fits: ["sell_crypto"], screen: "glossary", term: "Leverage", def: "Controlling a large position with a small deposit. It multiplies gains and losses equally.",
       say: "His crypto app keeps offering him ten times leverage. This time he looks it up first, in the Ledge Desk glossary. He closes the app.", cap: "HE LOOKED / IT *UP*" },
-    5: { screen: "calendar", title: "FED DECISION", when: "THIS MONTH", rows: [["Fed rate decision", "USD"], ["US jobs report", "USD"], ["US inflation", "USD"]],
+    5: { fits: ["extra_card", "balance_transfer", "credit_report", "budget"], screen: "calendar", title: "FED DECISION", when: "THIS MONTH", rows: [["Fed rate decision", "USD"], ["US jobs report", "USD"], ["US inflation", "USD"]],
       say: "Most credit card rates move with the Fed. So now Theo checks when the Fed meets, on the economic calendar. Voluntarily. Nobody asked him to.", cap: "HE CHECKS THE / *CALENDAR*" },
-    7: { screen: "mood", word: "NERVOUS",
+    7: { fits: ["sell_crypto", "match_401k", "automate_savings", "emergency_fund"], screen: "mood", word: "NERVOUS",
       say: "Instead of panic selling, he checks the market mood first. Everyone is nervous. He does nothing rash, which for Theo is a personal best.", cap: "NOTHING / *RASH*" },
-    9: { screen: "lesson", title: "How money is actually lost", line: "Six mechanisms, and none of them is picking the wrong direction.",
+    9: { fits: ["sell_crypto", "side_hustle", "emergency_fund", "sell_sneakers"], screen: "lesson", title: "How money is actually lost", line: "Six mechanisms, and none of them is picking the wrong direction.",
       say: "At lunch, Theo reads a lesson called How money is actually lost. On purpose. His coworkers are worried about him.", cap: "LUNCH BREAK / *LESSON*" },
-    11: { screen: "alert", title: "ALERT SET", detail: "Fed rate decision · 1 day before",
+    11: { fits: ["balance_transfer", "extra_card", "credit_report", "budget"], screen: "alert", title: "ALERT SET", detail: "Fed rate decision · 1 day before",
       say: "He sets an alert for the next Fed decision, the day his card rate could move. Old Theo found out from the bill.", cap: "HE SET AN / *ALERT*" },
-    13: { screen: "watchlist", rows: [["S&P 500", "watching"], ["Gold", "watching"], ["Bitcoin", "just looking"]],
+    13: { fits: ["match_401k", "automate_savings", "emergency_fund", "budget"], screen: "watchlist", rows: [["S&P 500", "watching"], ["Gold", "watching"], ["Bitcoin", "just looking"]],
       say: "He adds the S&P 500 to his watchlist. Just watching how it moves for now. Learning before buying.", cap: "WATCHING / *FIRST*" }
   },
   2: {
-    4: { screen: "calendar", title: "JOBS REPORT", when: "FRIDAY", rows: [["US jobs report", "USD"], ["Fed rate decision", "USD"]],
+    4: { fits: ["money_date", "joint_account", "emergency_together", "date_budget"], screen: "calendar", title: "JOBS REPORT", when: "FRIDAY", rows: [["US jobs report", "USD"], ["Fed rate decision", "USD"]],
       say: "Their Sunday money date now starts with the week ahead on the calendar. Theo calls it the briefing. Maya calls it cute.", cap: "THE *BRIEFING*" },
-    7: { screen: "lesson", title: "Position sizing", line: "Decide what you lose when wrong, before you decide what you'll buy.",
+    7: { fits: ["roth_ira", "index_fund"], screen: "lesson", title: "Position sizing", line: "Decide what you lose when wrong, before you decide what you'll buy.",
       say: "Before investing a cent, Theo reads the Ledge Desk lesson on position sizing. Then he makes Maya quiz him on it.", cap: "QUIZ / *ME*" },
-    8: { screen: "mood", word: "FEARFUL",
+    8: { fits: ["index_fund", "roth_ira", "trip_fund", "emergency_together"], screen: "mood", word: "FEARFUL",
       say: "Markets have a scary week. They check the mood on the desk, see the fear, and stick to the plan anyway.", cap: "STICK TO / THE *PLAN*" },
-    9: { screen: "watchlist", rows: [["Gold", "Maya's"], ["S&P 500", "Theo's"]],
+    9: { fits: ["gift_budget", "index_fund", "roth_ira"], screen: "watchlist", rows: [["Gold", "Maya's"], ["S&P 500", "Theo's"]],
       say: "Maya adds gold to their watchlist. She says it is for research. Theo knows it is for a necklace.", cap: "FOR *RESEARCH*" }
   }
 };

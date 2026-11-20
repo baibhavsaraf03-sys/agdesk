@@ -34,9 +34,9 @@ const SCHEMA = {
           pose: { type: "string", enum: POSES },
           mface: { type: "string", enum: FACES, description: "couple or maya scenes: Maya's face" },
           mpose: { type: "string", enum: POSES, description: "couple or maya scenes: Maya's pose" },
-          stamp: { type: "string", description: "Optional red stamp for a roast, 2 or 3 words, UPPERCASE, or empty." },
-          big: { type: "string", description: "stat scene: the big figure, e.g. '$55/MO'." },
-          small: { type: "string", description: "stat scene: a short UPPERCASE label." },
+          stamp: { type: "string", description: "Optional red stamp for a roast, 2 or 3 words, UPPERCASE, or empty. At most 2 in the whole episode, and it must fit what that beat says (never STILL BROKE on good news)." },
+          big: { type: "string", description: "stat scene: ONE figure from the facts, at most 9 characters, e.g. '$55/MO' or '101 MO'. Never a sentence or a comparison." },
+          small: { type: "string", description: "stat scene: a short UPPERCASE label, at most 22 characters." },
           bg: { type: "string", enum: ["red", "navy", "green"] },
           balance: { type: "string", description: "bank scene: the balance shown, e.g. '$90.00'." },
           lines: { type: "array", items: { type: "object", properties: { label: { type: "string" }, value: { type: "string" } }, required: ["label", "value"] } }
@@ -79,9 +79,15 @@ function check(beats, f) {
     if (bad.length) problems.push(`beat ${i + 1}: figures not in the facts: ${bad.join(", ")}`);
     if (/\b(I|I'm|I've|I'll|my|me|we|our)\b/.test(b.say || "")) problems.push(`beat ${i + 1}: the narrator talks about Theo in the third person (he, his), never I or my`);
     if (b.scene === "stat" && !(b.big || "").trim()) problems.push(`beat ${i + 1}: a stat scene needs its big figure`);
+    if (b.scene === "stat" && (b.big || "").length > 9) problems.push(`beat ${i + 1}: big must be one short figure of at most 9 characters, not "${b.big}"`);
+    if (b.scene === "stat" && (b.small || "").length > 22) problems.push(`beat ${i + 1}: small label longer than 22 characters`);
+    if (b.stamp && b.face === "happy") problems.push(`beat ${i + 1}: no roast stamp on a happy beat; a stamp must match what is said`);
+    if (i > 0 && b.scene !== "room" && b.scene === beats[i - 1].scene) problems.push(`beat ${i + 1}: two ${b.scene} scenes in a row; put Theo on screen in between`);
     if (b.scene === "bank" && !/\d/.test(b.balance || "")) problems.push(`beat ${i + 1}: a bank scene needs a balance from the facts`);
     if (b.scene === "receipt" && !(b.lines || []).some((l) => /\d/.test(l.value || ""))) problems.push(`beat ${i + 1}: a receipt scene needs lines with figures from the facts`);
   });
+  if ((beats || []).filter((b) => b.stamp && b.stamp.trim()).length > 2) problems.push("at most 2 stamps in the episode");
+  if ((beats || []).filter((b) => b.scene === "stat").length > 2) problems.push("at most 2 stat scenes");
   // Every figure that matters must actually be said out loud.
   const said = new Set(nums((beats || []).map((b) => b.say).join(" ")));
   const key = [...new Set(f.result.facts.flatMap(nums))].filter((n) => Number(n) > 12);
@@ -108,8 +114,13 @@ function plainMiddle(f) {
   const r = f.result, duo = f.season === 2, jokes = (f.jokes || []).map((j) => ({ scene: duo ? "couple" : "room", ...j })), out = [];
   out.push({ scene: "room", say: r.facts[0], cap: "TODAY'S / *MOVE*", face: "worried", pose: "idle" });
   if (jokes[0]) out.push(jokes[0]);
-  out.push({ scene: "stat", say: r.facts[1] || r.facts[0], cap: `*${r.big}*`, big: r.big, small: r.small, bg: "green" });
-  r.facts.slice(2, 4).forEach((x) => out.push({ scene: "room", say: x, cap: "NOT BAD / *THEO*", face: "happy", pose: "point" }));
+  // Facts in order; the one that says r.big's figure is shown on the stat card.
+  const bigNums = nums(r.big);
+  let statDone = false;
+  r.facts.slice(1, 5).forEach((x) => {
+    if (!statDone && nums(x).some((n) => bigNums.includes(n))) { statDone = true; out.push({ scene: "stat", say: x, cap: `*${r.big}*`, big: r.big, small: r.small, bg: "green" }); }
+    else out.push({ scene: "room", say: x, cap: "NOT BAD / *THEO*", face: "happy", pose: "point" });
+  });
   if (jokes[1]) out.push(jokes[1]);
   if (f.event) out.push({ scene: "room", say: f.event.text + (f.event.onCard ? ` No savings yet, so it goes on the card.` : ""), cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", stamp: "PLOT TWIST" });
   return out.slice(0, 8);
@@ -124,13 +135,13 @@ async function aiMiddle(f, last) {
     "Use ONLY the figures given in the facts, written in digits. Do not invent any other number, percentage or date.";
   const note = NOTES[f.season || 1]?.[f.day];
   const plot = PLOT[f.season || 1]?.[f.day];
-  const prompt = `${f.season === 2 ? "Season 2, " : ""}Day ${f.day} of ${f.of}. ${note ? "Today's story: " + note + "\n" : ""}` +
+  const prompt = `${f.season === 2 ? "Season 2, " : ""}Day ${f.day} of ${f.of}. ${note ? "Background for today, use only where it fits the facts: " + note + "\n" : ""}` +
     (plot ? `A scene is added separately where: ${plot.say} Do not repeat it; you may refer to it.\n` : "") +
     `Yesterday's choice, now happening: ${f.choice.label}.\n` +
     `Facts you must act out, in order:\n${f.result.facts.map((x) => "- " + x).join("\n")}\n` +
     (f.event ? `Then a surprise: ${f.event.text}${f.event.onCard ? ` His savings could not cover it, so ${money(f.event.onCard)} went on the credit card.` : ""}\n` : "") +
     `Big number for one stat scene: ${f.result.big} (${f.result.small}).\n` +
-    `Write 4 to 8 beats, narrated about Theo in the third person (he, his). Every figure in the facts must be said aloud in some beat. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines).\n` +
+    `Write 4 to 8 beats, narrated about Theo in the third person (he, his). Every figure in the facts must be said aloud in some beat. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines). Tell one clear story: what he did, what it changes, how he feels. Each beat says one thing; the next beat follows from it. Mostly room scenes, never two stat scenes in a row.\n` +
     `Do not write an opening, a vote or an ending: those are added separately. Do not mention any app, website or brand by name.\n` +
     `The ONLY figures you may write: ${[...allowedNumbers(f)].filter((n) => Number(n) > 12 || n.includes(".")).join(", ")} (and small counts up to 12). Never add, subtract or multiply them into new figures.\n` +
     `Ideas for jokes you may use or improve:\n${(f.jokes || []).map((j) => "- " + j.say).join("\n")}` +
@@ -145,7 +156,16 @@ async function aiMiddle(f, last) {
   return null;
 }
 
-const deskBeat = (season, day) => { const d = DESK[season]?.[day]; return d ? { scene: "desk", ...d } : null; };
+/** Today's Ledge Desk moment: the one planned for today if it fits today's choice, else any unused one that does, else none. */
+function deskFor(season, day, key, used) {
+  const all = DESK[season] || {};
+  const fitsKey = ([, d]) => !d.fits || d.fits.includes(key);
+  const free = Object.entries(all).filter(([d]) => !used.includes(`${season}:${d}`));
+  const pick = free.find(([d, x]) => Number(d) === day && fitsKey([d, x])) || free.find(fitsKey);
+  if (!pick) return null;
+  const { fits, ...d } = pick[1];
+  return { id: `${season}:${pick[0]}`, beat: { scene: "desk", ...d } };
+}
 
 /** Season 2, day 1: Maya properly, then the first couple vote. Written by hand. */
 function season2Intro(s1) {
@@ -190,7 +210,9 @@ export async function writeEpisode(state, winner, counts) {
   }
   const middle = mid ? mid.beats.map(clean) : plainMiddle(f);
   // The Ledge Desk moment, worded by hand, goes after the first middle beat.
-  const desk = deskBeat(season, f.day);
+  const pickDesk = deskFor(season, f.day, f.choice.key, state.deskUsed || []);
+  const desk = pickDesk?.beat || null;
+  if (pickDesk) next.deskUsed = [...(state.deskUsed || []), pickDesk.id];
   if (desk) middle.splice(Math.min(1, middle.length), 0, desk);
   const plot = PLOT[season]?.[f.day];
   if (plot) middle.splice(Math.min(desk ? 2 : 1, middle.length), 0, { ...plot });

@@ -22,6 +22,9 @@
  *   node scripts/reels/post.mjs <footagedir> <workdir> [--dry] [--force] [--kind=word]
  *   --dry    render and upload, but do not post or record anything
  *   --force  post even if today's post is already done
+ *   --redo   (Fix Theo) write and draw the latest episode again, same choice and
+ *            votes, from the state before it (rebuilt from the history), and
+ *            replace today's page; the story does not move on twice
  *   --kind   post this kind instead of the next in the rotation
  *   --check  only check the Instagram connection and print the account
  *
@@ -41,7 +44,7 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) || "").split("=")[1];
 const [FOOT, WORK] = args.filter((a) => !a.startsWith("--")).map((p) => path.resolve(p));
-const DRY = flag("dry"), FORCE = flag("force"), CHECK = flag("check"), RESEND = flag("resend");
+const DRY = flag("dry"), REDO = flag("redo"), FORCE = flag("force") || REDO, CHECK = flag("check"), RESEND = flag("resend");
 // --series=theo posts the daily "Fix Theo" cartoon instead of the rotation (scripts/cartoon/).
 // --series=updown posts the daily "Up or Down" price game (scripts/updown/).
 const SERIES = opt("series") || "";
@@ -294,8 +297,32 @@ async function voteCounts(tok) {
 async function theoPrepare(tok) {
   const { START, ACTIONS } = await import("../cartoon/theo.mjs");
   const { data: row } = await db.from("social_tokens").select("token").eq("name", "theo_state").maybeSingle();
-  const state = row ? JSON.parse(row.token) : null;
+  let state = row ? JSON.parse(row.token) : null;
   let ep, next, caption, tags = [];
+  if (REDO && state?.history?.length) {
+    // advance() is deterministic, so replaying the history from START gives the
+    // state the latest episode was written from. Season 1 day 1 is hand-written.
+    const { advance, startSeason2 } = await import("../cartoon/theo.mjs");
+    const hist = state.history, last = hist[hist.length - 1];
+    let s = JSON.parse(JSON.stringify(START)); s.history = s.history || [];
+    for (const h of hist.slice(0, -1)) {
+      if ((h.season || 1) === 2 && (s.season || 1) === 1) s = startSeason2(s);
+      if (h.day <= s.day && (h.season || 1) === (s.season || 1)) continue;
+      const w = s.vote?.[1] === h.choice ? "b" : "a";
+      s = advance(s, w, h.counts || null).state;
+    }
+    if ((last.season || 1) === 2 && (s.season || 1) === 1) s = startSeason2(s);
+    s.deskUsed = (state.deskUsed || []).slice(0, -1);
+    const winner = s.vote?.[1] === last.choice ? "b" : "a";
+    log(`  Redo: Day ${last.day} again (${last.choice}, ${winner.toUpperCase()}), from the rebuilt Day ${s.day} state`);
+    const { writeEpisode } = await import("../cartoon/write.mjs");
+    const r = await writeEpisode(s, winner, last.counts || null);
+    ep = r.episode; next = r.state; caption = r.caption; tags = r.hashtags || [];
+    log(`  Day ${ep.day}: ${ep.beats.length} beats, middle written by ${ep.writer}`);
+    ep.beats.forEach((b) => log(`    [${b.scene}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
+    state = null;
+  }
+  if (ep) { /* redone above */ } else
   if (!state) {
     ep = JSON.parse(fs.readFileSync(path.join(CARTOON, "episodes", "theo-001.json"), "utf8"));
     next = START; caption = DAY1_CAPTION;
