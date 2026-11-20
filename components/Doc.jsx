@@ -36,7 +36,7 @@ export function DocShell({ children, crumbs = [] }) {
           deposited, and regulators consistently find that most individual traders lose money.
         </p>
         <p>
-          <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link> · <Link href="/privacy">Privacy</Link>
+          <Link href="/info">Everything on Ledge Desk</Link> · <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/accessibility">Accessibility</Link>
         </p>
       </footer>
     </div>

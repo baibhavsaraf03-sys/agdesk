@@ -21,11 +21,17 @@ jobs:
           SB: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          for t in profiles market_reads articles article_editors watchlist alerts alert_events push_subscriptions social_posts social_tokens; do
+          for t in profiles market_reads articles article_editors watchlist alerts alert_events push_subscriptions social_posts social_tokens broker_links; do
             code=$(curl -sS -o /dev/null -D head.txt -w "%{http_code}" --max-time 20 "$SB/rest/v1/$t?select=*&limit=0" -H "apikey: $KEY" -H "authorization: Bearer $KEY" -H "Prefer: count=exact")
             rows=$(grep -i '^content-range' head.txt | tr -d '\r' | sed 's#.*/##')
             if [ "$code" = "200" ] || [ "$code" = "206" ]; then echo "$t: ready, $rows rows"; else echo "$t: MISSING (HTTP $code)"; fi
           done
+
+      - name: Broker linking (My positions)
+        run: |
+          curl -sS --max-time 30 "$SITE/api/broker" | python3 -c 'import json,sys; j=json.load(sys.stdin); print("SnapTrade keys in Vercel:", "yes" if j.get("configured") else "NO (add SNAPTRADE_OAUTH_CLIENT_ID and SNAPTRADE_OAUTH_CLIENT_SECRET, then redeploy)")'
+          curl -sS -o /dev/null --max-time 20 -w "SnapTrade sign-in server: HTTP %{http_code}\n" "https://api.snaptrade.com/.well-known/oauth-authorization-server"
+          for u in info accessibility; do curl -sS -o /dev/null --max-time 30 -w "/$u: HTTP %{http_code}\n" "$SITE/$u"; done
 
       - name: Market reads on the live site (what the home brief chooses from)
         run: |

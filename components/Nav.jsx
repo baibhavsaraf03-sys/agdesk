@@ -194,6 +194,9 @@ export function SideNav({ screens, screen, go, mode, setMode, onPicked, extras, 
           {NAV_FOOT.filter((c) => byCode[c]).map((c) => (
             <button key={c} type="button" className="linkbtn" onClick={() => pick(c)}>{byCode[c].t}</button>
           ))}
+          <a className="linkbtn" href="/info">Everything on Ledge Desk</a>
+          <a className="linkbtn" href="/privacy">Privacy</a>
+          <a className="linkbtn" href="/accessibility">Accessibility</a>
           <span>Educational material, not investment advice.</span>
         </div>
       </div>

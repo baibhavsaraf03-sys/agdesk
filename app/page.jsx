@@ -3407,9 +3407,24 @@ export default function Terminal() {
           </div>
 
           <footer className="foot">
-            Educational material, not investment advice. Futures and options are leveraged — losses can exceed the
-            amount deposited. Nothing here is a recommendation to buy or sell anything.{" "}
-            <button className="del" style={{ color: "var(--accent-2)" }} onClick={() => go("TERMS")}>Terms &amp; disclaimer</button>
+            <p>
+              Educational material, not investment advice. Futures and options are leveraged — losses can exceed the
+              amount deposited. Nothing here is a recommendation to buy or sell anything.
+            </p>
+            <details className="foot-info">
+              <summary>Site info</summary>
+              <nav className="foot-links" aria-label="Site information">
+                <a href="/info">Everything on Ledge Desk</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/accessibility">Accessibility</a>
+                <button type="button" className="linkbtn" onClick={() => go("TERMS")}>Terms &amp; disclaimer</button>
+                <button type="button" className="linkbtn" onClick={() => go("HELP")}>Help</button>
+                <a href="/learn">Lessons</a>
+                <a href="/glossary">Glossary</a>
+                <a href="/articles">Articles</a>
+                <a href="/account">Account</a>
+              </nav>
+            </details>
           </footer>
         </main>
       </div>
