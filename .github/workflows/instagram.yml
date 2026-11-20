@@ -18,7 +18,7 @@ name: Instagram post
 
 on:
   schedule:
-    - cron: "40 17 * * *"
+    - cron: "45 11 * * *"
   workflow_dispatch:
     inputs:
       what:
@@ -26,7 +26,7 @@ on:
         default: "post"
         required: true
       kind:
-        description: "Leave blank for the next in the rotation, or one of: mood tour themes market word habit"
+        description: "Leave blank for the next in the rotation, or one of: word habit mood market (rotation) or tour themes"
         default: ""
         required: false
       force:

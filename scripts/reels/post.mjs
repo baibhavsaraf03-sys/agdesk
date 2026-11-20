@@ -1,10 +1,11 @@
 /**
  * Posts one video a day to Instagram, as a Reel and then as a Story (17 Nov).
  *
- * The rotation repeats every six posts: three of the site (mood, tour,
- * themes), then three on markets and money (market, word, habit). The next
- * slot is the number of posts made so far, modulo six, so a failed day is
- * simply retried the next day with the same video.
+ * The rotation (20 Nov) is the four kinds whose content changes: word, habit,
+ * mood, market. The next slot is the number of posts made so far, modulo
+ * four, so a failed day is simply retried the next day with the same video.
+ * tour and themes show the same screens every time, so after one post each
+ * (19 and 20 Nov) they left the rotation; --kind=tour|themes still makes one.
  *
  * Steps: film the site first (scripts/reels/capture.mjs, done by the
  * workflow), then this script picks the slot, writes the item and caption,
@@ -52,7 +53,8 @@ const THEO = SERIES === "theo", UPDOWN = SERIES === "updown";
 const mine = (q) => (SERIES ? q.eq("kind", SERIES) : q.not("kind", "in", "(theo,updown)"));
 const SITE = (process.env.SITE || "https://ledgedesk.com").replace(/\/+$/, "");
 const GRAPH = "https://graph.instagram.com/" + (process.env.IG_API_VERSION || "v24.0");
-const ROTATION = ["mood", "tour", "themes", "market", "word", "habit"];
+const ROTATION = ["word", "habit", "mood", "market"];
+const ALL_KINDS = [...ROTATION, "tour", "themes"];
 const BUCKET = "social";
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -248,7 +250,7 @@ function manualPage(kind, n, file, caption, videoUrl, title = null) {
   const repo = process.env.GITHUB_REPOSITORY || "baibhavsaraf03-sys/agdesk";
   const notes = path.join(WORK, "release-notes.md");
   fs.writeFileSync(notes, [
-    title ? `**${title}**` : `**${KIND_NAMES[kind]}**, post ${n + 1} (slot ${n % ROTATION.length + 1} of 6).`,
+    title ? `**${title}**` : `**${KIND_NAMES[kind]}**, post ${n + 1} (slot ${n % ROTATION.length + 1} of ${ROTATION.length}).`,
     "",
     "1. Tap **" + path.basename(file) + "** under Assets (or [open the video](" + videoUrl + ")), then Share → **Save Video**.",
     "2. In Instagram: **+** → **Reel** → pick the video → paste the caption below → **Share**.",
@@ -446,8 +448,8 @@ try {
   } else {
     n = DRY ? await postedCount().catch(() => 0) : await postedCount();
     kind = opt("kind") || ROTATION[n % ROTATION.length];
-    if (!ROTATION.includes(kind)) throw new Error(`unknown kind ${kind}`);
-    log(`  post ${n + 1}, slot ${n % ROTATION.length + 1} of 6: ${kind}`);
+    if (!ALL_KINDS.includes(kind)) throw new Error(`unknown kind ${kind}`);
+    log(`  post ${n + 1}, slot ${n % ROTATION.length + 1} of ${ROTATION.length}: ${kind}`);
 
     stage = "writing the caption";
     fs.mkdirSync(WORK, { recursive: true });
