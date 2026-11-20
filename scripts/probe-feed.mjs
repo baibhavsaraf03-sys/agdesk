@@ -15,3 +15,11 @@ for (const [t, x] of Object.entries(d?.tickers || {})) {
 const ins = reads.insider;
 console.log("\ninsider through", ins?.through, "purchases", ins?.purchases, "clusters", ins?.clusters?.length);
 for (const c of (ins?.clusters || []).slice(0, 12)) console.log(c.ticker, c.insiders, Math.round(c.value / 1e3) + "k", c.since + "%", c.company);
+const doom = reads.doom;
+console.log("\ndoom", doom?.publishedAt || doom?.at || "", "|", doom?.headline);
+console.log("SHORT:", Array.isArray(doom?.short) ? doom.short.join(" ") : doom?.short);
+for (const t of doom?.tabs || []) {
+  console.log(`\n-- ${t.id || t.tab || t.title}: ${t.verdict} | ${t.note}`);
+  for (const f of t.figures || []) console.log("   fig:", JSON.stringify(f));
+  for (const p of (t.now || []).slice(0, 2)) console.log("   now:", String(p).slice(0, 400));
+}
