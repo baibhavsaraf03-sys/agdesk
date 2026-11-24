@@ -359,11 +359,12 @@ async function theoPrepare(tok) {
     const name = w.market.name.replace(/^The /, "the "), Name = w.market.name;
     const pct = Math.abs(w.pct).toFixed(2);
     const guess = (ep.day * 7 + 3) % 2 ? "up" : "down", right = guess === w.dir;
-    const hook = { scene: "stat", game: true, say: `${Name}: up or down in fifteen minutes? Answer at the end.`, cap: `UP OR *DOWN*?`,
+    const hook = { scene: "stat", game: true, say: `${Name}: up or down in fifteen minutes?`, cap: `UP OR *DOWN*?`,
       big: "UP/DOWN?", small: `${Name.replace(/^The /, "").toUpperCase()} · 15 MIN`, bg: "navy" };
-    const reveal = { scene: "stat", game: true, say: `${Name} went ${w.dir}, ${pct} percent. Theo said ${guess}. ${right ? "He actually got one right." : "Wrong again."}`,
+    const reveal = { scene: "stat", game: true, say: `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent. Theo said ${guess}. ${right ? "He got one right." : "Wrong again."}`,
       cap: `${name.toUpperCase()} WENT / *${w.dir.toUpperCase()}*`, big: w.dir.toUpperCase(), small: `${w.pct >= 0 ? "+" : "-"}${pct}% IN 15 MIN`, bg: w.dir === "up" ? "green" : "red" };
     const v = ep.beats.findIndex((b) => b.scene === "vote" || b.scene === "end");
+    if (v >= 0 && ep.beats[v].scene === "vote") ep.beats[v].cap = "COMMENT / *A* OR *B*";
     ep.beats.splice(v < 0 ? ep.beats.length : v, 0, reveal);
     ep.beats.unshift(hook);
     ep.game = { market: Name, start: w.start, dir: w.dir, pct: w.pct, guess };

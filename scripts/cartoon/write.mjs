@@ -81,8 +81,6 @@ function check(beats, f) {
     if (b.scene === "stat" && !(b.big || "").trim()) problems.push(`beat ${i + 1}: a stat scene needs its big figure`);
     if (b.scene === "stat" && (b.big || "").length > 9) problems.push(`beat ${i + 1}: big must be one short figure of at most 9 characters, not "${b.big}"`);
     if (b.scene === "stat" && (b.small || "").length > 22) problems.push(`beat ${i + 1}: small label longer than 22 characters`);
-    if (b.stamp && b.face === "happy") problems.push(`beat ${i + 1}: no roast stamp on a happy beat; a stamp must match what is said`);
-    if (i > 0 && b.scene !== "room" && b.scene === beats[i - 1].scene) problems.push(`beat ${i + 1}: two ${b.scene} scenes in a row; put Theo on screen in between`);
     if (b.scene === "bank" && !/\d/.test(b.balance || "")) problems.push(`beat ${i + 1}: a bank scene needs a balance from the facts`);
     if (b.scene === "receipt" && !(b.lines || []).some((l) => /\d/.test(l.value || ""))) problems.push(`beat ${i + 1}: a receipt scene needs lines with figures from the facts`);
   });
@@ -208,7 +206,13 @@ export async function writeEpisode(state, winner, counts) {
     if (!problems.length) { mid = o; writer = "ai"; }
     else { why = problems.slice(0, 6); console.warn("  rejected:", why.join(" | ")); }
   }
-  const middle = (mid ? mid.beats.map(clean) : plainMiddle(f)).slice(0, 5);
+  // Repairs instead of rejections (24 Nov): a roast stamp never sits on a happy
+  // beat, and a second picture scene in a row puts Theo back on screen.
+  const middle = (mid ? mid.beats.map(clean) : plainMiddle(f).slice(0, 3)).slice(0, 4).map((b, i, a) => {
+    if (b.stamp && b.face === "happy") delete b.stamp;
+    if (i > 0 && b.scene !== "room" && b.scene === a[i - 1].scene) return { scene: "room", say: b.say, cap: b.cap, face: "neutral", pose: "point" };
+    return b;
+  });
   // The Ledge Desk moment, worded by hand, goes after the first middle beat.
   const pickDesk = deskFor(season, f.day, f.choice.key, state.deskUsed || []);
   const desk = pickDesk?.beat || null;
@@ -216,21 +220,22 @@ export async function writeEpisode(state, winner, counts) {
   if (desk) middle.splice(Math.min(1, middle.length), 0, desk);
   const plot = PLOT[season]?.[f.day];
   if (plot) middle.splice(Math.min(desk ? 2 : 1, middle.length), 0, { ...plot });
+  // Hand-written moments stay; the AI's beats give way so the middle is 3 beats.
+  while (middle.length > 3) { const k = middle.findLastIndex((b) => b !== desk && !(plot && b.say === plot.say)); if (k < 0) break; middle.splice(k, 1); }
 
   const c = f.choice, tot = counts ? counts.a + counts.b : 0;
   const who = duo ? "Theo and Maya" : "Theo";
-  const opening = [duo
-    ? { scene: "couple", say: `Day ${f.day} of Theo and Maya.`, cap: `DAY *${f.day}*`, face: "neutral", pose: "wave", mface: "happy", mpose: "idle" }
-    : { scene: "room", say: `Day ${f.day} of fixing Theo.`, cap: `DAY *${f.day}*`, face: "neutral", pose: "wave" }];
+  // One opening beat (24 Nov: episodes must stay near 30 seconds).
+  const opening = [];
   if (tot > 0 && tot < 20) {
-    opening.push({ scene: "stat", say: `You voted ${c.letter}: ${c.label.toLowerCase()}.`, cap: `YOU VOTED / *${c.letter}*`, big: c.letter, small: c.label.toUpperCase(), bg: "green" });
+    opening.push({ scene: "stat", say: `Day ${f.day}. You voted ${c.letter}: ${c.label.toLowerCase()}.`, cap: `YOU VOTED / *${c.letter}*`, big: c.letter, small: c.label.toUpperCase(), bg: "green" });
   } else if (tot > 0) {
     const pct = Math.round(100 * (c.letter === "A" ? counts.a : counts.b) / tot);
-    opening.push({ scene: "stat", say: `${pct}% of you voted ${c.letter}: ${c.label.toLowerCase()}.`, cap: `*${pct}%* VOTED / *${c.letter}*`, big: `${pct}%`, small: `VOTED ${c.letter}`, bg: "green" });
+    opening.push({ scene: "stat", say: `Day ${f.day}. ${pct}% of you voted ${c.letter}: ${c.label.toLowerCase()}.`, cap: `*${pct}%* VOTED / *${c.letter}*`, big: `${pct}%`, small: `VOTED ${c.letter}`, bg: "green" });
   } else {
     opening.push(duo
-      ? { scene: "couple", say: `${who} went with ${c.letter}: ${c.label.toLowerCase()}.`, cap: `THEY PICKED / *${c.letter}*`, face: "smug", pose: "point", mface: "happy", mpose: "idle" }
-      : { scene: "room", say: `Theo went with ${c.letter}: ${c.label.toLowerCase()}.`, cap: `THEO PICKED / *${c.letter}*`, face: "smug", pose: "point" });
+      ? { scene: "couple", say: `Day ${f.day}. ${who} went with ${c.letter}: ${c.label.toLowerCase()}.`, cap: `THEY PICKED / *${c.letter}*`, face: "smug", pose: "point", mface: "happy", mpose: "idle" }
+      : { scene: "room", say: `Day ${f.day}. Theo went with ${c.letter}: ${c.label.toLowerCase()}.`, cap: `THEO PICKED / *${c.letter}*`, face: "smug", pose: "point" });
   }
   const lo = f.leftover;
   const status = [{ scene: "stat", say: lo >= 0 ? `Theo now has $${lo} left over each month.` : `Theo is still $${-lo} short each month.`,
@@ -249,8 +254,7 @@ export async function writeEpisode(state, winner, counts) {
     tail.push({ scene: "end", say: "Follow, so you don't miss the finale.", cap: "FOLLOW / FOR THE *FINALE*" });
   } else {
     const [a, b] = f.next;
-    tail.push({ scene: "vote", say: `Day ${f.day + 1} is your call. A, ${a.label.toLowerCase()}. Or B, ${b.label.toLowerCase()}. Comment A, or B.`, q: `DAY ${f.day + 1}: YOU DECIDE`, a: a.label.toUpperCase(), b: b.label.toUpperCase(), cap: "COMMENT / *A* OR *B*" });
-    tail.push({ scene: "end", say: "Follow, to see what happens, and vote again tomorrow.", cap: "FOLLOW / TO *VOTE*" });
+    tail.push({ scene: "vote", say: `Tomorrow: A, ${a.label.toLowerCase()}. Or B, ${b.label.toLowerCase()}. Comment A or B.`, q: `DAY ${f.day + 1}: YOU DECIDE`, a: a.label.toUpperCase(), b: b.label.toUpperCase(), cap: "COMMENT / *A* OR *B*" });
   }
   const episode = { series: "Fix Theo", season, day: f.day, of: f.of, score: f.score, cur: "$", food: "Takeout", writer,
     facts: f.result.facts, beats: [...opening, ...middle, ...status, ...tail] };
