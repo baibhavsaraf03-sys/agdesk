@@ -6,13 +6,11 @@ name: Up or Down
 # countdown, then the answer. Markets rotate (gold, S&P 500, bitcoin, oil,
 # euro); bitcoin stands in when a market is closed.
 #
-# Started by the Supabase scheduler (job ledge-updown) at 20:05 UTC, with
-# GitHub's own schedule as a backup; a second start the same day stops.
+# Manual only since 24 Nov (the market game now runs inside Fix Theo);
+# a second start the same day stops.
 # Until Instagram is connected: manual mode (release updown-YYYY-MM-DD + ntfy).
 
 on:
-  schedule:
-    - cron: "45 15 * * *"
   workflow_dispatch:
     inputs:
       what:

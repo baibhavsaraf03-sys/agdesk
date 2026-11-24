@@ -4,7 +4,7 @@
  * Code builds the parts that must be right: the opening, the vote result
  * (real comment counts when there are any, otherwise "Theo went with"), the
  * money status, the next vote and the end card. The free AI (Gemini, then
- * Groq) writes only the middle: four to eight beats acting out the engine's
+ * Groq) writes only the middle: three to five beats acting out the engine's
  * facts, with a little roasting. Every figure it uses must come from those
  * facts; anything else and the beats are rejected and written again, and if
  * that fails too a plain middle is built from the facts, so an episode always
@@ -65,7 +65,7 @@ function allowedNumbers(f) {
 
 function check(beats, f) {
   const ok = allowedNumbers(f), problems = [];
-  if (!Array.isArray(beats) || beats.length < 4 || beats.length > 8) problems.push(`need 4 to 8 beats, got ${beats?.length}`);
+  if (!Array.isArray(beats) || beats.length < 3 || beats.length > 5) problems.push(`need 3 to 5 beats, got ${beats?.length}`);
   const mayaIn = f.season === 2 || f.day >= 8;
   (beats || []).forEach((b, i) => {
     if (!SCENES.includes(b.scene) || (!mayaIn && (b.scene === "couple" || b.scene === "maya"))) problems.push(`beat ${i + 1}: scene ${b.scene} not allowed today`);
@@ -141,7 +141,7 @@ async function aiMiddle(f, last) {
     `Facts you must act out, in order:\n${f.result.facts.map((x) => "- " + x).join("\n")}\n` +
     (f.event ? `Then a surprise: ${f.event.text}${f.event.onCard ? ` His savings could not cover it, so ${money(f.event.onCard)} went on the credit card.` : ""}\n` : "") +
     `Big number for one stat scene: ${f.result.big} (${f.result.small}).\n` +
-    `Write 4 to 8 beats, narrated about Theo in the third person (he, his). Every figure in the facts must be said aloud in some beat. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines). Tell one clear story: what he did, what it changes, how he feels. Each beat says one thing; the next beat follows from it. Mostly room scenes, never two stat scenes in a row.\n` +
+    `Write 3 to 5 short beats (each line under 15 words: the whole episode must stay under 35 seconds), narrated about Theo in the third person (he, his). Every figure in the facts must be said aloud in some beat. Scenes: room (Theo on screen; set face and pose; optional stamp), stat (big figure card), bank (his balance), receipt (up to 4 lines). Tell one clear story: what he did, what it changes, how he feels. Each beat says one thing; the next beat follows from it. Mostly room scenes, never two stat scenes in a row.\n` +
     `Do not write an opening, a vote or an ending: those are added separately. Do not mention any app, website or brand by name.\n` +
     `The ONLY figures you may write: ${[...allowedNumbers(f)].filter((n) => Number(n) > 12 || n.includes(".")).join(", ")} (and small counts up to 12). Never add, subtract or multiply them into new figures.\n` +
     `Ideas for jokes you may use or improve:\n${(f.jokes || []).map((j) => "- " + j.say).join("\n")}` +
@@ -208,7 +208,7 @@ export async function writeEpisode(state, winner, counts) {
     if (!problems.length) { mid = o; writer = "ai"; }
     else { why = problems.slice(0, 6); console.warn("  rejected:", why.join(" | ")); }
   }
-  const middle = mid ? mid.beats.map(clean) : plainMiddle(f);
+  const middle = (mid ? mid.beats.map(clean) : plainMiddle(f)).slice(0, 5);
   // The Ledge Desk moment, worded by hand, goes after the first middle beat.
   const pickDesk = deskFor(season, f.day, f.choice.key, state.deskUsed || []);
   const desk = pickDesk?.beat || null;

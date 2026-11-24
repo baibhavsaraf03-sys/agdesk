@@ -350,6 +350,26 @@ async function theoPrepare(tok) {
     log(`  Day ${ep.day}: ${ep.beats.length} beats, middle written by ${ep.writer}`);
     ep.beats.forEach((b) => log(`    [${b.scene}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
   }
+  // The daily market game, folded into Theo (24 Nov: Theo reels get about ten
+  // times the views of the stand-alone Up or Down videos). The question is the
+  // hook in the first seconds; the answer comes just before the vote.
+  try {
+    const { today: pickToday } = await import("../updown/data.mjs");
+    const w = await pickToday();
+    const name = w.market.name.replace(/^The /, "the "), Name = w.market.name;
+    const pct = Math.abs(w.pct).toFixed(2);
+    const guess = (ep.day * 7 + 3) % 2 ? "up" : "down", right = guess === w.dir;
+    const hook = { scene: "stat", game: true, say: `${Name}: up or down in fifteen minutes? Answer at the end.`, cap: `UP OR *DOWN*?`,
+      big: "UP/DOWN?", small: `${Name.replace(/^The /, "").toUpperCase()} · 15 MIN`, bg: "navy" };
+    const reveal = { scene: "stat", game: true, say: `${Name} went ${w.dir}, ${pct} percent. Theo said ${guess}. ${right ? "He actually got one right." : "Wrong again."}`,
+      cap: `${name.toUpperCase()} WENT / *${w.dir.toUpperCase()}*`, big: w.dir.toUpperCase(), small: `${w.pct >= 0 ? "+" : "-"}${pct}% IN 15 MIN`, bg: w.dir === "up" ? "green" : "red" };
+    const v = ep.beats.findIndex((b) => b.scene === "vote" || b.scene === "end");
+    ep.beats.splice(v < 0 ? ep.beats.length : v, 0, reveal);
+    ep.beats.unshift(hook);
+    ep.game = { market: Name, start: w.start, dir: w.dir, pct: w.pct, guess };
+    caption = caption.replace(/\s*$/, "") + `\n\n${Name} at ${new Date(w.start).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" })} New York time: did you call it? Real prices, replayed (delayed Yahoo data). A game, not a bet.`;
+    log(`  game: ${Name}, ${w.dir} ${pct}%, Theo said ${guess}`);
+  } catch (e) { console.warn("  market game skipped:", e.message); }
   fs.mkdirSync(WORK, { recursive: true });
   const epFile = path.join(WORK, `theo-${String(ep.day).padStart(3, "0")}.json`);
   fs.writeFileSync(epFile, JSON.stringify(ep, null, 2));

@@ -4,7 +4,7 @@ name: Instagram post
 # (scripts/reels/post.mjs). The rotation repeats every six posts: three of
 # the site (mood, tour, themes), then market, word and habit.
 #
-# Started by the Supabase scheduler (job ledge-instagram) at 17:40 UTC, with
+# Manual only since 24 Nov (Fix Theo is the one daily video). With
 # GitHub's own schedule as a backup. A run that finds today's post already
 # done stops straight away, so two starts never post twice.
 #
@@ -17,8 +17,6 @@ name: Instagram post
 # other jobs already use.
 
 on:
-  schedule:
-    - cron: "45 11 * * *"
   workflow_dispatch:
     inputs:
       what:

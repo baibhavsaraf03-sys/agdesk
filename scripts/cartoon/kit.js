@@ -113,7 +113,7 @@
   }
 
   /* ---------- scenes (each returns SVG markup for 1080x1920) ---------- */
-  const T = (x, y, s, txt, o = {}) => `<text x="${x}" y="${y}" font-size="${s}" text-anchor="${o.a || "middle"}" fill="${o.f || "#fff"}" font-family="${o.ff || "Luckiest Guy"}" ${o.w ? `font-weight="${o.w}"` : ""} ${o.ls ? `letter-spacing="${o.ls}"` : ""} ${o.st ? `stroke="${o.st}" stroke-width="${o.sw || 10}" paint-order="stroke" stroke-linejoin="round"` : ""} ${o.tr ? `transform="${o.tr}"` : ""}>${esc(txt)}</text>`;
+  const T = (x, y, s, txt, o = {}) => `<text x="${x}" y="${y}" font-size="${s}" text-anchor="${o.a || "middle"}" fill="${o.f || "#fff"}" font-family="${o.ff || (document.body.classList.contains("sketch") ? "Permanent Marker" : "Luckiest Guy")}" ${o.w ? `font-weight="${o.w}"` : ""} ${o.ls ? `letter-spacing="${o.ls}"` : ""} ${o.st ? `stroke="${o.st}" stroke-width="${o.sw || 10}" paint-order="stroke" stroke-linejoin="round"` : ""} ${o.tr ? `transform="${o.tr}"` : ""}>${esc(txt)}</text>`;
 
   function room() {
     let s = `<rect width="${W}" height="1420" fill="${C.wall}"/>`;
@@ -298,7 +298,7 @@
 
   function capHTML(chunk, tone) {
     const hi = tone === "red" ? C.red : C.gold;
-    return esc(chunk).replace(/\*([^*]+)\*/g, `<span style="color:${hi}">$1</span>`);
+    return document.body.classList.contains("sketch") ? esc(chunk).replace(/\*([^*]+)\*/g, `<span class="hi">$1</span>`) : esc(chunk).replace(/\*([^*]+)\*/g, `<span style="color:${hi}">$1</span>`);
   }
 
   /* ---------- timeline ---------- */
@@ -357,6 +357,11 @@
     let c = -1;
     B.chunks.forEach((ch, k) => { if (t >= ch.t) c = k; });
     if (c !== els.chunk) { els.chunk = c; els.cap.innerHTML = c >= 0 ? `<span class="cap">${capHTML(B.chunks[c].text, b.tone)}</span>` : ""; }
-    if (c >= 0) { const a = (t - B.chunks[c].t) / 0.13; const sp = els.cap.firstChild; if (sp) sp.style.transform = `scale(${1.32 - 0.32 * ease(a)})`; }
+    const sketch = document.body.classList.contains("sketch");
+    if (sketch) {
+      // Lines boil: a different wobble every 4 frames, as when each drawing is traced again by hand.
+      els.punch.style.filter = `url(#boil${Math.floor(t * 7.5) % 3})`;
+      const sp = els.cap.firstChild; if (sp) sp.style.transform = `rotate(${[-1.6, 1.2, -0.8, 1.8].at(c % 4)}deg)`;
+    } else if (c >= 0) { const a = (t - B.chunks[c].t) / 0.13; const sp = els.cap.firstChild; if (sp) sp.style.transform = `scale(${1.32 - 0.32 * ease(a)})`; }
   };
 })();

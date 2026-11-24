@@ -18,6 +18,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const [epFile, outArg] = process.argv.slice(2);
 const OUT = path.resolve(outArg || "/tmp/cartoon");
 const FPS = 30, W = 1080, H = 1920;
+const STYLE = process.env.CARTOON_STYLE || "sketch";
 const FONTS = path.resolve(process.env.FONTS || "node_modules/@fontsource");
 const { chromium } = await import(process.env.PW || "playwright");
 fs.mkdirSync(OUT, { recursive: true });
@@ -36,11 +37,22 @@ ${face("Luckiest Guy", "luckiest-guy/files/luckiest-guy-latin-400-normal.woff2")
 ${face("Nunito", "nunito/files/nunito-latin-800-normal.woff2", 800)}
 ${face("Nunito", "nunito/files/nunito-latin-900-normal.woff2", 900)}
 ${face("Cormorant", "cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2", 600)}
+${face("Permanent Marker", "permanent-marker/files/permanent-marker-latin-400-normal.woff2")}
 html,body{margin:0;width:${W}px;height:${H}px;overflow:hidden;background:#000}
 #stage{position:absolute;inset:0;overflow:hidden}
 .cap{display:inline-block;font-family:'Luckiest Guy';font-size:118px;line-height:1.05;color:#fff;letter-spacing:2px;
   -webkit-text-stroke:16px #14131b;paint-order:stroke fill;text-shadow:0 10px 0 rgba(0,0,0,.35);transform-origin:50% 60%}
-</style></head><body><div id="stage"></div>
+/* Sketch look (24 Nov, after a viewer said the videos "looked like AI"): ink lines that
+   boil like hand-drawn animation, paper grain, motion on twos, marker captions on paper. */
+.sketch #stage{filter:saturate(.82) contrast(.96) sepia(.1)}
+.sketch .cap{font-family:'Permanent Marker';font-size:88px;line-height:1.12;color:#1d1b18;letter-spacing:0;-webkit-text-stroke:0;text-shadow:none;
+  background:#f4eddc;padding:14px 30px 6px;box-shadow:0 8px 0 rgba(0,0,0,.28);border-radius:3px}
+.sketch .cap .hi{background:linear-gradient(transparent 55%,#ffd23f 55%,#ffd23f 92%,transparent 92%);color:#1d1b18}
+#paper{position:absolute;inset:0;pointer-events:none;display:none;mix-blend-mode:multiply;opacity:.55;
+  background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(60,40,20,.35)),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='540' height='540'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 .55  0 0 0 0 .5  0 0 0 0 .42  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.sketch #paper{display:block}
+</style></head><body class="${STYLE === "sketch" ? "sketch" : ""}"><div id="stage"></div><div id="paper"></div>
+<svg width="0" height="0" style="position:absolute">${[0, 1, 2].map((k) => `<filter id="boil${k}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="turbulence" baseFrequency="0.018" numOctaves="2" seed="${k * 11 + 3}" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="7" xChannelSelector="R" yChannelSelector="G"/></filter>`).join("")}</svg>
 <script>${fs.readFileSync(path.join(here, "kit.js"), "utf8")}</script>
 <script>setup(${JSON.stringify(ep)}, ${JSON.stringify(tl)});</script></body></html>`;
 const page = path.join(OUT, "episode.html");
@@ -58,7 +70,8 @@ const n = Math.round(tl.seconds * FPS);
 const only = process.env.FRAMES ? process.env.FRAMES.split(",").map(Number) : null;
 for (let i = 0; i < n; i++) {
   if (only && !only.includes(i)) continue;
-  await p.evaluate((t) => window.draw(t), i / FPS);
+  // Sketch: the picture moves on twos (15 drawings a second), like hand animation.
+  await p.evaluate((t) => window.draw(t), STYLE === "sketch" ? Math.floor(i / 2) * 2 / FPS : i / FPS);
   await p.screenshot({ path: path.join(dir, String(i).padStart(5, "0") + ".jpg"), type: "jpeg", quality: 92 });
 }
 await b.close();
