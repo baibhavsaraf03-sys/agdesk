@@ -225,6 +225,9 @@ export async function writeEpisode(state, winner, counts) {
 
   const c = f.choice, tot = counts ? counts.a + counts.b : 0;
   const who = duo ? "Theo and Maya" : "Theo";
+  // The money status and the game's answer are both cards, so the middle ends on Theo.
+  const lastMid = middle.at(-1);
+  if (lastMid && lastMid.scene !== "room" && lastMid.scene !== "couple" && lastMid !== desk) middle[middle.length - 1] = { scene: duo ? "couple" : "room", say: lastMid.say, cap: lastMid.cap, face: "happy", pose: "point", mface: "happy", mpose: "idle" };
   // One opening beat (24 Nov: episodes must stay near 30 seconds).
   const opening = [];
   if (tot > 0 && tot < 20) {
