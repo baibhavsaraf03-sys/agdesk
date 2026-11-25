@@ -321,7 +321,7 @@ function TVWidget({ widget, config, label, theme }) {
   // The widget paints its own background, so it has to be told which theme
   // the page is in or it sits as a dark slab on a light page.
   const dark = theme === "dark";
-  config = { ...config, colorTheme: dark ? "dark" : "light", backgroundColor: dark ? "#0d0c0b" : "#ffffff" };
+  config = { ...config, colorTheme: dark ? "dark" : "light", backgroundColor: dark ? "#0f1a2d" : "#faf7f0" };
 
   // The embed script's only job is to build this iframe, reading its config
   // from its own text content. Injecting a script tag from React turned out to
@@ -913,6 +913,27 @@ function FXScreen({ openChart, openCalendar }) {
   );
 }
 
+/* The door's date, written out as a letter would have it: "Wednesday, the 25th of November". */
+function longDate(d) {
+  const n = d.getDate();
+  const th = n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th";
+  return `${d.toLocaleDateString("en-GB", { weekday: "long" })}, the ${n}${th} of ${d.toLocaleDateString("en-GB", { month: "long" })}`;
+}
+function partOfDay(d) {
+  const h = d.getHours();
+  return h < 12 ? "morning" : h < 18 ? "afternoon" : "evening";
+}
+/* The seal: an engraved oval with the initials, as on a letterhead. */
+function Seal() {
+  return (
+    <svg className="mono-seal" viewBox="0 0 84 84" aria-hidden="true">
+      <ellipse cx="42" cy="42" rx="40" ry="40" strokeWidth="1" />
+      <ellipse cx="42" cy="42" rx="35.5" ry="35.5" strokeWidth="0.6" />
+      <text x="42" y="52" textAnchor="middle" fontSize="30">LD</text>
+    </svg>
+  );
+}
+
 export default function Terminal() {
   const supabase = useMemo(() => browserClient(), []);
 
@@ -1108,7 +1129,7 @@ export default function Terminal() {
       document.documentElement.dataset.theme = next;
     }, "theme");
     // The browser's own bar (and an installed app's title bar) follows: black for Noir, white for Blanc.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#000000" : "#ffffff");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#0b1424" : "#f4efe4");
     try {
       localStorage.setItem("agdesk-theme", next);
     } catch {
@@ -1400,22 +1421,25 @@ export default function Terminal() {
   if (showLanding) {
     return (
       <div className="landing">
-        {/* The door (Noir, 12 Nov): a clock, one line, the way in. */}
-        <section className="door dotfield">
-          <div className="door-top"><a href="/about">Made by Baibhav in St Andrews</a><a href="/info">What is on the desk</a></div>
+        {/* The door (Engadin, 25 Nov): a calling card. Seal, name, the date written out, one line on the market. */}
+        <section className="door">
+          <div className="door-top"><a href="/about">St Andrews, Scotland</a><a href="/info">What is on the desk</a></div>
           <div className="door-mid">
-            <div className="door-mark">LEDGE DESK</div>
+            <Seal />
             <h1 className="door-h">Ledge Desk</h1>
-            <div className="door-stem" />
-            <div className="door-clock" aria-label={`Time now ${clock}`}><DotTime value={clock} /></div>
+            <p className="door-motto">Markets · Credit · Law</p>
+            <div className="door-rule" />
+            <p className="door-date">{clock === "--:--:--" ? "\u00a0" : longDate(new Date())}</p>
             <p className="door-line">
-              {pulse?.mood ? `The market is ${pulse.mood.word.toLowerCase()} right now. ` : ""}Free market screens, charts and plain-English lessons.
+              {pulse?.mood
+                ? `The market is ${pulse.mood.word.toLowerCase()} this ${partOfDay(new Date())}, with the VIX at ${pulse.mood.level.toFixed(1)}.`
+                : "Market screens, charts and plain-English lessons, free to all."}
             </p>
             <div className="door-acts">
               <button className="btn pri door-btn" onClick={() => enterDesk("HOME")}>Enter the desk</button>
               {supabase && <a className="btn door-btn" href="/signin">Sign in</a>}
             </div>
-            <button className="door-new" onClick={() => enterDesk("START")}>New to investing? Start with the lessons</button>
+            <button className="door-new" onClick={() => enterDesk("START")}>New to investing? Begin with the lessons</button>
             <InstallButton className="door-new door-install" />
             <p className="door-ai">The hourly market notes are drafted by AI from public figures and named headlines, and marked as such. The lessons and reference pages are fixed, checked, and never rewritten by the AI.</p>
           </div>
@@ -1570,7 +1594,7 @@ export default function Terminal() {
           onClick={flipTheme}
           title={theme === "dark" ? "Switch to light" : "Switch to dark"}
         >
-          {theme === "dark" ? "Blanc" : "Noir"}
+          {theme === "dark" ? "Ivory" : "Midnight"}
         </button>
         <button
           className="tbtn tbtn-cmd"
@@ -1641,7 +1665,7 @@ export default function Terminal() {
               <InstallButton className="nav-door nav-install" />
               <div className="nav-phone">
                 <button className="tbtn" aria-pressed={peOn} onClick={() => { const v = !peOn; setPe(v); setPEGlobal(v); }}>Plain English</button>
-                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Blanc" : "Noir"}</button>
+                <button className="tbtn" onClick={flipTheme}>{theme === "dark" ? "Ivory" : "Midnight"}</button>
               </div>
               </>
             }

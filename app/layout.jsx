@@ -18,7 +18,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#000000",
+  themeColor: "#0b1424",
   viewportFit: "cover",
   width: "device-width",
   initialScale: 1
@@ -40,7 +40,7 @@ try {
     document.documentElement.dataset.theme = "light";
     var paint = function () {
       var m = document.querySelector('meta[name="theme-color"]');
-      if (m) m.setAttribute("content", "#ffffff");
+      if (m) m.setAttribute("content", "#f4efe4");
     };
     paint();
     document.addEventListener("DOMContentLoaded", paint);
@@ -59,7 +59,7 @@ export default function RootLayout({ children }) {
             reading. Inter and Plex Mono serve the light theme. */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Doto:wght@700;900&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,300;1,400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Doto:wght@700;900&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Cormorant+SC:wght@500;600&display=swap"
         />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>

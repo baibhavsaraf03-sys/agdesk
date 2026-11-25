@@ -1079,17 +1079,19 @@ a.btn{display:inline-block;text-decoration:none}
    paper look for anyone who switches.
    ========================================================================== */
 :root[data-theme="dark"]{
-  --bg:#000000; --surface:#0d0c0b; --surface-2:#151412; --line:#24211d;
-  --fg:#e6e2da; --fg-dim:#8f8a80; --accent:#c8a96a; --accent-2:#2bd67b;
-  --warn:#d9a441; --up:#2bd67b; --down:#a39e94;
-  --gold:#c8a96a; --gold-dim:#5a4c30; --racing:#06140e; --racing-line:#1e5a41;
-  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --sans:"Geist","Helvetica Neue",Arial,system-ui,sans-serif;
+  /* Midnight (25 Nov): Engadin navy, cream ink, antique gold kept for the few marks that earn it */
+  --bg:#0b1424; --surface:#0f1a2d; --surface-2:#142139; --line:#223049;
+  --fg:#efe8d8; --fg-dim:#a39d8e; --accent:#c9b386; --accent-2:#8fbf9c;
+  --warn:#d7b16a; --up:#8fbf9c; --down:#a8a294;
+  --gold:#c9b386; --gold-dim:#4a4a44; --racing:#0f1f1c; --racing-line:#2e5546;
+  --mono:"Source Serif 4",Georgia,serif;
+  --sans:"Source Serif 4",Georgia,serif;
   --serif:"Cormorant Garamond","Source Serif 4",Georgia,serif;
   --read:"Source Serif 4",Georgia,serif;
-  --dots:"Doto","Geist Mono",monospace;
-  --chrome:#070707; --chrome-line:#1c1a17; --line-strong:#2a2723; --dot:#171613; --dial:#0a0a09; --tick:#34302a;
-  --sheet:#0b0b0a; --scrim:rgba(0,0,0,.72); --on-gold:#000000;
+  --dots:"Cormorant Garamond","Source Serif 4",Georgia,serif;
+  --caps:"Cormorant SC","Cormorant Garamond",Georgia,serif;
+  --chrome:#09111f; --chrome-line:#1d2a40; --line-strong:#33445f; --dot:#121d31; --dial:#0d1729; --tick:#3a4a66;
+  --sheet:#0c1526; --scrim:rgba(4,9,18,.74); --on-gold:#0b1424;
 }
 /* Blanc (13 Nov, owner's choice): Noir's light twin. Same hairlines, square
    corners, serif capitals, dot-matrix figures and one cut corner; ivory and
@@ -1097,17 +1099,19 @@ a.btn{display:inline-block;text-decoration:none}
    up and live. Every Noir rule below applies to both themes; only these
    tokens differ. */
 :root[data-theme="light"]{
-  --bg:#fbfaf6; --surface:#ffffff; --surface-2:#f4f1ea; --line:#e6e1d6;
-  --fg:#16140f; --fg-dim:#6a645a; --accent:#8a6a2e; --accent-2:#0e7a43;
-  --warn:#9a6508; --up:#0e7a43; --down:#7d786e;
-  --gold:#8a6a2e; --gold-dim:#d9ccaf; --racing:#eef4ef; --racing-line:#1e5a41;
-  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --sans:"Geist","Helvetica Neue",Arial,system-ui,sans-serif;
+  /* Ivory (25 Nov): engraved stationery, navy ink, claret for the few marks that earn it */
+  --bg:#f4efe4; --surface:#faf7f0; --surface-2:#ede6d7; --line:#dbd1bd;
+  --fg:#15213b; --fg-dim:#5c6273; --accent:#7a2b2b; --accent-2:#2c6748;
+  --warn:#8d5a12; --up:#2c6748; --down:#7a766c;
+  --gold:#7a2b2b; --gold-dim:#d8c6b6; --racing:#e8efe8; --racing-line:#2c6748;
+  --mono:"Source Serif 4",Georgia,serif;
+  --sans:"Source Serif 4",Georgia,serif;
   --serif:"Cormorant Garamond","Source Serif 4",Georgia,serif;
   --read:"Source Serif 4",Georgia,serif;
-  --dots:"Doto","Geist Mono",monospace;
-  --chrome:#ffffff; --chrome-line:#e6e1d6; --line-strong:#d6cfbf; --dot:#ebe6db; --dial:#ffffff; --tick:#d9d2c3;
-  --sheet:#ffffff; --scrim:rgba(20,18,15,.45); --on-gold:#ffffff;
+  --dots:"Cormorant Garamond","Source Serif 4",Georgia,serif;
+  --caps:"Cormorant SC","Cormorant Garamond",Georgia,serif;
+  --chrome:#faf7f0; --chrome-line:#dbd1bd; --line-strong:#c6b89e; --dot:#e9e2d3; --dial:#faf7f0; --tick:#cdbfa6;
+  --sheet:#faf7f0; --scrim:rgba(21,33,59,.4); --on-gold:#faf7f0;
 }
 :root{--read:var(--serif);--dots:var(--mono);--gold:var(--accent);--gold-dim:var(--line);--racing:var(--surface-2);--racing-line:var(--line)}
 
@@ -1712,3 +1716,57 @@ a.btn{display:inline-block;text-decoration:none}
 :root:is([data-theme="dark"],[data-theme="light"]) .nav-brief{font-size:22px}
 :root:is([data-theme="dark"],[data-theme="light"]) .door-line{font-weight:400;font-size:clamp(18px,2.2vw,22px);line-height:1.45;color:var(--fg-dim)}
 :root:is([data-theme="dark"],[data-theme="light"]) .door-top{font-family:var(--sans);font-size:13px;letter-spacing:0}
+
+/* ===== Engadin (25 Nov, owner: "St Moritz old money, finance and law, throughout the site").
+   Private-bank stationery and legal chambers, not a trading app: serif type everywhere, figures in
+   lining tabular numerals, labels in true small capitals, double hairlines like engraved letterhead,
+   panels framed with an inner rule, plain rectangular buttons, numbered sections on reading pages.
+   Tokens above (Midnight / Ivory) do the colour; this block does the manners. ===== */
+:root:is([data-theme="dark"],[data-theme="light"]) body{font-family:var(--sans);font-variant-numeric:lining-nums tabular-nums;font-feature-settings:"lnum","tnum"}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.ptitle,.inst-h,.nav-title,.gate-h,.inst-sheet-h,.side .nav-area,.door-h,.doc-article h1){font-family:var(--serif);font-weight:600;letter-spacing:0}
+:root:is([data-theme="dark"],[data-theme="light"]) .ptitle{font-size:32px}
+:root:is([data-theme="dark"],[data-theme="light"]) .inst-h{font-size:36px}
+:root:is([data-theme="dark"],[data-theme="light"]) .phead{border-bottom:3px double var(--line-strong);padding-bottom:12px}
+/* small capitals for labels, codes and captions: the one place letters are spaced, as engravers do */
+:root:is([data-theme="dark"],[data-theme="light"]) :is(h3,.pcode,.pmeta,.inst-k,.inst-meta,.nav-asidemeta,.nav-jumplabel,.dial figcaption,.inst-moodcap,.door-top,.door-foot,.doc-crumbs,.inst-heads-z,.info-code){font-family:var(--caps);font-weight:600;text-transform:lowercase;letter-spacing:0.07em;font-size:14px}
+:root:is([data-theme="dark"],[data-theme="light"]) h3{color:var(--gold);font-size:15px}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.dial figcaption,.inst-moodcap){font-size:17px;color:var(--fg)}
+/* figures */
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.dial-val){font-family:var(--serif);font-weight:600}
+:root:is([data-theme="dark"],[data-theme="light"]) .dial-sub{font-family:var(--caps);letter-spacing:0.08em;font-size:12px}
+:root:is([data-theme="dark"],[data-theme="light"]) .dial-t.major{stroke:var(--fg-dim)}
+:root:is([data-theme="dark"],[data-theme="light"]) .dial-t.danger{stroke:var(--gold)}
+:root:is([data-theme="dark"],[data-theme="light"]) .dial-needle{stroke:var(--gold);stroke-width:1.6}
+:root:is([data-theme="dark"],[data-theme="light"]) .dial-hub{fill:var(--bg);stroke:var(--fg-dim)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.door-clock,.tclock){font-family:var(--serif);font-weight:500}
+/* panels: a hairline frame with a second rule inside it, like a certificate border */
+:root:is([data-theme="dark"],[data-theme="light"]) .cut{clip-path:none;background:var(--line-strong)}
+:root:is([data-theme="dark"],[data-theme="light"]) .cut > .cut-in{clip-path:none;box-shadow:inset 0 0 0 4px var(--surface),inset 0 0 0 5px var(--line)}
+:root:is([data-theme="dark"],[data-theme="light"]) .cut.racing > .cut-in{box-shadow:inset 0 0 0 4px var(--racing),inset 0 0 0 5px var(--racing-line)}
+/* buttons: plain rectangles in small capitals; the main one is solid ink */
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.btn,.tbtn,.chip,.side .nav-mode .ch-seg,.doc-nav .doc-cta,.door-new){font-family:var(--caps);font-weight:600;text-transform:lowercase;letter-spacing:0.06em;font-size:15px;border-radius:0 !important}
+:root:is([data-theme="dark"],[data-theme="light"]) .btn{border-color:var(--line-strong)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.btn.pri,.doc-nav .doc-cta){background:var(--fg);border-color:var(--fg);color:var(--bg)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.btn.pri,.doc-nav .doc-cta):hover{filter:none;opacity:0.88;color:var(--bg)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.topbar .sysname,.doc-mark){font-family:var(--serif);font-weight:600;font-size:24px}
+:root:is([data-theme="dark"],[data-theme="light"]) .topbar{border-bottom:3px double var(--chrome-line)}
+/* reading pages: numbered sections and a ruled title, as in a legal opinion */
+.doc-article,.doc-main{counter-reset:sec}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.doc-article,.doc-sec) > h2{counter-increment:sec;font-family:var(--serif);font-weight:600;font-size:26px}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.doc-article,.doc-sec) > h2::before{content:"§ " counter(sec) "\2003";color:var(--gold);font-weight:500}
+:root:is([data-theme="dark"],[data-theme="light"]) .doc-article h1{font-size:clamp(36px,5vw,48px);padding-bottom:14px;border-bottom:3px double var(--line-strong)}
+:root:is([data-theme="dark"],[data-theme="light"]) a{text-underline-offset:3px;text-decoration-thickness:1px}
+/* the door: a calling card */
+.mono-seal{display:block;width:84px;height:84px;color:var(--gold)}
+.mono-seal text{font-family:var(--serif);font-style:italic;font-weight:500;fill:currentColor}
+.mono-seal ellipse{fill:none;stroke:currentColor}
+:root:is([data-theme="dark"],[data-theme="light"]) .door-h{font-size:clamp(46px,8vw,76px);font-weight:600;margin:6px 0 0}
+.door-motto{margin:0;font-family:var(--caps);font-weight:600;font-size:16px;letter-spacing:0.12em;text-transform:lowercase;color:var(--fg-dim)}
+.door-rule{width:min(320px,60vw);height:0;border-top:3px double var(--line-strong);margin:4px 0}
+.door-date{margin:0;font-family:var(--serif);font-style:italic;font-size:clamp(22px,3vw,28px);color:var(--fg)}
+:root:is([data-theme="dark"],[data-theme="light"]) .door-line{font-family:var(--read);font-style:normal;font-size:clamp(17px,2vw,19px);max-width:520px;color:var(--fg-dim)}
+.door-clock{display:none}
+:root:is([data-theme="dark"],[data-theme="light"]) .phead::after{display:none}
+:root:is([data-theme="dark"],[data-theme="light"]) .side .nav-area::after{display:none}
+:root:is([data-theme="dark"],[data-theme="light"]) .nav-rule{height:0;background:none;border-top:3px double var(--line-strong);width:100%}
+:root:is([data-theme="dark"],[data-theme="light"]) .dial-val.big{font-style:italic;font-weight:600}

@@ -153,7 +153,7 @@ export function MoodDial({ pulse, size = 260 }) {
     <Dial
       size={size}
       t={m ? m.needle : null}
-      value={m ? m.word.toUpperCase() : null}
+      value={m ? m.word : null}
       sub={m ? `VIX ${m.level.toFixed(1)}` : "MARKET MOOD"}
       aria={m ? `Market mood: ${m.word}, VIX ${m.level.toFixed(1)}` : "Market mood unavailable"}
       danger={0.8}

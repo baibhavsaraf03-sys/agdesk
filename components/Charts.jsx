@@ -41,7 +41,7 @@ function ChartFrame({ symbol, interval, studies, theme, compact }) {
         style: "1",
         locale: "en",
         // Matches --surface, so the chart sits flush with the panel.
-        backgroundColor: dark ? "#0d0c0b" : "#ffffff",
+        backgroundColor: dark ? "#0f1a2d" : "#faf7f0",
         gridColor: dark ? "rgba(50, 50, 44, 0.6)" : "rgba(226, 222, 211, 0.6)",
         withdateranges: !compact,
         hide_side_toolbar: compact,
