@@ -99,7 +99,9 @@ if model.startswith("kokoro:"):
         return v / (np.max(np.abs(v)) or 1) * 0.98
     for b in ep["beats"]:
         vname = CAST.get(b.get("who"), kvoice) if COACH else kvoice
-        vlang = "en-gb" if vname.startswith("b") else "en-us"   # English words in every voice; the accent comes from the voice
+        # English words in every voice; the accent comes from the voice. The coach is British Indian
+        # (owner, 25 Nov: "British Hindi, not American"), so his English is always the British form.
+        vlang = "en-gb" if vname.startswith("b") or (COACH and b.get("who") == "coach") else "en-us"
         pf = PITCH.get(b.get("who"), 1.0) if COACH else 1.0
         loud = COACH and b.get("loud")
         sp = min(2.0, float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.12 if COACH else 1.0) / pf)
