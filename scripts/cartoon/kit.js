@@ -217,6 +217,13 @@
     return bg(c[0], c[1]) + `<g class="pop">${T(540, 860, fit(b.big, 260), b.big || "", { st: C.line, sw: 18 })}</g>
       ${T(540, 990, fit(b.small, 60), b.small || "", { f: C.gold, st: C.line, sw: 12 })}`;
   }
+  // The figure for a stat line in 3D: a heavy banner across the top of the shot.
+  function statBanner(b) {
+    const col = { red: "#c8202f", navy: "#22306a", green: "#16804f" }[b.bg || "navy"];
+    const fit = (txt, max, room = 900) => Math.max(40, Math.min(max, Math.floor(room / (0.62 * Math.max(1, String(txt || "").length)))));
+    return `<g transform="rotate(-3 540 420)"><rect x="70" y="270" width="940" height="330" rx="18" fill="${col}" stroke="#14131b" stroke-width="10"/>
+      ${T(540, 470, fit(b.big, 190), b.big || "", { st: "#14131b", sw: 16 })}${T(540, 560, fit(b.small, 54, 860), b.small || "", { f: C.gold, st: "#14131b", sw: 10 })}</g>`;
+  }
   function crypto(b) {
     const pts = [[170, 520], [260, 470], [340, 560], [420, 520], [500, 660], [580, 620], [660, 780], [740, 740], [820, 930], [900, 1010]];
     return bg("#1a1d2b", "#08090f") + `<g>
@@ -315,7 +322,10 @@
     const b = EP.beats[i];
     const stage = document.getElementById("stage");
     const scene = (SCENES[b.scene] || room)(b, EP);
-    const cast = b.scene === "couple" || (b.scene === "end" && EP.season === 2) ? ["theo", "maya"] : b.scene === "dev" ? ["theo", "dev"] : b.scene === "maya" ? ["maya"] : (b.scene === "room" || b.scene === "end") ? ["theo"] : [];
+    let cast = b.scene === "couple" || (b.scene === "end" && EP.season === 2) ? ["theo", "maya"] : b.scene === "dev" ? ["theo", "dev"] : b.scene === "maya" ? ["maya"] : (b.scene === "room" || b.scene === "end") ? ["theo"] : [];
+    // 3D: a figure line keeps the people on screen, with the number floating above them (25 Nov).
+    const statUp = !!window.World && b.scene === "stat";
+    if (statUp) cast = b.who === "dev" ? ["theo", "dev"] : b.who === "maya" || (EP.season === 2 && b.who !== "theo") ? ["theo", "maya"] : ["theo"];
     const withTheo = cast.length > 0;
     // 3D (25 Nov): people and the room are drawn by kit3d.js on the canvas underneath; the SVG layer keeps cards, stamps, HUD and captions.
     const td = !!window.World && cast.length > 0 && b.scene !== "end";
@@ -328,6 +338,7 @@
     };
     stage.innerHTML = `<div id="punch" style="position:absolute;inset:0;transform-origin:50% 45%">
         ${td ? "" : `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${scene}</svg>`}
+        ${statUp ? `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0"><g class="pop">${statBanner(b)}</g></svg>` : ""}
         ${td ? "" : cast.map(place).join("")}
         ${b.stamp ? `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${stampSVG(b.stamp, td ? 470 : 1300)}</svg>` : ""}
       </div>

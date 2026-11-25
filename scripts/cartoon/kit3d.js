@@ -228,7 +228,8 @@ window.World = {
     const talking = t >= B.voice && t <= B.vend, mouthOpen = talking && Math.floor(t * 11) % 3 !== 0;
     cast.forEach((w, i) => {
       const me = b.who === w;
-      const face = w === "theo" ? b.face || "neutral" : b.mface || b.face || "neutral";
+      const statFace = b.scene === "stat" ? ({ green: "smug", red: "shock", navy: "worried" }[b.bg || "navy"]) : null;
+      const face = w === "theo" ? b.face || statFace || "neutral" : b.mface || (b.scene === "stat" ? "smug" : b.face) || "neutral";
       const ps = w === "theo" ? b.pose || "idle" : b.mpose || "idle";
       pose(PEOPLE[w], ps, face, me && mouthOpen, t, i * 1.7, me && B.loud);
     });
