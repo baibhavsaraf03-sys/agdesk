@@ -28,7 +28,7 @@ CAST = {"coach": os.environ.get("COACH_VOICE", "hm_omega"), "theo": os.environ.g
         "dev": os.environ.get("DEV_VOICE", "ff_siwis"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
 # The coach is raised to match the owner's reference reel (a high, bouncy voice, about 212 Hz against
 # Kokoro's 130): resampled up by COACH_PITCH and spoken slower first, so his pace stays the same.
-PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8")), "coach": float(os.environ.get("COACH_PITCH", "1.5"))}
+PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.62")), "coach": float(os.environ.get("COACH_PITCH", "1.5"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
@@ -81,6 +81,7 @@ if model.startswith("kokoro:"):
             if part.isdigit(): out.append(marks[int(part)])
             elif part.strip(): out.append(k.tokenizer.phonemize(part.strip(), lang))
         return " ".join(out)
+    FRENCH = r"(?i)((?:oh )?là là|frérot|voilà|allez|mon ami|n'est-ce pas|bof|c'est la vie|zut)"
     def yell(v):
         # A yelled line: pitched up about a semitone (by resampling, which also quickens it),
         # driven hard into a soft clipper for grit, then levelled.
@@ -94,7 +95,14 @@ if model.startswith("kokoro:"):
         pf = PITCH.get(b.get("who"), 1.0) if COACH else 1.0
         loud = COACH and b.get("loud")
         sp = min(2.0, float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.12 if COACH else 1.0) / pf)
-        a, rate = k.create(phon(spoken(b["say"])) if vlang == lang else k.tokenizer.phonemize(spoken(b["say"]), vlang), voice=vname, speed=sp, lang=vlang, is_phonemes=True)
+        line = spoken(b["say"])
+        if COACH and b.get("who") == "dev":
+            # Dev's French words (frérot, voilà...) are said the French way; the rest is English.
+            parts = re.split(FRENCH, line)
+            ps = " ".join(k.tokenizer.phonemize(x.strip(), "fr-fr") if re.fullmatch(FRENCH, x.strip()) else k.tokenizer.phonemize(x.strip(), vlang) for x in parts if x and x.strip(" ,"))
+        else:
+            ps = phon(line) if vlang == lang else k.tokenizer.phonemize(line, vlang)
+        a, rate = k.create(ps, voice=vname, speed=sp, lang=vlang, is_phonemes=True)
         v = to_sr(np.asarray(a, dtype=np.float32), rate)
         if pf != 1.0: v = np.interp(np.arange(0, len(v) - 1, pf), np.arange(len(v)), v)
         if COACH: v = yell(v) if loud else v / (np.max(np.abs(v)) or 1) * 0.8
