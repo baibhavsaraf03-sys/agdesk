@@ -321,7 +321,7 @@ async function theoPrepare(tok) {
     const r = await writeEpisode(s, winner, last.counts || null);
     ep = r.episode; next = r.state; caption = r.caption; tags = r.hashtags || [];
     log(`  Day ${ep.day}: ${ep.beats.length} beats, middle written by ${ep.writer}`);
-    ep.beats.forEach((b) => log(`    [${b.scene}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
+    ep.beats.forEach((b) => log(`    [${b.scene}${b.who ? " " + b.who : ""}${b.loud ? " LOUD" : ""}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
     state = null;
   }
   if (ep) { /* redone above */ } else
@@ -348,7 +348,7 @@ async function theoPrepare(tok) {
     const r = await writeEpisode(state, winner, counts);
     ep = r.episode; next = r.state; caption = r.caption; tags = r.hashtags || [];
     log(`  Day ${ep.day}: ${ep.beats.length} beats, middle written by ${ep.writer}`);
-    ep.beats.forEach((b) => log(`    [${b.scene}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
+    ep.beats.forEach((b) => log(`    [${b.scene}${b.who ? " " + b.who : ""}${b.loud ? " LOUD" : ""}] ${b.say}  |  ${b.cap}${b.stamp ? "  |  stamp " + b.stamp : ""}`));
   }
   // The daily market game, folded into Theo (24 Nov: Theo reels get about ten
   // times the views of the stand-alone Up or Down videos). The question is the
@@ -359,14 +359,17 @@ async function theoPrepare(tok) {
     const name = w.market.name.replace(/^The /, "the "), Name = w.market.name;
     const pct = Math.abs(w.pct).toFixed(2);
     const guess = (ep.day * 7 + 3) % 2 ? "up" : "down", right = guess === w.dir;
-    const hook = { scene: "stat", game: true, say: `${Name}: up or down in fifteen minutes?`, cap: `UP OR *DOWN*?`,
+    const coach = ep.format === "coach";
+    const hook = { who: coach ? "dev" : undefined, scene: "stat", game: true, say: coach ? `Bro. ${Name}: up or down in fifteen minutes? Answer at the end.` : `${Name}: up or down in fifteen minutes?`, cap: `UP OR *DOWN*?`,
       big: "UP/DOWN?", small: `${Name.replace(/^The /, "").toUpperCase()} · 15 MIN`, bg: "navy" };
-    const reveal = { scene: "stat", game: true, say: `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent. Theo said ${guess}. ${right ? "He got one right." : "Wrong again."}`,
+    const reveal = { who: coach ? "dev" : undefined, loud: coach && !right, scene: "stat", game: true,
+      say: coach ? `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent! You said ${guess}. ${right ? "Okay, one right." : "WRONG AGAIN!"}` : `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent. Theo said ${guess}. ${right ? "He got one right." : "Wrong again."}`,
       cap: `${name.toUpperCase()} WENT / *${w.dir.toUpperCase()}*`, big: w.dir.toUpperCase(), small: `${w.pct >= 0 ? "+" : "-"}${pct}% IN 15 MIN`, bg: w.dir === "up" ? "green" : "red" };
     const v = ep.beats.findIndex((b) => b.scene === "vote" || b.scene === "end");
     if (v >= 0 && ep.beats[v].scene === "vote") ep.beats[v].cap = "COMMENT / *A* OR *B*";
     ep.beats.splice(v < 0 ? ep.beats.length : v, 0, reveal);
-    ep.beats.unshift(hook);
+    // Coach mode: the coach's yell is the first thing heard; Dev's question comes after Theo's reply.
+    if (coach) ep.beats.splice(Math.min(2, ep.beats.length), 0, hook); else ep.beats.unshift(hook);
     ep.game = { market: Name, start: w.start, dir: w.dir, pct: w.pct, guess };
     caption = caption.replace(/\s*$/, "") + `\n\n${Name} at ${new Date(w.start).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" })} New York time: did you call it? Real prices, replayed (delayed Yahoo data). A game, not a bet.`;
     log(`  game: ${Name}, ${w.dir} ${pct}%, Theo said ${guess}`);

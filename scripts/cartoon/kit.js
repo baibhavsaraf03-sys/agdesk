@@ -23,7 +23,9 @@
   // Looks: Theo (curls, green hoodie) and Maya (long hair, mustard sweater).
   const LOOKS = {
     theo: { skin: "#c68863", skinD: "#a86c4b", bag: "#8c5a3e", hair: "#23202b", top: "#2a9d68", topD: "#1f7a50", jean: "#3f5d8f", jeanD: "#324a73", style: "curls" },
-    maya: { skin: "#e2b08a", skinD: "#c48f69", bag: "#c9926c", hair: "#3b2418", top: "#e0a526", topD: "#b98318", jean: "#2b2a33", jeanD: "#1d1c24", style: "long" }
+    maya: { skin: "#e2b08a", skinD: "#c48f69", bag: "#c9926c", hair: "#3b2418", top: "#e0a526", topD: "#b98318", jean: "#2b2a33", jeanD: "#1d1c24", style: "long" },
+    // Dev (25 Nov): Theo's roommate. Buzz cut under a backwards red cap, orange tee, grey joggers.
+    dev: { skin: "#8a5a3c", skinD: "#6e452c", bag: "#6e452c", hair: "#141217", top: "#ee7a2f", topD: "#c45f1c", jean: "#6c7080", jeanD: "#555867", style: "cap" }
   };
   let L = LOOKS.theo;
   function arm(pts, id) {
@@ -70,10 +72,11 @@
   const CURLS = [[96, 186, 30], [104, 146, 32], [130, 112, 34], [168, 92, 36], [210, 86, 37], [250, 96, 35], [284, 120, 33], [304, 156, 31], [308, 192, 26], [150, 128, 30], [200, 120, 30], [250, 130, 30]];
   function theo(o = {}) { return person(o, "theo"); }
   function maya(o = {}) { return person(o, "maya"); }
+  function dev(o = {}) { return person(o, "dev"); }
   function person({ face = "neutral", pose = "idle" } = {}, who = "theo") {
     L = LOOKS[who];
     const P = POSES[pose] || POSES.idle;
-    const isMaya = who === "maya";
+    const isMaya = who === "maya", isDev = who === "dev";
     const curls = (stroke) => CURLS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${L.hair}"${stroke ? ` stroke="${C.line}" stroke-width="12"` : ""}/>`).join("");
     return `<svg viewBox="0 0 400 820" width="540" height="1107" overflow="visible">
       <!-- legs and shoes -->
@@ -86,9 +89,9 @@
       <path d="M140,756 L176,756 M228,756 L268,756" stroke="${isMaya ? "#ff7ab6" : C.gold}" stroke-width="7" stroke-linecap="round"/>
       <!-- body -->
       <rect x="178" y="318" width="44" height="40" fill="${L.skinD}" stroke="${C.line}" stroke-width="6"/>
-      ${isMaya ? "" : `<ellipse cx="200" cy="350" rx="96" ry="30" fill="${L.topD}" stroke="${C.line}" stroke-width="6"/>`}
+      ${isMaya || isDev ? "" : `<ellipse cx="200" cy="350" rx="96" ry="30" fill="${L.topD}" stroke="${C.line}" stroke-width="6"/>`}
       <path d="M110,368 Q112,344 152,338 L248,338 Q288,344 290,368 L300,560 Q300,578 284,578 L116,578 Q100,578 100,560 Z" fill="${L.top}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>
-      ${isMaya ? `<path d="M168,340 Q200,372 232,340" fill="none" stroke="${C.line}" stroke-width="6"/><path d="M110,540 L290,540" stroke="${L.topD}" stroke-width="16"/><path d="M130,420 L150,400 L170,420 L190,400 L210,420 L230,400 L250,420 L270,400" fill="none" stroke="${L.topD}" stroke-width="6"/>` : `<path d="M140,482 L260,482 L270,544 L130,544 Z" fill="${L.topD}" stroke="${C.line}" stroke-width="5" stroke-linejoin="round"/>
+      ${isDev ? `<path d="M168,340 Q200,370 232,340" fill="none" stroke="${C.line}" stroke-width="6"/>${T(200, 470, 64, "24", { f: "#fff", st: C.line, sw: 8 })}` : isMaya ? `<path d="M168,340 Q200,372 232,340" fill="none" stroke="${C.line}" stroke-width="6"/><path d="M110,540 L290,540" stroke="${L.topD}" stroke-width="16"/><path d="M130,420 L150,400 L170,420 L190,400 L210,420 L230,400 L250,420 L270,400" fill="none" stroke="${L.topD}" stroke-width="6"/>` : `<path d="M140,482 L260,482 L270,544 L130,544 Z" fill="${L.topD}" stroke="${C.line}" stroke-width="5" stroke-linejoin="round"/>
       <path d="M184,350 L180,416 M216,350 L220,416" stroke="${C.shoe}" stroke-width="6" stroke-linecap="round"/>
       <circle cx="180" cy="420" r="7" fill="${C.shoe}" stroke="${C.line}" stroke-width="3"/><circle cx="220" cy="420" r="7" fill="${C.shoe}" stroke="${C.line}" stroke-width="3"/>`}
       ${arm(P.L, "armL")}${arm(P.R, "armR")}
@@ -97,16 +100,16 @@
         ${isMaya ? `<path d="M74,230 Q60,90 200,82 Q340,90 326,230 L338,420 Q300,446 262,430 L262,300 L138,300 L138,430 Q100,446 62,420 Z" fill="${L.hair}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>` : ""}
         <ellipse cx="88" cy="232" rx="22" ry="28" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/>
         <ellipse cx="312" cy="232" rx="22" ry="28" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/>
-        ${isMaya ? `<circle cx="88" cy="266" r="8" fill="${C.gold}" stroke="${C.line}" stroke-width="3"/><circle cx="312" cy="266" r="8" fill="${C.gold}" stroke="${C.line}" stroke-width="3"/>` : curls(true)}
+        ${isMaya ? `<circle cx="88" cy="266" r="8" fill="${C.gold}" stroke="${C.line}" stroke-width="3"/><circle cx="312" cy="266" r="8" fill="${C.gold}" stroke="${C.line}" stroke-width="3"/>` : isDev ? "" : curls(true)}
         <ellipse cx="200" cy="222" rx="112" ry="120" fill="${L.skin}" stroke="${C.line}" stroke-width="6"/>
-        ${isMaya ? `<path d="M86,212 Q92,104 200,98 Q308,104 314,212 Q292,150 238,140 Q210,176 150,176 Q110,170 86,212 Z" fill="${L.hair}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>` : curls(false)}
-        ${isMaya ? "" : `<path d="M92,190 Q120,150 200,146 Q280,150 308,190 Q290,168 200,166 Q110,168 92,190 Z" fill="${L.hair}"/>`}
+        ${isMaya ? `<path d="M86,212 Q92,104 200,98 Q308,104 314,212 Q292,150 238,140 Q210,176 150,176 Q110,170 86,212 Z" fill="${L.hair}" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/>` : isDev ? `<path d="M90,200 Q92,104 200,100 Q308,104 310,200 Q300,150 200,146 Q100,150 90,200 Z" fill="#c8202f" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/><path d="M96,176 Q40,170 22,196 Q60,206 104,196 Z" fill="#a0141f" stroke="${C.line}" stroke-width="6" stroke-linejoin="round"/><rect x="186" y="128" width="28" height="18" rx="6" fill="#fff" stroke="${C.line}" stroke-width="4"/>` : curls(false)}
+        ${isMaya || isDev ? "" : `<path d="M92,190 Q120,150 200,146 Q280,150 308,190 Q290,168 200,166 Q110,168 92,190 Z" fill="${L.hair}"/>`}
         ${eye(160, face)}${eye(240, face)}
         ${isMaya ? `<path d="M128,206 L120,198 M134,200 L130,190 M272,206 L280,198 M266,200 L270,190" stroke="${C.line}" stroke-width="5" stroke-linecap="round"/>` : ""}
         <path d="M134,266 Q160,276 186,266 M214,266 Q240,276 266,266" fill="none" stroke="${L.bag}" stroke-width="4" stroke-linecap="round"/>
         ${brows(face)}
         <path d="M197,240 Q188,264 204,268" fill="none" stroke="${C.line}" stroke-width="5" stroke-linecap="round"/>
-        ${mouth(face)}
+        <g class="mc">${mouth(face)}</g><g class="mo" style="display:none"><path d="M168,294 Q200,288 232,294 Q228,336 200,338 Q172,336 168,294 Z" fill="${C.mouth}" stroke="${C.line}" stroke-width="5" stroke-linejoin="round"/><path d="M178,298 L222,298 Q220,306 200,307 Q180,306 178,298 Z" fill="#fff"/><ellipse cx="200" cy="326" rx="14" ry="6" fill="#d9536a"/></g>
         ${face === "worried" || face === "shock" ? `<path d="M300,150 Q312,170 300,182 Q288,170 300,150 Z" fill="#7fd3ff" stroke="${C.line}" stroke-width="4"/>` : ""}
       </g>
     </svg>`;
@@ -281,7 +284,7 @@
     }
     return s + `</g>`;
   }
-  const SCENES = { room, bank, calendar, receipt, subs, card, stat, crypto, vote, end, desk, couple: room, maya: room };
+  const SCENES = { room, bank, calendar, receipt, subs, card, stat, crypto, vote, end, desk, couple: room, maya: room, dev: room };
 
   /* ---------- HUD, stamp, caption ---------- */
   function hud(ep) {
@@ -292,9 +295,10 @@
       <rect x="252" y="160" width="46" height="14" rx="7" fill="#2e3452"/><rect x="252" y="160" width="${Math.max(6, 46 * ep.score / 100)}" height="14" rx="7" fill="${C.green}"/>
       ${T(1040, 140, 30, "LEDGE · DESK", { a: "end", f: "#c8a96a", ff: "Nunito", w: 900, ls: 8, st: "#000", sw: 6 })}</g>`;
   }
-  const stampSVG = (txt) => `<g class="bigstamp" style="transform-origin:540px 1300px"><g transform="rotate(-8 540 1300)">
-      <rect x="${540 - txt.length * 30 - 40}" y="1230" width="${txt.length * 60 + 80}" height="140" rx="14" fill="rgba(255,255,255,.9)" stroke="${C.red}" stroke-width="12"/>
-      ${T(540, 1340, 100, txt, { f: C.red })}</g></g>`;
+  // In 3D the caption sits low, so the stamp goes up by the head instead.
+  const stampSVG = (txt, y = 1300) => `<g class="bigstamp" style="transform-origin:540px ${y}px"><g transform="rotate(-8 540 ${y})">
+      <rect x="${540 - txt.length * 30 - 40}" y="${y - 70}" width="${txt.length * 60 + 80}" height="140" rx="14" fill="rgba(255,255,255,.9)" stroke="${C.red}" stroke-width="12"/>
+      ${T(540, y + 40, 100, txt, { f: C.red })}</g></g>`;
 
   function capHTML(chunk, tone) {
     const hi = tone === "red" ? C.red : C.gold;
@@ -311,23 +315,29 @@
     const b = EP.beats[i];
     const stage = document.getElementById("stage");
     const scene = (SCENES[b.scene] || room)(b, EP);
-    const cast = b.scene === "couple" || (b.scene === "end" && EP.season === 2) ? ["theo", "maya"] : b.scene === "maya" ? ["maya"] : (b.scene === "room" || b.scene === "end") ? ["theo"] : [];
+    const cast = b.scene === "couple" || (b.scene === "end" && EP.season === 2) ? ["theo", "maya"] : b.scene === "dev" ? ["theo", "dev"] : b.scene === "maya" ? ["maya"] : (b.scene === "room" || b.scene === "end") ? ["theo"] : [];
     const withTheo = cast.length > 0;
+    // 3D (25 Nov): people and the room are drawn by kit3d.js on the canvas underneath; the SVG layer keeps cards, stamps, HUD and captions.
+    const td = !!window.World && cast.length > 0 && b.scene !== "end";
+    if (window.World) { document.getElementById("gl").style.visibility = td ? "visible" : "hidden"; if (td) window.World.set(b, cast); }
     const place = (who, i) => {
       const end = b.scene === "end", duo = cast.length === 2;
       const left = end && duo ? (i ? 400 : 140) : duo ? (i ? 520 : 30) : 270, top = end ? -100 : duo ? 560 : 420, sc = end ? 0.6 : duo ? 0.8 : 1;
-      const o = who === "maya" ? { face: b.mface || b.face || "neutral", pose: b.mpose || (duo ? "idle" : b.pose) || "idle" } : { face: b.face || (end ? "happy" : "neutral"), pose: b.pose || (end ? "wave" : "idle") };
-      return `<div class="person" data-sc="${sc}" style="position:absolute;left:${left}px;top:${top}px;transform-origin:50% 100%;transform:scale(${sc})">${who === "maya" ? maya(o) : theo(o)}</div>`;
+      const o = who !== "theo" ? { face: b.mface || b.face || "neutral", pose: b.mpose || (duo ? "idle" : b.pose) || "idle" } : { face: b.face || (end ? "happy" : "neutral"), pose: b.pose || (end ? "wave" : "idle") };
+      return `<div class="person" data-who="${who}" data-sc="${sc}" style="position:absolute;left:${left}px;top:${top}px;transform-origin:50% 100%;transform:scale(${sc})">${who === "maya" ? maya(o) : who === "dev" ? dev(o) : theo(o)}</div>`;
     };
     stage.innerHTML = `<div id="punch" style="position:absolute;inset:0;transform-origin:50% 45%">
-        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${scene}</svg>
-        ${cast.map(place).join("")}
-        ${b.stamp ? `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${stampSVG(b.stamp)}</svg>` : ""}
+        ${td ? "" : `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${scene}</svg>`}
+        ${td ? "" : cast.map(place).join("")}
+        ${b.stamp ? `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${stampSVG(b.stamp, td ? 470 : 1300)}</svg>` : ""}
       </div>
       ${b.scene === "end" ? "" : `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="position:absolute;inset:0">${hud(EP)}</svg>`}
-      <div id="cap" style="position:absolute;left:40px;right:40px;top:${b.scene === "end" ? 1580 : cast.length === 2 ? 1560 : withTheo ? 980 : 1440}px;text-align:center"></div>`;
+      ${EP.format === "coach" ? `<div id="flash" style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(255,40,40,0) 35%,rgba(255,30,30,.75));opacity:0;pointer-events:none"></div>` : ""}
+      <div id="cap" style="position:absolute;left:40px;right:40px;top:${b.scene === "end" ? 1580 : td ? 1330 : cast.length === 2 ? 1560 : withTheo ? 980 : 1440}px;text-align:center">
+        ${EP.format === "coach" && b.who ? `<div class="who who-${b.who}">${{ coach: "COACH", theo: "THEO", dev: "DEV", maya: "MAYA" }[b.who] || ""}</div>` : ""}<div id="capline"></div></div>`;
     els = {
-      punch: document.getElementById("punch"), people: [...stage.querySelectorAll(".person")], cap: document.getElementById("cap"),
+      punch: document.getElementById("punch"), people: [...stage.querySelectorAll(".person")], cap: document.getElementById("capline") || document.getElementById("cap"),
+      flash: document.getElementById("flash"), tag: stage.querySelector(".who"), cast, td,
       eyes: [...stage.querySelectorAll(".eye")], armR: [...stage.querySelectorAll("#armR")], pops: [...stage.querySelectorAll(".pop")], needle: stage.querySelector(".needle"),
       stamp: stage.querySelector(".bigstamp"), smallStamps: [...stage.querySelectorAll(".stamp")], tiles: [...stage.querySelectorAll(".tile")],
       line: stage.querySelector(".drawline"), newLine: stage.querySelector(".line-new"), opts: [...stage.querySelectorAll(".opt")], chunk: -1
@@ -339,6 +349,26 @@
     if (i < 0) i = t < TL.beats[0].start ? 0 : TL.beats.length - 1;
     if (i !== cur) { build(i); cur = i; }
     const B = TL.beats[i], b = EP.beats[i], lt = t - B.start, D = B.end - B.start;
+    if (EP.format === "coach") {
+      // Camera: a close-up on whoever is talking, a slow push on Theo while the coach talks,
+      // and a hard punch-in with shake on a yelled line. A new framing on every line keeps the eye busy.
+      const duo = els.cast.length === 2, k = els.cast.indexOf(b.who);
+      const ox = k < 0 ? 540 : duo ? (k ? 790 : 300) : 540, oy = k < 0 ? 760 : duo ? 1020 : 720;
+      let sc = k >= 0 ? 1.2 + 0.05 * (lt / D) : (els.cast.length ? 1.0 + 0.08 * (lt / D) : 1.0);
+      let dx = 0, dy = 0, rot = 0;
+      if (B.loud) {
+        sc += 0.22 * (1 - ease(lt / 0.35));
+        const amp = 26 * Math.max(0.15, 1 - lt / 0.9);
+        dx = amp * Math.sin(t * 83.1) * Math.cos(t * 37.7); dy = amp * Math.sin(t * 71.3 + 1.7); rot = 1.4 * Math.sin(t * 59.9) * Math.max(0, 1 - lt / 0.9);
+      } else sc += 0.08 * (1 - ease(lt / 0.22));
+      if (els.td) { window.World.frame(t, lt, D, B); els.punch.style.transform = B.loud ? `translate(${dx * 0.5}px,${dy * 0.5}px) rotate(${rot}deg)` : ""; }
+      else { els.punch.style.transformOrigin = `${ox}px ${oy}px`; els.punch.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(${sc})`; }
+      if (els.flash) els.flash.style.opacity = B.loud ? Math.max(0, 0.9 - lt / 0.3) + 0.12 * (Math.sin(t * 30) > 0.6 ? 1 : 0) * (lt < 1 ? 1 : 0) : 0;
+      // Mouths move only while their owner is speaking.
+      const talking = t >= B.voice && t <= B.vend, open = Math.floor(t * 11) % 3 !== 0;
+      els.people.forEach((p) => { const me = p.dataset.who === b.who && talking && open; const mo = p.querySelector(".mo"), mc = p.querySelector(".mc"); if (mo) { mo.style.display = me ? "" : "none"; mc.style.display = me ? "none" : ""; } });
+      if (els.tag) els.tag.style.transform = `scale(${0.7 + 0.3 * back(lt / 0.2)})`;
+    } else
     els.punch.style.transform = `scale(${1.07 - 0.07 * ease(lt / 0.28)})`;
     els.people.forEach((p, k) => { p.style.transform = `scale(${p.dataset.sc}) translateY(${Math.sin(t * 2.4 + k * 1.3) * 6}px)`; });
     const blink = (t % 3.3) < 0.12;
@@ -356,12 +386,15 @@
     // caption: one chunk at a time, popping in
     let c = -1;
     B.chunks.forEach((ch, k) => { if (t >= ch.t) c = k; });
-    if (c !== els.chunk) { els.chunk = c; els.cap.innerHTML = c >= 0 ? `<span class="cap">${capHTML(B.chunks[c].text, b.tone)}</span>` : ""; }
+    if (c !== els.chunk) { els.chunk = c; els.cap.innerHTML = c >= 0 ? `<span class="cap${B.loud ? " loud" : ""}">${capHTML(B.chunks[c].text, b.tone)}</span>` : ""; }
     const sketch = document.body.classList.contains("sketch");
-    if (sketch) {
+    if (sketch && !document.body.classList.contains("td")) {
       // Lines boil: a different wobble every 4 frames, as when each drawing is traced again by hand.
       els.punch.style.filter = `url(#boil${Math.floor(t * 7.5) % 3})`;
-      const sp = els.cap.firstChild; if (sp) sp.style.transform = `rotate(${[-1.6, 1.2, -0.8, 1.8].at(c % 4)}deg)`;
+    }
+    if (sketch) {
+      const sp = els.cap.firstChild;
+      if (sp) sp.style.transform = B.loud ? `rotate(${[-3, 2.5, -2, 3.5].at(c % 4) + Math.sin(t * 61) * 1.2}deg) scale(${1.25 - 0.13 * ease((t - (B.chunks[c]?.t || 0)) / 0.12)})` : `rotate(${[-1.6, 1.2, -0.8, 1.8].at(c % 4)}deg)`;
     } else if (c >= 0) { const a = (t - B.chunks[c].t) / 0.13; const sp = els.cap.firstChild; if (sp) sp.style.transform = `scale(${1.32 - 0.32 * ease(a)})`; }
   };
 })();
