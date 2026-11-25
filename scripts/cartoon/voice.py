@@ -28,7 +28,7 @@ CAST = {"coach": os.environ.get("COACH_VOICE", "hm_psi"), "theo": os.environ.get
         "dev": os.environ.get("DEV_VOICE", "ff_siwis"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
 # The coach is raised to match the owner's reference reel (a high, bouncy voice, about 212 Hz against
 # Kokoro's 130): resampled up by COACH_PITCH and spoken slower first, so his pace stays the same.
-PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.62")), "coach": float(os.environ.get("COACH_PITCH", "1.2"))}
+PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8")), "coach": float(os.environ.get("COACH_PITCH", "1.2"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
@@ -82,10 +82,10 @@ if model.startswith("kokoro:"):
             elif part.strip(): out.append(k.tokenizer.phonemize(part.strip(), lang))
         return " ".join(out)
     def indianise(p):
-        # Indian English on top of British phonemes: retroflex t and d, th as aspirated t or d,
-        # w and v both as ʋ, tapped r, pure long vowels instead of the glides.
-        p = p.replace("θ", "tʰ").replace("ð", "d")
-        p = p.replace("əʊ", "oː").replace("oʊ", "oː").replace("eɪ", "eː").replace("ɜː", "əɾ").replace("ʌ", "ə").replace("ɒ", "ɔ")
+        # Indian English on top of British phonemes: retroflex t and d, w and v both as ʋ, tapped r,
+        # pure long vowels instead of the glides. "th" and the other vowels are left as they are
+        # (25 Nov: rewriting them made words such as "month" come out wrong).
+        p = p.replace("əʊ", "oː").replace("oʊ", "oː").replace("eɪ", "eː")
         p = re.sub(r"t(?!ʰ|ʃ)", "ʈ", p)
         p = re.sub(r"d(?!ʒ)", "ɖ", p)
         return p.replace("w", "ʋ").replace("v", "ʋ").replace("ɹ", "ɾ")
