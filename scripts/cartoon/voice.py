@@ -91,11 +91,13 @@ if model.startswith("kokoro:"):
         return p.replace("w", "ʋ").replace("v", "ʋ").replace("ɹ", "ɾ")
     FRENCH = r"(?i)((?:oh )?là là|frérot|voilà|allez|mon ami|n'est-ce pas|bof|c'est la vie|zut)"
     def yell(v):
-        # A yelled line: pitched up about a semitone (by resampling, which also quickens it),
-        # driven hard into a soft clipper for grit, then levelled.
-        idx = np.arange(0, len(v) - 1, 1.07)
+        # A yelled line: pitched up a little (by resampling, which also quickens it) and made
+        # louder with gentle compression. 25 Nov: hard clipping made yells sound like static
+        # and hard to understand, so there is no distortion now.
+        idx = np.arange(0, len(v) - 1, 1.05)
         v = np.interp(idx, np.arange(len(v)), v)
-        v = np.tanh(v / (np.max(np.abs(v)) or 1) * 3.2)
+        v = v / (np.max(np.abs(v)) or 1)
+        v = np.sign(v) * np.abs(v) ** 0.8          # lifts the quieter syllables, no clipping
         return v / (np.max(np.abs(v)) or 1) * 0.98
     for b in ep["beats"]:
         vname = CAST.get(b.get("who"), kvoice) if COACH else kvoice
@@ -221,7 +223,7 @@ def tone(f0, f1, dur, amp, decay):
 
 pop = tone(1400, 700, 0.07, 0.16 if not COACH else 0.08, 60)
 rng = np.random.default_rng(7)
-def whoosh(dur=0.22, amp=0.14):
+def whoosh(dur=0.2, amp=0.06):
     # Filtered noise swelling and falling: the cut sound between lines.
     nn = int(dur * SR); x = rng.standard_normal(nn)
     x = np.convolve(x, np.ones(18) / 18, mode="same")
@@ -229,10 +231,8 @@ def whoosh(dur=0.22, amp=0.14):
     return amp * x * env
 def boom():
     # The hit under a yelled line: a sub drop plus a short noise crack.
-    b0 = tone(110, 38, 0.6, 0.75, 7)
-    cr = rng.standard_normal(int(0.05 * SR)) * np.exp(-np.arange(int(0.05 * SR)) / SR * 70) * 0.25
-    b0[:len(cr)] += cr
-    return b0
+    # A clean sub drop only (the noise crack read as static over the words).
+    return tone(110, 38, 0.6, 0.55, 7)
 thud = tone(140, 55, 0.35, 0.5, 14)
 for b in beats:
     for c in b["chunks"]:
@@ -240,9 +240,9 @@ for b in beats:
     if b["stamp"]:
         s = int((b["voice"] + 0.25) * SR); mix[s:s + len(thud)] += thud
     if COACH:
-        w = whoosh(); s = max(0, int((b["start"] - 0.08) * SR)); mix[s:s + len(w)] += w[: len(mix) - s]
+        w = whoosh(); s = max(0, int((b["voice"] - 0.2) * SR)); mix[s:s + len(w)] += w[: len(mix) - s]
         if b["loud"]:
-            bm = boom(); s = max(0, int((b["voice"] - 0.02) * SR)); mix[s:s + len(bm)] += bm[: len(mix) - s]
+            bm = boom(); s = max(0, int((b["voice"] - 0.12) * SR)); mix[s:s + len(bm)] += bm[: len(mix) - s]
 
 # Music bed: Am - F - C - G, soft pad plus a light plucked arpeggio at 112 bpm.
 bpm, chords = (126 if COACH else 112), [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]
