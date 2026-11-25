@@ -24,11 +24,11 @@ GAP, LEAD, TAIL = (0.06, 0.04, 0.5) if COACH else (0.22, 0.25, 0.6)
 # 25 Nov (owner: "make the coach a funny Indian voice and the roommate a funny French voice"):
 # the coach is Kokoro's Indian male voice; Kokoro's only French voice is female, so Dev's is lowered
 # in pitch (DEV_PITCH, a resampling factor) and spoken faster to keep his pace.
-CAST = {"coach": os.environ.get("COACH_VOICE", "hm_omega"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
+CAST = {"coach": os.environ.get("COACH_VOICE", "hm_psi"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
         "dev": os.environ.get("DEV_VOICE", "ff_siwis"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
 # The coach is raised to match the owner's reference reel (a high, bouncy voice, about 212 Hz against
 # Kokoro's 130): resampled up by COACH_PITCH and spoken slower first, so his pace stays the same.
-PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.62")), "coach": float(os.environ.get("COACH_PITCH", "1.5"))}
+PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.62")), "coach": float(os.environ.get("COACH_PITCH", "1.2"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
@@ -81,6 +81,14 @@ if model.startswith("kokoro:"):
             if part.isdigit(): out.append(marks[int(part)])
             elif part.strip(): out.append(k.tokenizer.phonemize(part.strip(), lang))
         return " ".join(out)
+    def indianise(p):
+        # Indian English on top of British phonemes: retroflex t and d, th as aspirated t or d,
+        # w and v both as ʋ, tapped r, pure long vowels instead of the glides.
+        p = p.replace("θ", "tʰ").replace("ð", "d")
+        p = p.replace("əʊ", "oː").replace("oʊ", "oː").replace("eɪ", "eː").replace("ɜː", "əɾ").replace("ʌ", "ə").replace("ɒ", "ɔ")
+        p = re.sub(r"t(?!ʰ|ʃ)", "ʈ", p)
+        p = re.sub(r"d(?!ʒ)", "ɖ", p)
+        return p.replace("w", "ʋ").replace("v", "ʋ").replace("ɹ", "ɾ")
     FRENCH = r"(?i)((?:oh )?là là|frérot|voilà|allez|mon ami|n'est-ce pas|bof|c'est la vie|zut)"
     def yell(v):
         # A yelled line: pitched up about a semitone (by resampling, which also quickens it),
@@ -100,6 +108,10 @@ if model.startswith("kokoro:"):
             # Dev's French words (frérot, voilà...) are said the French way; the rest is English.
             parts = re.split(FRENCH, line)
             ps = " ".join(k.tokenizer.phonemize(x.strip(), "fr-fr") if re.fullmatch(FRENCH, x.strip()) else k.tokenizer.phonemize(x.strip(), vlang) for x in parts if x and x.strip(" ,"))
+        elif COACH and b.get("who") == "coach":
+            # 25 Nov (owner: the coach "sounds like an old Filipino man", match the Indian reel's pronunciation):
+            # British phonemes rewritten with Indian English sounds, then spoken by the Hindi voice.
+            ps = indianise(k.tokenizer.phonemize(line, "en-gb"))
         else:
             ps = phon(line) if vlang == lang else k.tokenizer.phonemize(line, vlang)
         a, rate = k.create(ps, voice=vname, speed=sp, lang=vlang, is_phonemes=True)
