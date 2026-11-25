@@ -26,7 +26,9 @@ GAP, LEAD, TAIL = (0.06, 0.04, 0.5) if COACH else (0.22, 0.25, 0.6)
 # in pitch (DEV_PITCH, a resampling factor) and spoken faster to keep his pace.
 CAST = {"coach": os.environ.get("COACH_VOICE", "hm_omega"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
         "dev": os.environ.get("DEV_VOICE", "ff_siwis"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
-PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8"))}
+# The coach is raised to match the owner's reference reel (a high, bouncy voice, about 212 Hz against
+# Kokoro's 130): resampled up by COACH_PITCH and spoken slower first, so his pace stays the same.
+PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8")), "coach": float(os.environ.get("COACH_PITCH", "1.5"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
