@@ -18,6 +18,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { geminiJson, groqJson, GEMINI_FEED_MODEL, GROQ_FEED_MODELS } from "../lib/providers.mjs";
 import { TICKERS, buildFacts, checkNumbers } from "../lib/debate.mjs";
+import { HOUSE_STYLE, tidy } from "../lib/house-style.mjs";
 
 const arg = (k) => process.argv.find((a) => a.startsWith(`--${k}=`))?.split("=")[1];
 const PROBE = process.argv.includes("--probe");
@@ -62,6 +63,7 @@ const RULES =
   "Plain English for a reader who is new to markets. No advice to buy or sell, no price targets, no predictions of the share price.";
 
 async function write(system, prompt, schema, maxTokens) {
+  system = system + " " + HOUSE_STYLE;
   const tried = [];
   for (const model of GEMINI_FEED_MODEL.split(",").map((m) => m.trim()).filter(Boolean)) {
     try { const out = await geminiJson({ model, system, prompt, schema, maxTokens }); if (out) return { out, writer: "gemini" }; }
@@ -98,7 +100,7 @@ async function debate(ticker) {
   const judge = await checked("judge", `You judge a debate between a bull and a bear. Score how well each side's argument is supported by the facts, not which view you hold about the stock. ${RULES}`,
     base + `BULL CASE\n${JSON.stringify(bull)}\n\nBEAR CASE\n${JSON.stringify(bear)}\n\nJudge which case the facts support better. Penalise any claim the facts do not back.`,
     JUDGE_SCHEMA, facts.allowed, 900);
-  return { ticker, name: facts.name, cik: facts.cik, fy: facts.fy, facts: facts.text, bull, bear, judge, at: new Date().toISOString() };
+  return { ticker, name: facts.name, cik: facts.cik, fy: facts.fy, facts: facts.text, bull: tidy(bull), bear: tidy(bear), judge: tidy(judge), at: new Date().toISOString() };
 }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;

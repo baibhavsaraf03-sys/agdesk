@@ -19,6 +19,7 @@ import { createClient } from "@supabase/supabase-js";
 import { fetchMentions, fetchQuotes, buildRows } from "../lib/meme.mjs";
 import { fetchNews } from "../lib/news.mjs";
 import { geminiJson, groqJson, GEMINI_FEED_MODEL, GROQ_FEED_MODELS } from "../lib/providers.mjs";
+import { HOUSE_STYLE, tidyText } from "../lib/house-style.mjs";
 
 const PROBE = process.argv.includes("--probe");
 const FORCE_SUMMARY = process.argv.includes("--summary");
@@ -86,7 +87,7 @@ async function writeSummary() {
     `The most-discussed tickers on Reddit's r/wallstreetbets over the last 24 hours, with their price move and volume:\n${table}\n\n` +
     `Headlines from the last 24 hours that mention any of them:\n${relevant.map((n) => `- ${n.title} (${n.source})`).join("\n") || "(none)"}\n\n` +
     "Write the summary. Use only the figures and headlines given. A label of Rally means the talk and the price rose together; Buzzing means talk without a price move; Selling off means talk while the price fell.";
-  const system = "You write for a markets terminal used by students and beginners. Plain words, no hype, no slang, no recommendations.";
+  const system = "You write for a markets terminal used by students and beginners. Plain words, no hype, no slang, no recommendations. " + HOUSE_STYLE;
 
   const tried = [];
   for (const model of GEMINI_FEED_MODEL.split(",").map((m) => m.trim()).filter(Boolean)) {
@@ -119,9 +120,9 @@ if (FORCE_SUMMARY || summaryAge >= SUMMARY_EVERY_MS) {
     if (s) {
       const known = new Set(rows.map((r) => r.ticker));
       summary = {
-        text: String(s.text).trim(),
+        text: tidyText(String(s.text).trim()),
         movers: (Array.isArray(s.movers) ? s.movers : []).filter((m) => known.has(String(m.ticker).toUpperCase())).slice(0, 5)
-          .map((m) => ({ ticker: String(m.ticker).toUpperCase(), why: String(m.why).trim() })),
+          .map((m) => ({ ticker: String(m.ticker).toUpperCase(), why: tidyText(String(m.why).trim()) })),
         at: new Date().toISOString(),
         writer: s.writer
       };

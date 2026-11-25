@@ -22,6 +22,7 @@ import { DOOM_TABS, DOOM_WRITTEN, doomTabDigest } from "../lib/doomsday.js";
 import {
   geminiJson, groqJson, FEED_PROVIDER, GEMINI_FEED_MODEL, GROQ_FEED_MODELS
 } from "../lib/providers.mjs";
+import { HOUSE_STYLE, tidy } from "../lib/house-style.mjs";
 
 /* -------------------------------------------------------------------------- */
 /* zones                                                                      */
@@ -316,6 +317,7 @@ ${doomTabDigest()}
 - Every other figure must come from something you actually retrieved in this session. Never carry a number forward unverified. Omit anything you cannot verify rather than guessing.
 - Say explicitly when a figure is a forecast or projection rather than a traded level.
 - No buy or sell calls and no investment advice. Explain reasoning instead.
+- ${HOUSE_STYLE}
 - Write plain prose. No citation markup, reference tags, bracketed source indices or inline source numbering anywhere in any field — sources go in the sources array and nowhere else.
 - Where two sources disagree materially, say so and say which you trust, rather than averaging them or picking silently.
 - Match your language to the size of the move. A 3 basis point change in a yield is small; a 0.2% index move is noise. Never write "plunging", "surging", "soaring" or "collapsing" about a move under roughly 1%, or about a yield change under 15 basis points. State the number and say plainly that it is small. Inflating a quiet session into a dramatic one is the single worst thing you can do here, because a reader cannot tell it from a real move.
@@ -454,7 +456,7 @@ async function readViaGemini(prompt) {
 
 const SYSTEM =
   "You are the resident analyst on a markets terminal used by finance, economics and politics students. " +
-  "You are given verified figures and headlines. Your job is interpretation, not recall.";
+  "You are given verified figures and headlines. Your job is interpretation, not recall. " + HOUSE_STYLE;
 
 async function readViaGroq(prompt) {
   let last;
@@ -475,9 +477,7 @@ async function readViaGroq(prompt) {
 async function readViaGeminiModel(prompt, model) {
   const out = await geminiJson({
     model,
-    system:
-      "You are the resident analyst on a markets terminal used by finance, economics and politics students. " +
-      "You are given verified figures and headlines. Your job is interpretation, not recall.",
+    system: SYSTEM,
     prompt,
     schema: READ_TOOL.input_schema,
     // Gemini 3.x spends thinking tokens from this same budget, so a ceiling
@@ -638,6 +638,7 @@ async function main() {
     throw new Error("The published read had no headline.");
   }
   payload = deepStrip(payload);
+  { const st = { changed: 0 }; payload = tidy(payload, st); if (st.changed) console.log(`  house style mended ${st.changed} passage(s)`); }
   payload.sections = Array.isArray(payload.sections) ? payload.sections : [];
   payload.watch = Array.isArray(payload.watch) ? payload.watch : [];
   payload.short = (Array.isArray(payload.short) ? payload.short : []).filter((x) => typeof x === "string" && x.trim()).slice(0, 4);

@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { geminiText, AGENT_PROVIDER, GEMINI_AGENT_MODEL } from "@/lib/providers.mjs";
 import { serverClient, adminClient } from "@/lib/supabase-server";
 import { METHOD_SUMMARY, AGENT_RULES, EXCHANGES, ZONES } from "@/lib/content";
+import { HOUSE_STYLE } from "@/lib/house-style.mjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -55,6 +56,7 @@ function openNow() {
 function buildContext(reads) {
   const lines = [
     `You are the resident analyst on an open-access markets terminal called Ledge Desk. It covers ${EXCHANGES.length} world equity exchanges by trading session and agricultural commodities in depth. The user may ask about anything — an exchange, an index, a market, a term, a scenario, or their own written analysis.`,
+    HOUSE_STYLE + " Answering a question, you may be warmer and may use the second person, but keep the same plain, exact words.",
     "",
     `Exchanges trading right now: ${openNow().join("; ") || "none — all closed or weekend"}.`,
     ""
