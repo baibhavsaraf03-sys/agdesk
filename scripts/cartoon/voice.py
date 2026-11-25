@@ -19,7 +19,7 @@ ep = json.load(open(ep_path))
 SR = 48000
 COACH = ep.get("format") == "coach"
 # Coach mode is a quick-fire argument: tighter gaps and no silent lead-in, so the first yell lands at once.
-GAP, LEAD, TAIL = (0.1, 0.04, 0.5) if COACH else (0.22, 0.25, 0.6)
+GAP, LEAD, TAIL = (0.06, 0.04, 0.5) if COACH else (0.22, 0.25, 0.6)
 # One voice per character (25 Nov). Kokoro voice names; variables override.
 CAST = {"coach": os.environ.get("COACH_VOICE", "am_michael"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
         "dev": os.environ.get("DEV_VOICE", "am_fenrir"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
@@ -86,7 +86,7 @@ if model.startswith("kokoro:"):
         vname = CAST.get(b.get("who"), kvoice) if COACH else kvoice
         vlang = "en-gb" if vname.startswith("b") else "en-us"
         loud = COACH and b.get("loud")
-        sp = float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.07 if COACH else 1.0)
+        sp = float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.12 if COACH else 1.0)
         a, rate = k.create(phon(spoken(b["say"])) if vlang == lang else k.tokenizer.phonemize(spoken(b["say"]), vlang), voice=vname, speed=sp, lang=vlang, is_phonemes=True)
         v = to_sr(np.asarray(a, dtype=np.float32), rate)
         if COACH: v = yell(v) if loud else v / (np.max(np.abs(v)) or 1) * 0.8

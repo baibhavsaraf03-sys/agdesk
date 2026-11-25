@@ -74,12 +74,12 @@ function allowedNumbers(f) {
 
 function check(beats, f) {
   const ok = allowedNumbers(f), problems = [];
-  if (!Array.isArray(beats) || beats.length < 4 || beats.length > 6) problems.push(`need 4 to 6 beats, got ${beats?.length}`);
+  if (!Array.isArray(beats) || beats.length < 3 || beats.length > 5) problems.push(`need 3 to 4 beats, got ${beats?.length}`);
   const mayaIn = f.season === 2 || f.day >= 8;
   (beats || []).forEach((b, i) => {
     if (!SCENES.includes(b.scene) || (!mayaIn && (b.scene === "couple" || b.scene === "maya"))) problems.push(`beat ${i + 1}: scene ${b.scene} not allowed today`);
     if (AD.test([b.say, b.cap, b.stamp].join(" "))) problems.push(`beat ${i + 1}: do not mention Ledge Desk, apps, downloads or sign-ups (that scene is added separately)`);
-    if (!b.say || b.say.split(/\s+/).length > 16) problems.push(`beat ${i + 1}: say missing or longer than 16 words`);
+    if (!b.say || b.say.split(/\s+/).length > 14) problems.push(`beat ${i + 1}: say missing or longer than 14 words`);
     if (!WHO.includes(b.who) || (b.who === "maya" && !mayaIn)) problems.push(`beat ${i + 1}: who must be coach, theo or dev${mayaIn ? " or maya" : ""}`);
     const chunks = String(b.cap || "").split("/").map((x) => x.trim()).filter(Boolean);
     if (!chunks.length || chunks.length > 3 || chunks.some((c) => c.replace(/\*/g, "").length > 20)) problems.push(`beat ${i + 1}: cap needs 1-3 chunks of at most 20 letters`);
@@ -157,7 +157,7 @@ async function aiMiddle(f, last) {
     `Facts you must act out, in order:\n${f.result.facts.map((x) => "- " + x).join("\n")}\n` +
     (f.event ? `Then a surprise: ${f.event.text}${f.event.onCard ? ` His savings could not cover it, so ${money(f.event.onCard)} went on the credit card.` : ""}\n` : "") +
     `Big number for one stat scene: ${f.result.big} (${f.result.small}).\n` +
-    `Write 4 to 6 lines of dialogue (each under 14 words: the whole episode must stay under 35 seconds). Each line has who: coach, theo or dev${f.season === 2 || f.day >= 8 ? " (or maya)" : ""}. Never the same speaker twice in a row. Dev speaks at least once, Theo talks back at least once, and Theo insists he is broke at least once even if the figures say he is doing better; Coach or Dev shuts that down with a figure. Mark at most 2 lines loud (yelled), the ones with the biggest reaction. Every figure in the facts must be said aloud in some line, by whoever fits. Scenes: room (Theo alone), dev (Theo and Dev; use for every Dev line), stat (big figure card), bank (his balance), receipt (up to 4 lines). Set face and pose for Theo and mface/mpose for Dev. Tell one clear story: what he did, what it changes, how he takes it. Never two stat scenes in a row.\n` +
+    `Write 3 or 4 lines of dialogue (each under 12 words: the whole episode must stay under 30 seconds). The first line must not be Theo's (he has just spoken). Each line has who: coach, theo or dev${f.season === 2 || f.day >= 8 ? " (or maya)" : ""}. Never the same speaker twice in a row. Dev speaks at least once, Theo talks back at least once, and Theo insists he is broke at least once even if the figures say he is doing better; Coach or Dev shuts that down with a figure. Mark at most 2 lines loud (yelled), the ones with the biggest reaction. Every figure in the facts must be said aloud in some line, by whoever fits. Scenes: room (Theo alone), dev (Theo and Dev; use for every Dev line), stat (big figure card), bank (his balance), receipt (up to 4 lines). Set face and pose for Theo and mface/mpose for Dev. Tell one clear story: what he did, what it changes, how he takes it. Never two stat scenes in a row.\n` +
     `Do not write an opening, a vote or an ending: those are added separately (the episode opens with Coach yelling at Theo). Do not mention any app, website or brand by name.\n` +
     `The ONLY figures you may write: ${[...allowedNumbers(f)].filter((n) => Number(n) > 12 || n.includes(".")).join(", ")} (and small counts up to 12). Never add, subtract or multiply them into new figures.\n` +
     `Ideas for jokes you may use or improve:\n${(f.jokes || []).map((j) => "- " + j.say).join("\n")}` +
@@ -242,8 +242,10 @@ export async function writeEpisode(state, winner, counts) {
   const plot = plotB ? { who: "coach", ...plotB } : null;
   if (plot) middle.splice(Math.min(desk ? 3 : 2, middle.length), 0, plot);
   // Hand-written moments stay; the AI's lines give way so the middle stays short.
-  while (middle.length > 5) { const k = middle.findLastIndex((b) => b !== desk && b !== plot); if (k < 0) break; middle.splice(k, 1); }
+  while (middle.length > 4) { const k = middle.findLastIndex((b) => b !== desk && b !== plot); if (k < 0) break; middle.splice(k, 1); }
 
+  // Theo has just answered the coach, so the middle never opens on Theo.
+  if (middle[0]?.who === "theo") { const k = middle.findIndex((b) => b.who !== "theo"); if (k > 0) middle.unshift(...middle.splice(k, 1)); }
   const c = f.choice, tot = counts ? counts.a + counts.b : 0;
   const lo = f.leftover;
   // The hook (first 2 seconds): the coach yells the day's most damning figure at Theo.
@@ -257,10 +259,10 @@ export async function writeEpisode(state, winner, counts) {
   const pct = tot > 0 ? Math.round(100 * (c.letter === "A" ? counts.a : counts.b) / tot) : 0;
   opening.push(tot >= 20
     ? { who: "theo", scene: "stat", say: `Relax! ${pct}% of you voted ${c.letter}. ${c.label}.`, cap: `*${pct}%* VOTED / *${c.letter}*`, big: `${pct}%`, small: `VOTED ${c.letter}`, bg: "green" }
-    : { who: "theo", scene: duo ? "couple" : "room", say: `Relax, Coach! Day ${f.day}. ${tot > 0 ? "You voted" : "I went with"} ${c.letter}: ${c.label.toLowerCase()}.`, cap: `DAY ${f.day}: / *${c.letter}*`, face: "smug", pose: "point", mface: "happy", mpose: "idle" });
+    : { who: "theo", scene: duo ? "couple" : "room", say: `Relax! ${tot > 0 ? "You voted" : "I picked"} ${c.letter}: ${c.label.toLowerCase()}.`, cap: `DAY ${f.day}: / *${c.letter}*`, face: "smug", pose: "point", mface: "happy", mpose: "idle" });
 
   const status = [lo >= 0
-    ? { who: "coach", scene: "stat", say: `Read it, Theo. $${lo} left over every month. You are not broke.`, cap: `*$${lo}* LEFT / NOT BROKE`, big: `$${lo}`, small: "LEFT EACH MONTH", bg: "green" }
+    ? { who: "coach", scene: "stat", say: `$${lo} left every month. You. Are not. Broke.`, cap: `*$${lo}* LEFT / NOT BROKE`, big: `$${lo}`, small: "LEFT EACH MONTH", bg: "green" }
     : { who: "coach", loud: true, scene: "stat", say: `And you are STILL $${-lo} short every month!`, cap: `STILL *$${-lo}* / SHORT`, big: `-$${-lo}`, small: "LEFT EACH MONTH", bg: "red" }];
   const finale = f.day >= f.of || f.next.length === 0;
   const tail = [];
@@ -276,7 +278,7 @@ export async function writeEpisode(state, winner, counts) {
     tail.push({ who: "dev", scene: "end", say: "Follow, or he goes back to ramen.", cap: "FOLLOW / FOR THE *FINALE*" });
   } else {
     const [va, vb] = f.next;
-    tail.push({ who: "coach", loud: true, scene: "vote", say: `Tomorrow! A: ${va.label.toLowerCase()}. Or B: ${vb.label.toLowerCase()}. Comment NOW!`, q: `DAY ${f.day + 1}: YOU DECIDE`, a: va.label.toUpperCase(), b: vb.label.toUpperCase(), cap: "COMMENT / *A* OR *B*" });
+    tail.push({ who: "coach", loud: true, scene: "vote", say: `Tomorrow! A, or B? Comment NOW!`, q: `DAY ${f.day + 1}: YOU DECIDE`, a: va.label.toUpperCase(), b: vb.label.toUpperCase(), cap: "COMMENT / *A* OR *B*" });
   }
   const episode = { series: "Fix Theo", format: "coach", season, day: f.day, of: f.of, score: f.score, cur: "$", food: "Takeout", writer,
     facts: f.result.facts, beats: [...opening, ...middle, ...status, ...tail] };
