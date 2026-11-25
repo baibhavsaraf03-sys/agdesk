@@ -21,8 +21,12 @@ COACH = ep.get("format") == "coach"
 # Coach mode is a quick-fire argument: tighter gaps and no silent lead-in, so the first yell lands at once.
 GAP, LEAD, TAIL = (0.06, 0.04, 0.5) if COACH else (0.22, 0.25, 0.6)
 # One voice per character (25 Nov). Kokoro voice names; variables override.
-CAST = {"coach": os.environ.get("COACH_VOICE", "am_michael"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
-        "dev": os.environ.get("DEV_VOICE", "am_fenrir"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
+# 25 Nov (owner: "make the coach a funny Indian voice and the roommate a funny French voice"):
+# the coach is Kokoro's Indian male voice; Kokoro's only French voice is female, so Dev's is lowered
+# in pitch (DEV_PITCH, a resampling factor) and spoken faster to keep his pace.
+CAST = {"coach": os.environ.get("COACH_VOICE", "hm_omega"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
+        "dev": os.environ.get("DEV_VOICE", "ff_siwis"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
+PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
@@ -84,11 +88,13 @@ if model.startswith("kokoro:"):
         return v / (np.max(np.abs(v)) or 1) * 0.98
     for b in ep["beats"]:
         vname = CAST.get(b.get("who"), kvoice) if COACH else kvoice
-        vlang = "en-gb" if vname.startswith("b") else "en-us"
+        vlang = "en-gb" if vname.startswith("b") else "en-us"   # English words in every voice; the accent comes from the voice
+        pf = PITCH.get(b.get("who"), 1.0) if COACH else 1.0
         loud = COACH and b.get("loud")
-        sp = float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.12 if COACH else 1.0)
+        sp = min(2.0, float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.12 if COACH else 1.0) / pf)
         a, rate = k.create(phon(spoken(b["say"])) if vlang == lang else k.tokenizer.phonemize(spoken(b["say"]), vlang), voice=vname, speed=sp, lang=vlang, is_phonemes=True)
         v = to_sr(np.asarray(a, dtype=np.float32), rate)
+        if pf != 1.0: v = np.interp(np.arange(0, len(v) - 1, pf), np.arange(len(v)), v)
         if COACH: v = yell(v) if loud else v / (np.max(np.abs(v)) or 1) * 0.8
         voices.append(v)
     model = "kokoro"
