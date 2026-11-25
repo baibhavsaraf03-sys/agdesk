@@ -1092,6 +1092,7 @@ a.btn{display:inline-block;text-decoration:none}
   --caps:"Cormorant SC","Cormorant Garamond",Georgia,serif;
   --chrome:#09111f; --chrome-line:#1d2a40; --line-strong:#33445f; --dot:#121d31; --dial:#0d1729; --tick:#3a4a66;
   --sheet:#0c1526; --scrim:rgba(4,9,18,.74); --on-gold:#0b1424;
+  --gilt:#c2a66b; --gilt-soft:#6f6146;
 }
 /* Blanc (13 Nov, owner's choice): Noir's light twin. Same hairlines, square
    corners, serif capitals, dot-matrix figures and one cut corner; ivory and
@@ -1112,6 +1113,7 @@ a.btn{display:inline-block;text-decoration:none}
   --caps:"Cormorant SC","Cormorant Garamond",Georgia,serif;
   --chrome:#faf7f0; --chrome-line:#dbd1bd; --line-strong:#c6b89e; --dot:#e9e2d3; --dial:#faf7f0; --tick:#cdbfa6;
   --sheet:#faf7f0; --scrim:rgba(21,33,59,.4); --on-gold:#faf7f0;
+  --gilt:#a2823f; --gilt-soft:#d6c49a;
 }
 :root{--read:var(--serif);--dots:var(--mono);--gold:var(--accent);--gold-dim:var(--line);--racing:var(--surface-2);--racing-line:var(--line)}
 
@@ -1770,3 +1772,17 @@ a.btn{display:inline-block;text-decoration:none}
 :root:is([data-theme="dark"],[data-theme="light"]) .side .nav-area::after{display:none}
 :root:is([data-theme="dark"],[data-theme="light"]) .nav-rule{height:0;background:none;border-top:3px double var(--line-strong);width:100%}
 :root:is([data-theme="dark"],[data-theme="light"]) .dial-val.big{font-style:italic;font-weight:600}
+/* Gilt (25 Nov, owner: "underlying gold accents"): gold leaf on the engraving, never on the text.
+   The double rules, the seal, section marks, label capitals, link underlines and the dial needles. */
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.phead,.doc-article h1){border-bottom-color:var(--gilt-soft)}
+:root:is([data-theme="dark"],[data-theme="light"]) .topbar{border-bottom-color:var(--gilt-soft)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.door-rule,.nav-rule){border-top-color:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) .mono-seal{color:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.doc-article,.doc-sec) > h2::before{color:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(h3,.inst-k,.door-motto){color:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.dial-needle){stroke:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.dial-t.danger,.dial-hub){stroke:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) .cut{background:var(--gilt-soft)}
+:root:is([data-theme="dark"],[data-theme="light"]) :is(.door-new,.door-top a,.doc-body a,.doc-article a){text-decoration-color:var(--gilt);border-bottom-color:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) .btn:not(.pri):hover{border-color:var(--gilt)}
+:root:is([data-theme="dark"],[data-theme="light"]) .door-h{text-shadow:none}
