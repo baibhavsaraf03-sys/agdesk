@@ -81,6 +81,16 @@ if model.startswith("kokoro:"):
             if part.isdigit(): out.append(marks[int(part)])
             elif part.strip(): out.append(k.tokenizer.phonemize(part.strip(), lang))
         return " ".join(out)
+    def shift(v, f):
+        # Pitch (and pace) times f by resampling, with the anti-aliasing filter that plain
+        # interpolation lacks (its aliasing was heard as static on the yelled lines).
+        try:
+            from scipy.signal import resample_poly
+            from fractions import Fraction
+            r = Fraction(1 / f).limit_denominator(200)
+            return resample_poly(v, r.numerator, r.denominator).astype(np.float32)
+        except ImportError:
+            return np.interp(np.arange(0, len(v) - 1, f), np.arange(len(v)), v)
     def indianise(p):
         # Indian English on top of British phonemes: retroflex t and d, w and v both as ʋ, tapped r,
         # pure long vowels instead of the glides. "th" and the other vowels are left as they are
@@ -94,10 +104,9 @@ if model.startswith("kokoro:"):
         # A yelled line: pitched up a little (by resampling, which also quickens it) and made
         # louder with gentle compression. 25 Nov: hard clipping made yells sound like static
         # and hard to understand, so there is no distortion now.
-        idx = np.arange(0, len(v) - 1, 1.05)
-        v = np.interp(idx, np.arange(len(v)), v)
-        v = v / (np.max(np.abs(v)) or 1)
-        v = np.sign(v) * np.abs(v) ** 0.8          # lifts the quieter syllables, no clipping
+        # (Later the same day: the soft waveshaper that replaced it still fizzed on Dev's voice, so
+        # a yell is now only the small pitch lift, done with a filtered resampler, and full level.)
+        v = shift(v, 1.05)
         return v / (np.max(np.abs(v)) or 1) * 0.98
     for b in ep["beats"]:
         vname = CAST.get(b.get("who"), kvoice) if COACH else kvoice
@@ -120,7 +129,7 @@ if model.startswith("kokoro:"):
             ps = phon(line) if vlang == lang else k.tokenizer.phonemize(line, vlang)
         a, rate = k.create(ps, voice=vname, speed=sp, lang=vlang, is_phonemes=True)
         v = to_sr(np.asarray(a, dtype=np.float32), rate)
-        if pf != 1.0: v = np.interp(np.arange(0, len(v) - 1, pf), np.arange(len(v)), v)
+        if pf != 1.0: v = shift(v, pf)
         if COACH: v = yell(v) if loud else v / (np.max(np.abs(v)) or 1) * 0.8
         voices.append(v)
     model = "kokoro"
@@ -231,8 +240,9 @@ def whoosh(dur=0.2, amp=0.06):
     return amp * x * env
 def boom():
     # The hit under a yelled line: a sub drop plus a short noise crack.
-    # A clean sub drop only (the noise crack read as static over the words).
-    return tone(110, 38, 0.6, 0.55, 7)
+    # A short mid thump, over before the words start. The sub drop (110 to 38 Hz) it replaced made
+    # phone speakers rattle, which the owner heard as static on every yelled line.
+    return tone(220, 120, 0.14, 0.22, 26)
 thud = tone(140, 55, 0.35, 0.5, 14)
 for b in beats:
     for c in b["chunks"]:
@@ -242,7 +252,7 @@ for b in beats:
     if COACH:
         w = whoosh(); s = max(0, int((b["voice"] - 0.2) * SR)); mix[s:s + len(w)] += w[: len(mix) - s]
         if b["loud"]:
-            bm = boom(); s = max(0, int((b["voice"] - 0.12) * SR)); mix[s:s + len(bm)] += bm[: len(mix) - s]
+            bm = boom(); s = max(0, int((b["voice"] - 0.16) * SR)); mix[s:s + len(bm)] += bm[: len(mix) - s]
 
 # Music bed: Am - F - C - G, soft pad plus a light plucked arpeggio at 112 bpm.
 bpm, chords = (126 if COACH else 112), [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]

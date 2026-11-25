@@ -94,7 +94,7 @@ jobs:
       - name: Tools (voice, Playwright, fonts, ffmpeg)
         if: env.WHAT == 'post' || env.WHAT == 'dry' || env.WHAT == 'redo'
         run: |
-          pip install -q kokoro-onnx soundfile numpy
+          pip install -q kokoro-onnx soundfile numpy scipy
           mkdir -p /tmp/kokoro && cd /tmp/kokoro
           for f in kokoro-v1.0.onnx voices-v1.0.bin; do
             [ -s "$f" ] || curl -sSfL -o "$f" "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/$f"
