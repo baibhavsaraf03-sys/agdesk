@@ -1402,13 +1402,14 @@ export default function Terminal() {
       <div className="landing">
         {/* The door (Noir, 12 Nov): a clock, one line, the way in. */}
         <section className="door dotfield">
-          <div className="door-top"><span>EST. MMXXVI</span><span>LONDON · NEW YORK · TOKYO</span></div>
+          <div className="door-top"><a href="/about">Made by Baibhav in St Andrews</a><a href="/info">What is on the desk</a></div>
           <div className="door-mid">
             <div className="door-mark">LEDGE DESK</div>
+            <h1 className="door-h">Ledge Desk</h1>
             <div className="door-stem" />
             <div className="door-clock" aria-label={`Time now ${clock}`}><DotTime value={clock} /></div>
             <p className="door-line">
-              {pulse?.mood ? `The market is ${pulse.mood.word.toLowerCase()}. ` : ""}The desk is open.
+              {pulse?.mood ? `The market is ${pulse.mood.word.toLowerCase()} right now. ` : ""}Free market screens, charts and plain-English lessons.
             </p>
             <div className="door-acts">
               <button className="btn pri door-btn" onClick={() => enterDesk("HOME")}>Enter the desk</button>
@@ -1416,10 +1417,11 @@ export default function Terminal() {
             </div>
             <button className="door-new" onClick={() => enterDesk("START")}>New to investing? Start with the lessons</button>
             <InstallButton className="door-new door-install" />
+            <p className="door-ai">The hourly market notes are drafted by AI from public figures and named headlines, and marked as such. The lessons and reference pages are fixed, checked, and never rewritten by the AI.</p>
           </div>
           <div className="door-foot">
-            <span><span className="dot live" /> {EXCHANGES.length} EXCHANGES · REWRITTEN HOURLY</span>
-            <span>EDUCATIONAL MATERIAL · NOT INVESTMENT ADVICE</span>
+            <span><span className="dot live" /> {EXCHANGES.length} exchanges</span>
+            <span>For learning, not investment advice</span>
           </div>
         </section>
 
@@ -1536,7 +1538,7 @@ export default function Terminal() {
           <span /><span /><span />
         </button>
 
-        <button type="button" className="sysname" onClick={toDoor} title="Front page" aria-label="Ledge Desk front page">LEDGE&middot;DESK</button>
+        <button type="button" className="sysname" onClick={toDoor} title="Front page" aria-label="Ledge Desk front page">Ledge Desk</button>
 
         <span className="tstat">
           <span className={"dot " + (agLive || zoneCount ? "live" : "warn")} />
@@ -3416,6 +3418,7 @@ export default function Terminal() {
               <nav className="foot-links" aria-label="Site information">
                 <a href="/info">Everything on Ledge Desk</a>
                 <a href="/privacy">Privacy</a>
+                <a href="/about">About</a>
                 <a href="/accessibility">Accessibility</a>
                 <button type="button" className="linkbtn" onClick={() => go("TERMS")}>Terms &amp; disclaimer</button>
                 <button type="button" className="linkbtn" onClick={() => go("HELP")}>Help</button>

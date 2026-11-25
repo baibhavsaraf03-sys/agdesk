@@ -259,7 +259,7 @@ export function Instruments({ pulse, failed, reads, onAsk, onShare, onChart, onC
           {dial("ftse", "FTSE 100")}
           <div className="inst-mood">
             <MoodDial pulse={pulse} size={320} />
-            <span className="inst-moodcap">THE DESK</span>
+            <span className="inst-moodcap">The mood</span>
           </div>
           <Dial
             t={gold?.change != null ? needleForChange(gold.change) : null}

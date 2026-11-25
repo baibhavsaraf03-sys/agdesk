@@ -11,7 +11,7 @@ export function DocShell({ children, crumbs = [] }) {
   return (
     <div className="doc">
       <header className="doc-top">
-        <Link href="/" className="doc-mark">LEDGE&middot;DESK</Link>
+        <Link href="/" className="doc-mark">Ledge Desk</Link>
         <nav className="doc-nav" aria-label="Sections">
           <Link href="/learn">Lessons</Link>
           <Link href="/glossary">Glossary</Link>
@@ -36,7 +36,7 @@ export function DocShell({ children, crumbs = [] }) {
           deposited, and regulators consistently find that most individual traders lose money.
         </p>
         <p>
-          <Link href="/info">Everything on Ledge Desk</Link> · <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/accessibility">Accessibility</Link>
+          <Link href="/about">About</Link> · <Link href="/info">Everything on Ledge Desk</Link> · <Link href="/learn">Lessons</Link> · <Link href="/glossary">Glossary</Link> · <Link href="/articles">Articles</Link> · <Link href="/#TERMS">Terms</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/accessibility">Accessibility</Link>
         </p>
       </footer>
     </div>

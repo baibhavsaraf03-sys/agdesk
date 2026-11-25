@@ -196,6 +196,7 @@ export function SideNav({ screens, screen, go, mode, setMode, onPicked, extras, 
           ))}
           <a className="linkbtn" href="/info">Everything on Ledge Desk</a>
           <a className="linkbtn" href="/privacy">Privacy</a>
+          <a className="linkbtn" href="/about">About</a>
           <a className="linkbtn" href="/accessibility">Accessibility</a>
           <span>Educational material, not investment advice.</span>
         </div>
