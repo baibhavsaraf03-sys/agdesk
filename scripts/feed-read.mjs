@@ -623,8 +623,19 @@ async function main() {
         throw e;
       }
       console.warn("  falling back to anthropic (billed) on the same material");
-      payload = await readViaAnthropic(PROMPT);
-      payload.writer = "anthropic";
+      try {
+        payload = await readViaAnthropic(PROMPT);
+        payload.writer = "anthropic";
+      } catch (err) {
+        // 26 Nov: a refused Anthropic key turned a busy hour into a failed run and an email.
+        // The previous read stays up either way, so this is a warning, not a failure.
+        const bad = /401|invalid x-api-key|authentication/i.test(String(err.message));
+        const e = new Error(bad
+          ? "every free model failed and Anthropic refused the key (ANTHROPIC_API_KEY is invalid or revoked: replace it in GitHub secrets and Vercel), so the previous read stays up"
+          : `every free model failed and Anthropic failed too (${String(err.message).slice(0, 120)}), so the previous read stays up`);
+        e.soft = true;
+        throw e;
+      }
     }
   } else {
     payload = await readViaAnthropic(PROMPT);
