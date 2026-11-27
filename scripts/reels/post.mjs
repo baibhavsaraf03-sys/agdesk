@@ -360,10 +360,10 @@ async function theoPrepare(tok) {
     const pct = Math.abs(w.pct).toFixed(2);
     const guess = (ep.day * 7 + 3) % 2 ? "up" : "down", right = guess === w.dir;
     const coach = ep.format === "coach";
-    const hook = { who: coach ? "dev" : undefined, scene: "stat", game: true, say: coach ? `Frérot. ${Name}. Up or down in fifteen minutes?` : `${Name}: up or down in fifteen minutes?`, cap: `UP OR *DOWN*?`,
+    const hook = { who: coach ? "dev" : undefined, scene: "stat", game: true, say: coach ? `Bro. ${Name}. Up or down in fifteen minutes?` : `${Name}: up or down in fifteen minutes?`, cap: `UP OR *DOWN*?`,
       big: "UP/DOWN?", small: `${Name.replace(/^The /, "").toUpperCase()} · 15 MIN`, bg: "navy" };
     const reveal = { who: coach ? "dev" : undefined, loud: coach && !right, scene: "stat", game: true,
-      say: coach ? `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent! You said ${guess}. ${right ? "Okay, one right." : "Oh là là. WRONG AGAIN!"}` : `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent. Theo said ${guess}. ${right ? "He got one right." : "Wrong again."}`,
+      say: coach ? `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent! You said ${guess}. ${right ? "Okay, one right." : "WRONG AGAIN!"}` : `${w.dir === "up" ? "Up" : "Down"}, ${pct} percent. Theo said ${guess}. ${right ? "He got one right." : "Wrong again."}`,
       cap: `${name.toUpperCase()} WENT / *${w.dir.toUpperCase()}*`, big: w.dir.toUpperCase(), small: `${w.pct >= 0 ? "+" : "-"}${pct}% IN 15 MIN`, bg: w.dir === "up" ? "green" : "red" };
     const v = ep.beats.findIndex((b) => b.scene === "vote" || b.scene === "end");
     if (v >= 0 && ep.beats[v].scene === "vote") ep.beats[v].cap = "COMMENT / *A* OR *B*";
