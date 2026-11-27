@@ -242,7 +242,18 @@ export async function writeEpisode(state, winner, counts) {
   const plot = plotB ? { who: "coach", ...plotB } : null;
   if (plot) middle.splice(Math.min(desk ? 3 : 2, middle.length), 0, plot);
   // Hand-written moments stay; the AI's lines give way so the middle stays short.
-  while (middle.length > 4) { const k = middle.findLastIndex((b) => b !== desk && b !== plot); if (k < 0) break; middle.splice(k, 1); }
+  // 27 Nov: trimming used to drop the last AI lines, which were Dev's and Theo's, leaving a
+  // coach monologue. Coach lines go first; Dev and Theo keep at least one line each.
+  const cap = desk && plot ? 5 : 4;
+  while (middle.length > cap) {
+    const free = (b) => b !== desk && b !== plot;
+    const keepOne = (w) => middle.filter((b) => b.who === w).length <= 1;
+    let k = middle.findLastIndex((b) => free(b) && b.who === "coach");
+    if (k < 0) k = middle.findLastIndex((b) => free(b) && !(b.who === "dev" && keepOne("dev")) && !(b.who === "theo" && keepOne("theo")));
+    if (k < 0) k = middle.findLastIndex(free);
+    if (k < 0) break;
+    middle.splice(k, 1);
+  }
 
   // Theo has just answered the coach, so the middle never opens on Theo.
   if (middle[0]?.who === "theo") { const k = middle.findIndex((b) => b.who !== "theo"); if (k > 0) middle.unshift(...middle.splice(k, 1)); }

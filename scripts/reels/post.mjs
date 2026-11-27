@@ -252,7 +252,7 @@ function manualPage(kind, n, file, caption, videoUrl, title = null) {
   fs.writeFileSync(notes, [
     title ? `**${title}**` : `**${KIND_NAMES[kind]}**, post ${n + 1} (slot ${n % ROTATION.length + 1} of ${ROTATION.length}).`,
     "",
-    "1. Tap **" + path.basename(file) + "** under Assets (or [open the video](" + videoUrl + ")), then Share → **Save Video**.",
+    "1. Tap **" + path.basename(file) + "** under Assets" + (videoUrl ? " (or [open the video](" + videoUrl + "))" : "") + ", then Share → **Save Video**.",
     "2. In Instagram: **+** → **Reel** → pick the video → paste the caption below → **Share**.",
     "3. On the new Reel, tap the paper plane → **Add to story** → **Your story**.",
     "",
@@ -491,11 +491,19 @@ try {
 
   stage = "uploading the video";
   const key = THEO ? `reels/${today}-${path.basename(file)}` : `reels/${today}-${kind}.mp4`;   // updown -> reels/<day>-updown.mp4
-  const up = await db.storage.from(BUCKET).upload(key, fs.readFileSync(file), { contentType: "video/mp4", upsert: true });
+  // 27 Nov: one "fetch failed" from Storage stopped Day 10 reaching the owner. Try four times,
+  // and in manual mode carry on without the public link (the release page holds the video).
+  let up = null;
+  for (const wait of [0, 5, 15, 30]) {
+    if (wait) { log(`  upload failed (${up.error.message}); trying again in ${wait}s`); await new Promise((r) => setTimeout(r, wait * 1000)); }
+    try { up = await db.storage.from(BUCKET).upload(key, fs.readFileSync(file), { contentType: "video/mp4", upsert: true }); }
+    catch (e) { up = { error: e }; }
+    if (!up.error) break;
+  }
   if (up.error && DRY) throw new Stop(`Dry run: video made (${file}); upload skipped: ${up.error.message}`);
-  if (up.error) throw new Error("upload to Supabase Storage failed: " + up.error.message);
-  const videoUrl = db.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
-  log(`  video: ${videoUrl}`);
+  if (up.error && !MANUAL) throw new Error("upload to Supabase Storage failed: " + up.error.message);
+  const videoUrl = up.error ? null : db.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
+  log(videoUrl ? `  video: ${videoUrl}` : `  upload failed four times (${up.error.message}); the video goes out on the release page only`);
   if (DRY) throw new Stop("Dry run: rendered and uploaded, not posted.");
 
   if (MANUAL) {
@@ -504,7 +512,7 @@ try {
     const page = manualPage(kind, n, file, caption, videoUrl, title);
     await db.from("social_posts").insert({ day: today, slot: THEO ? theoRun.ep.day : SERIES ? 0 : n % ROTATION.length, kind, status: "posted", video_url: videoUrl, caption, permalink: page, error: "Manual mode: sent to the owner's phone to post by hand." });
     if (THEO) await theoSave(theoRun.next);
-    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : UPDOWN ? "Today's Up or Down is ready" : "Today's Instagram video is ready", `Tap to open the video, then save it. Caption to copy:\n\n${caption}`.slice(0, 3800), videoUrl, videoUrl);
+    const sent = await tellOwner(THEO ? `Fix Theo, Day ${theoRun.ep.day} is ready` : UPDOWN ? "Today's Up or Down is ready" : "Today's Instagram video is ready", `Tap to open the video, then save it. Caption to copy:\n\n${caption}`.slice(0, 3800), videoUrl || page, videoUrl || page);
     // 20 Nov: GitHub's download failed on the owner's phone, so the tap opens the
     // video itself (public Supabase Storage) and the caption travels in the message.
     log(`Done (manual): ${page}. Notified through ${sent} channel(s).`);
