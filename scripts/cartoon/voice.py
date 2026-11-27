@@ -19,7 +19,9 @@ ep = json.load(open(ep_path))
 SR = 48000
 COACH = ep.get("format") == "coach"
 # Coach mode is a quick-fire argument: tighter gaps and no silent lead-in, so the first yell lands at once.
-GAP, LEAD, TAIL = (0.06, 0.04, 0.5) if COACH else (0.22, 0.25, 0.6)
+# 27 Nov (owner: "hard understanding when the video is going too fast; Instagram has 2x if people want it
+# faster"): normal speaking pace and a real pause between lines.
+GAP, LEAD, TAIL = (0.35, 0.04, 0.7) if COACH else (0.22, 0.25, 0.6)
 # One voice per character (25 Nov). Kokoro voice names; variables override.
 # Voices (27 Nov, owner: the accented voices were "hard to watch", go back to smooth normal ones):
 # plain Kokoro voices, no pitch shifting, no accent rewriting. ACCENTS=1 brings back the 25 Nov
@@ -30,7 +32,7 @@ CAST = {"coach": os.environ.get("COACH_VOICE", "hm_psi" if ACCENTS else "am_mich
 PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8")), "coach": float(os.environ.get("COACH_PITCH", "1.2"))} if ACCENTS else {}
 # Owner, 27 Nov: "make Dev sound cooler than Theo". Dev is the deep, unhurried one (am_onyx, a touch
 # slower); Theo stays young and quick (am_puck).
-PACE = {"dev": float(os.environ.get("DEV_PACE", "0.9"))}
+PACE = {"dev": float(os.environ.get("DEV_PACE", "0.93"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
@@ -117,7 +119,8 @@ if model.startswith("kokoro:"):
         vlang = "en-gb" if vname.startswith("b") or (ACCENTS and COACH and b.get("who") == "coach") else "en-us"
         pf = PITCH.get(b.get("who"), 1.0) if COACH else 1.0
         loud = COACH and b.get("loud")
-        sp = min(2.0, float(os.environ.get("SPEED", "1.08")) * (1.06 if loud else 1.0) * (1.12 if COACH else 1.0) * (PACE.get(b.get("who"), 1.0) if COACH else 1.0) / pf)
+        base = float(os.environ.get("SPEED", "0.98" if COACH else "1.08"))
+        sp = min(2.0, base * (PACE.get(b.get("who"), 1.0) if COACH else 1.0) / pf)
         line = spoken(b["say"])
         if ACCENTS and COACH and b.get("who") == "dev":
             # Dev's French words (frérot, voilà...) are said the French way; the rest is English.
