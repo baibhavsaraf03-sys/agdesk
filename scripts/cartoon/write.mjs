@@ -137,14 +137,14 @@ function plainMiddle(f) {
     else out.push({ who: "coach", scene: "room", say, cap: "LISTEN / *THEO*", face: "shock", pose: "shrug" });
   });
   out.push({ who: "theo", scene: "room", say: "Okay. But I'm still broke. Spiritually.", cap: "STILL BROKE. / *SPIRITUALLY*", face: "sad", pose: "shrug" });
-  if (f.event) out.push({ who: "dev", loud: false, scene: "dev", say: "Bro! " + f.event.text, cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", mface: "shock", mpose: "point", stamp: "PLOT TWIST" });
+  if (f.event) out.push({ who: "dev", loud: false, scene: "dev", say: "Mate. " + f.event.text, cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", mface: "shock", mpose: "point", stamp: "PLOT TWIST" });
   return out.slice(0, 5);
 }
 
 async function aiMiddle(f, last) {
   const system = "You write short, loud, funny dialogue for a cartoon money series on Instagram called Fix Theo. It must hold a scrolling viewer's attention line by line. " +
     "Theo is 23, lives in the US, sells phones, and is slowly getting better with money, but he is convinced he is broke and acts it: dry ramen, 'I can't afford joy', refusing to check his balance, calling himself broke even when the figures say otherwise. That belief is the running joke. " +
-    "Coach is an off-screen voice who roasts Theo and talks to him directly as 'you'; he yells when Theo does something silly. Dev is Theo's roommate, the cool one: calm, unbothered, never shouts, says little and lands dry one-liners that catch Theo out. Theo argues back, badly. " +
+    "Coach is an off-screen voice who roasts Theo and talks to him directly as 'you'; he yells when Theo does something silly. Dev is Theo's English roommate, the cool one: calm, unbothered, never shouts, says little, calls Theo 'mate', and lands dry British one-liners that catch Theo out, often with a dig at something American that Theo will defend (tipping, imperial units, 'soccer', huge portions, dinner at 5pm, the price of healthcare). Playful, never cruel, no insults about where anyone is from. Theo argues back, badly. " +
     (f.season === 2 || f.day >= 8 ? "Maya is 24, a nurse, organised, saves 15% of every paycheck, but has a 2am online shopping habit; she and Theo are " + (f.season === 2 ? "a couple making money decisions together. Use scene 'couple' for both of them and set mface/mpose for Maya. " : "getting to know each other. ") : "") +
     "Tone: fast, relatable and funny, people talking over each other, a roast in most lines " +
     "(a stamp like 'BOLD MOVE' or 'STILL BROKE'). Never cruel, nothing about his looks, no swearing, no real brand names, no advice to buy or sell any investment. " +
