@@ -137,14 +137,14 @@ function plainMiddle(f) {
     else out.push({ who: "coach", scene: "room", say, cap: "LISTEN / *THEO*", face: "shock", pose: "shrug" });
   });
   out.push({ who: "theo", scene: "room", say: "Okay. But I'm still broke. Spiritually.", cap: "STILL BROKE. / *SPIRITUALLY*", face: "sad", pose: "shrug" });
-  if (f.event) out.push({ who: "dev", loud: true, scene: "dev", say: "Bro! " + f.event.text, cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", mface: "shock", mpose: "point", stamp: "PLOT TWIST" });
+  if (f.event) out.push({ who: "dev", loud: false, scene: "dev", say: "Bro! " + f.event.text, cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", mface: "shock", mpose: "point", stamp: "PLOT TWIST" });
   return out.slice(0, 5);
 }
 
 async function aiMiddle(f, last) {
   const system = "You write short, loud, funny dialogue for a cartoon money series on Instagram called Fix Theo. It must hold a scrolling viewer's attention line by line. " +
     "Theo is 23, lives in the US, sells phones, and is slowly getting better with money, but he is convinced he is broke and acts it: dry ramen, 'I can't afford joy', refusing to check his balance, calling himself broke even when the figures say otherwise. That belief is the running joke. " +
-    "Coach is an off-screen voice who roasts Theo and talks to him directly as 'you'; he yells when Theo does something silly. Dev is Theo's roommate, who catches him out and piles on. Theo argues back, badly. " +
+    "Coach is an off-screen voice who roasts Theo and talks to him directly as 'you'; he yells when Theo does something silly. Dev is Theo's roommate, the cool one: calm, unbothered, never shouts, says little and lands dry one-liners that catch Theo out. Theo argues back, badly. " +
     (f.season === 2 || f.day >= 8 ? "Maya is 24, a nurse, organised, saves 15% of every paycheck, but has a 2am online shopping habit; she and Theo are " + (f.season === 2 ? "a couple making money decisions together. Use scene 'couple' for both of them and set mface/mpose for Maya. " : "getting to know each other. ") : "") +
     "Tone: fast, relatable and funny, people talking over each other, a roast in most lines " +
     "(a stamp like 'BOLD MOVE' or 'STILL BROKE'). Never cruel, nothing about his looks, no swearing, no real brand names, no advice to buy or sell any investment. " +
@@ -157,7 +157,7 @@ async function aiMiddle(f, last) {
     `Facts you must act out, in order:\n${f.result.facts.map((x) => "- " + x).join("\n")}\n` +
     (f.event ? `Then a surprise: ${f.event.text}${f.event.onCard ? ` His savings could not cover it, so ${money(f.event.onCard)} went on the credit card.` : ""}\n` : "") +
     `Big number for one stat scene: ${f.result.big} (${f.result.small}).\n` +
-    `Write 3 or 4 lines of dialogue (each under 12 words: the whole episode must stay under 30 seconds). The first line must not be Theo's (he has just spoken). Each line has who: coach, theo or dev${f.season === 2 || f.day >= 8 ? " (or maya)" : ""}. Never the same speaker twice in a row. Dev speaks at least once, Theo talks back at least once, and Theo insists he is broke at least once even if the figures say he is doing better; Coach or Dev shuts that down with a figure. Mark at most 2 lines loud (yelled), the ones with the biggest reaction. Every figure in the facts must be said aloud in some line, by whoever fits. Scenes: room (Theo alone), dev (Theo and Dev; use for every Dev line), stat (big figure card), bank (his balance), receipt (up to 4 lines). Set face and pose for Theo and mface/mpose for Dev. Tell one clear story: what he did, what it changes, how he takes it. Never two stat scenes in a row.\n` +
+    `Write 3 or 4 lines of dialogue (each under 12 words: the whole episode must stay under 30 seconds). The first line must not be Theo's (he has just spoken). Each line has who: coach, theo or dev${f.season === 2 || f.day >= 8 ? " (or maya)" : ""}. Never the same speaker twice in a row. Dev speaks at least once, Theo talks back at least once, and Theo insists he is broke at least once even if the figures say he is doing better; Coach or Dev shuts that down with a figure. Mark at most 2 lines loud (yelled), the ones with the biggest reaction; Dev's lines are never loud. Every figure in the facts must be said aloud in some line, by whoever fits. Scenes: room (Theo alone), dev (Theo and Dev; use for every Dev line), stat (big figure card), bank (his balance), receipt (up to 4 lines). Set face and pose for Theo and mface/mpose for Dev. Tell one clear story: what he did, what it changes, how he takes it. Never two stat scenes in a row.\n` +
     `Do not write an opening, a vote or an ending: those are added separately (the episode opens with Coach yelling at Theo). Do not mention any app, website or brand by name.\n` +
     `The ONLY figures you may write: ${[...allowedNumbers(f)].filter((n) => Number(n) > 12 || n.includes(".")).join(", ")} (and small counts up to 12). Never add, subtract or multiply them into new figures.\n` +
     `Ideas for jokes you may use or improve:\n${(f.jokes || []).map((j) => "- " + j.say).join("\n")}` +
@@ -229,6 +229,7 @@ export async function writeEpisode(state, winner, counts) {
   let loudLeft = 2;
   const middle = (mid ? mid.beats.map(clean) : plainMiddle(f)).slice(0, 6).map((b, i, a) => {
     if (b.stamp && b.face === "happy") delete b.stamp;
+    if (b.who === "dev") b.loud = false;   // Dev is the calm one
     if (b.loud && loudLeft-- <= 0) b.loud = false;
     if (i > 0 && !["room", "dev", "couple", "maya"].includes(b.scene) && b.scene === a[i - 1].scene) return { ...b, scene: b.who === "dev" ? "dev" : "room", face: "shock", pose: "point" };
     return b;
