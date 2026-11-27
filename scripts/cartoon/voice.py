@@ -28,11 +28,11 @@ GAP, LEAD, TAIL = (0.35, 0.04, 0.7) if COACH else (0.22, 0.25, 0.6)
 # set (Indian coach on hm_psi raised 1.2 with indianise(), French Dev on ff_siwis lowered 0.8).
 ACCENTS = os.environ.get("ACCENTS") == "1"
 CAST = {"coach": os.environ.get("COACH_VOICE", "hm_psi" if ACCENTS else "am_michael"), "theo": os.environ.get("THEO_VOICE_LINE", "am_puck"),
-        "dev": os.environ.get("DEV_VOICE", "ff_siwis" if ACCENTS else "am_onyx"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
+        "dev": os.environ.get("DEV_VOICE", "ff_siwis" if ACCENTS else "am_fenrir"), "maya": os.environ.get("MAYA_VOICE", "af_bella")}
 PITCH = {"dev": float(os.environ.get("DEV_PITCH", "0.8")), "coach": float(os.environ.get("COACH_PITCH", "1.2"))} if ACCENTS else {}
 # Owner, 27 Nov: "make Dev sound cooler than Theo". Dev is the deep, unhurried one (am_onyx, a touch
 # slower); Theo stays young and quick (am_puck).
-PACE = {"dev": float(os.environ.get("DEV_PACE", "0.93"))}
+PACE = {"dev": float(os.environ.get("DEV_PACE", "1.0"))}
 
 def spoken(text):
     # Say figures the way a person would, so the voice doesn't read symbols.
