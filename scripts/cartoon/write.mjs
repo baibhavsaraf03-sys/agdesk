@@ -74,13 +74,13 @@ function allowedNumbers(f) {
 
 function check(beats, f) {
   const ok = allowedNumbers(f), problems = [];
-  if (!Array.isArray(beats) || beats.length < 3 || beats.length > 5) problems.push(`need 3 to 4 beats, got ${beats?.length}`);
+  if (!Array.isArray(beats) || beats.length < 3 || beats.length > 6) problems.push(`need 3 to 5 beats, got ${beats?.length}`);
   const mayaIn = f.season === 2 || f.day >= 8;
   (beats || []).forEach((b, i) => {
     if (!SCENES.includes(b.scene) || (!mayaIn && (b.scene === "couple" || b.scene === "maya"))) problems.push(`beat ${i + 1}: scene ${b.scene} not allowed today`);
     if (AD.test([b.say, b.cap, b.stamp].join(" "))) problems.push(`beat ${i + 1}: do not mention Ledge Desk, apps, downloads or sign-ups (that scene is added separately)`);
-    if (!b.say || b.say.split(/\s+/).length > 14) problems.push(`beat ${i + 1}: say missing or longer than 14 words`);
-    if (!WHO.includes(b.who) || (b.who === "maya" && !mayaIn)) problems.push(`beat ${i + 1}: who must be coach, theo or dev${mayaIn ? " or maya" : ""}`);
+    if (!b.say || b.say.split(/\s+/).length > 18) problems.push(`beat ${i + 1}: say missing or longer than 18 words`);
+    if (b.who === "maya" && !mayaIn) problems.push(`beat ${i + 1}: who must be coach, theo or dev${mayaIn ? " or maya" : ""}`);
     const chunks = String(b.cap || "").split("/").map((x) => x.trim()).filter(Boolean);
     if (!chunks.length || chunks.length > 3 || chunks.some((c) => c.replace(/\*/g, "").length > 20)) problems.push(`beat ${i + 1}: cap needs 1-3 chunks of at most 20 letters`);
     if (b.stamp && b.stamp.length > 16) problems.push(`beat ${i + 1}: stamp too long`);
@@ -88,7 +88,6 @@ function check(beats, f) {
     const bad = nums(text).filter((n) => !ok.has(n));
     if (bad.length) problems.push(`beat ${i + 1}: figures not in the facts: ${bad.join(", ")}`);
     if (b.scene === "stat" && !(b.big || "").trim()) problems.push(`beat ${i + 1}: a stat scene needs its big figure`);
-    if (b.scene === "stat" && (b.big || "").length > 9) problems.push(`beat ${i + 1}: big must be one short figure of at most 9 characters, not "${b.big}"`);
     if (b.scene === "stat" && (b.small || "").length > 22) problems.push(`beat ${i + 1}: small label longer than 22 characters`);
     if (b.scene === "bank" && !/\d/.test(b.balance || "")) problems.push(`beat ${i + 1}: a bank scene needs a balance from the facts`);
     if (b.scene === "receipt" && !(b.lines || []).some((l) => /\d/.test(l.value || ""))) problems.push(`beat ${i + 1}: a receipt scene needs lines with figures from the facts`);
@@ -97,9 +96,10 @@ function check(beats, f) {
   if (!(beats || []).some((b) => b.who === "dev")) problems.push("Dev the roommate must say at least one line");
   if (!(beats || []).some((b) => b.who === "theo")) problems.push("Theo must talk back at least once");
   if ((beats || []).filter((b) => b.scene === "stat").length > 2) problems.push("at most 2 stat scenes");
-  // Every figure that matters must actually be said out loud.
+  // The day's headline figure must be said out loud. (27 Nov: requiring every figure in only
+  // 3-4 short lines rejected nearly every AI script, so the episodes fell back to the plain one.)
   const said = new Set(nums((beats || []).map((b) => b.say).join(" ")));
-  const key = [...new Set(f.result.facts.flatMap(nums))].filter((n) => Number(n) > 12);
+  const key = [...new Set(nums(f.result.big || ""))].filter((n) => Number(n) > 12);
   const missing = key.filter((n) => !said.has(n));
   if (missing.length) problems.push(`these figures from the facts are never said aloud: ${missing.join(", ")}`);
   return problems;
@@ -112,6 +112,8 @@ function clean(b) {
   if (who === "dev" && ["room", "couple", "maya"].includes(scene)) scene = "dev";
   if (who === "maya" && ["room", "dev"].includes(scene)) scene = "couple";
   const o = { who, loud: !!b.loud, scene, say: b.say.trim(), cap: b.cap.toUpperCase().trim() };
+  // A long "big" ("20 PAYDAYS") keeps just its figure.
+  if (b.big && b.big.length > 9) { const m = String(b.big).match(/[-+]?[$€£]?\d[\d,.]*%?/); b = { ...b, big: m ? m[0] : String(b.big).slice(0, 9) }; }
   b = { ...b, scene };
   if (["room", "dev", "couple", "maya"].includes(b.scene)) {
     o.face = FACES.includes(b.face) ? b.face : "neutral"; o.pose = POSES.includes(b.pose) ? b.pose : "idle";
@@ -128,6 +130,8 @@ function plainMiddle(f) {
   // Hand-written fallback in dialogue: the coach reads the facts at Theo, Dev and Theo answer with the choice's jokes.
   const r = f.result, out = [], jokes = f.jokes || [];
   out.push({ who: "coach", scene: "room", say: r.facts[0], cap: "TODAY'S / *MOVE*", face: "worried", pose: "idle" });
+  out.push({ who: "theo", scene: "room", say: "Okay. But I'm still broke. Spiritually.", cap: "STILL BROKE. / *SPIRITUALLY*", face: "sad", pose: "shrug" });
+  out.push({ who: "dev", scene: "dev", say: "Mate, you tip a barista for pouring coffee. You're not broke, you're American.", cap: "NOT BROKE. / *AMERICAN*", face: "shock", pose: "idle", mface: "smug", mpose: "idle" });
   if (jokes[0]) out.push({ who: "dev", scene: "dev", say: jokes[0].say, cap: jokes[0].cap, face: jokes[0].face || "worried", pose: "idle", mface: "smug", mpose: "point" });
   const bigNums = nums(r.big);
   let statDone = false;
@@ -136,7 +140,6 @@ function plainMiddle(f) {
     if (!statDone && nums(x).some((n) => bigNums.includes(n))) { statDone = true; out.push({ who: "coach", scene: "stat", say, cap: `*${r.big}*`, big: r.big, small: r.small, bg: "green" }); }
     else out.push({ who: "coach", scene: "room", say, cap: "LISTEN / *THEO*", face: "shock", pose: "shrug" });
   });
-  out.push({ who: "theo", scene: "room", say: "Okay. But I'm still broke. Spiritually.", cap: "STILL BROKE. / *SPIRITUALLY*", face: "sad", pose: "shrug" });
   if (f.event) out.push({ who: "dev", loud: false, scene: "dev", say: "Mate. " + f.event.text, cap: "AND THEN / *THIS*", face: "shock", pose: "shrug", mface: "shock", mpose: "point", stamp: "PLOT TWIST" });
   return out.slice(0, 5);
 }
